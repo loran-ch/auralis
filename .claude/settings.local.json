@@ -6,7 +6,9 @@
       "Bash(start http://localhost:3000/003.UI/index.html)",
       "Bash(git init *)",
       "Bash(git config *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: LiveTrans v1.01 初始化版本 *)",
+      "Bash(dism /online /get-featureinfo /featurename:VirtualMachinePlatform)"
     ]
   }
 }
