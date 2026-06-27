@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveTrans — 摄像头实时翻译，即见即译</title>
+  <meta name="description" content="LiveTrans 利用 AI 视觉识别技术实时翻译摄像头中的外文。支持 50+ 语种，离线可用。手机号/微信一键注册，云端同步翻译记录。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================
+       CSS Variables — PRD §6.3 色彩规范
+       ======================================== */
+    :root {
+      --color-primary: #4A90D9;
+      --color-primary-dark: #3A7BC8;
+      --color-primary-light: #6BA8E8;
+      --color-green: #4CAF50;
+      --color-green-light: #81C784;
+      --color-orange: #FF9800;
+      --color-red: #EF4444;
+      --color-bg: #FFFFFF;
+      --color-bg-secondary: #F7F8FA;
+      --color-bg-tertiary: #EDF0F4;
+      --color-text: #1A1A1A;
+      --color-text-secondary: #555555;
+      --color-text-muted: #8B8B8B;
+      --color-border: #E4E7EC;
+      --color-card-bg: rgba(255,255,255,0.85);
+      --color-nav-bg: rgba(255,255,255,0.8);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+      --shadow-xl: 0 24px 56px rgba(0,0,0,0.16), 0 8px 16px rgba(0,0,0,0.08);
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --transition-fast: 150ms ease-out;
+      --transition-base: 300ms ease-out;
+      --transition-slow: 500ms ease-out;
+      --max-width: 1200px;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0F1117;
+      --color-bg-secondary: #161822;
+      --color-bg-tertiary: #1E2030;
+      --color-text: #F5F5F5;
+      --color-text-secondary: #B0B3BE;
+      --color-text-muted: #6B6F7B;
+      --color-border: #2A2D3A;
+      --color-card-bg: rgba(30,32,48,0.85);
+      --color-nav-bg: rgba(15,17,23,0.8);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.4);
+      --shadow-xl: 0 24px 56px rgba(0,0,0,0.5);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--color-bg); color: var(--color-text);
+      line-height: 1.6; overflow-x: hidden;
+      transition: background var(--transition-base), color var(--transition-base);
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+    ul { list-style: none; }
+
+    .container { max-width: var(--max-width); margin: 0 auto; padding: 0 24px; }
+
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--color-primary); margin-bottom: 16px;
+    }
+    .section-label::before { content: ''; width: 24px; height: 2px; background: var(--color-primary); border-radius: 1px; }
+    .section-title {
+      font-size: clamp(32px, 5vw, 48px); font-weight: 800;
+      letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 20px; color: var(--color-text);
+    }
+    .section-subtitle { font-size: 18px; color: var(--color-text-secondary); max-width: 560px; line-height: 1.7; }
+
+    /* ========================================
+       Navigation
+       ======================================== */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: var(--color-nav-bg); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--color-border);
+      transition: all var(--transition-base);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px; max-width: var(--max-width); margin: 0 auto; padding: 0 24px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--color-text);
+    }
+    .nav-logo-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: white;
+    }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); transition: color var(--transition-fast); }
+    .nav-links a:hover { color: var(--color-primary); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px; font-size: 14px; font-weight: 600;
+      border-radius: var(--radius-md); transition: all var(--transition-fast); white-space: nowrap;
+    }
+    .btn-primary { background: var(--color-primary); color: #FFFFFF; box-shadow: 0 2px 8px rgba(74,144,217,0.35); }
+    .btn-primary:hover { background: var(--color-primary-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,144,217,0.45); }
+    .btn-outline { border: 1.5px solid var(--color-border); color: var(--color-text); background: transparent; }
+    .btn-outline:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .btn-lg { padding: 16px 32px; font-size: 16px; border-radius: var(--radius-lg); }
+    .btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 8px; }
+
+    .theme-toggle {
+      width: 40px; height: 40px; border-radius: 10px; background: var(--color-bg-tertiary);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+      transition: all var(--transition-fast); color: var(--color-text-secondary);
+    }
+    .theme-toggle:hover { background: var(--color-border); }
+
+    /* ========================================
+       Hero
+       ======================================== */
+    .hero { padding: 160px 0 100px; overflow: hidden; position: relative; }
+    .hero-bg { position: absolute; top: -200px; right: -300px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(74,144,217,0.08) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+    .hero-bg-2 { position: absolute; bottom: -150px; left: -200px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(76,175,80,0.06) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; position: relative; z-index: 1; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--color-bg-tertiary); border-radius: 100px; font-size: 13px; font-weight: 600; color: var(--color-primary); margin-bottom: 28px; }
+    .hero-badge-dot { width: 8px; height: 8px; background: var(--color-green); border-radius: 50%; animation: pulse-dot 2s ease-in-out infinite; }
+    @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(1.5); } }
+    .hero-title { font-size: clamp(42px,6.5vw,68px); font-weight: 900; letter-spacing: -0.03em; line-height:1.08; margin-bottom:24px; color:var(--color-text); }
+    .hero-title-highlight { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-green) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero-desc { font-size:19px; color:var(--color-text-secondary); line-height:1.7; margin-bottom:36px; max-width:480px; }
+    .hero-actions { display:flex; gap:16px; flex-wrap:wrap; }
+    .hero-stats { display:flex; gap:40px; margin-top:48px; padding-top:32px; border-top:1px solid var(--color-border); }
+
+    /* ========================================
+       Phone Mockup — used across multiple sections
+       ======================================== */
+    .phone-mockup { position: relative; width: 320px; margin: 0 auto; }
+    .phone-frame { position: relative; background: #1A1D28; border-radius: 40px; padding: 12px; box-shadow: var(--shadow-xl); border: 2px solid #2A2D3A; }
+    .phone-screen { position: relative; background: #232737; border-radius: 30px; overflow: hidden; aspect-ratio: 390 / 844; }
+    .phone-viewfinder {
+      width: 100%; height: 100%;
+      background: linear-gradient(180deg, #1a1d28 0%, #252837 50%, #1a1d28 100%);
+      position: relative; display: flex; align-items: center; justify-content: center;
+    }
+    .phone-scene {
+      width: 85%; height: 60%; background: #2C2F3D; border-radius: 12px;
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .phone-scene-text { font-family: 'Georgia', serif; font-size: 26px; color: #E8E8E8; letter-spacing: 1px; position: relative; z-index: 1; }
+    .ocr-box {
+      position: absolute; border: 2px solid var(--color-green); border-radius: 6px;
+      padding: 4px 8px; animation: ocr-breathe 2s ease-in-out infinite;
+    }
+    @keyframes ocr-breathe { 0%,100% { box-shadow:0 0 0 0 rgba(76,175,80,0.3); } 50% { box-shadow:0 0 0 8px rgba(76,175,80,0); } }
+    .translation-card {
+      position: absolute; background: rgba(30,32,48,0.92); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px;
+      color: #F5F5F5; font-size: 14px; font-weight: 600;
+      animation: card-float 3s ease-in-out infinite; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    @keyframes card-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+    .phone-status { position: absolute; top: 12px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 10; }
+    .phone-status-item { font-size: 10px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 4px; }
+    .phone-bottom { position: absolute; bottom: 12px; left: 16px; right: 16px; z-index: 10; }
+    .phone-lang-bar {
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(10px); border-radius: 20px;
+      padding: 8px 12px; display: flex; align-items: center; justify-content: center;
+      gap: 12px; font-size: 10px; color: rgba(255,255,255,0.9); margin-bottom: 8px;
+    }
+    .phone-lang-switch { width: 24px; height: 24px; background: var(--color-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .phone-actions { display: flex; justify-content: space-between; align-items: center; padding: 0 8px; }
+    .phone-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 14px; color: white; transition: background var(--transition-fast); }
+    .phone-btn:hover { background: rgba(255,255,255,0.25); }
+    .phone-btn-capture { width: 48px; height: 48px; border-radius: 50%; border: 3px solid white; background: transparent; position: relative; }
+    .phone-btn-capture::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: white; }
+
+    .phone-float {
+      position: absolute; background: var(--color-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: 12px 16px; box-shadow: var(--shadow-lg);
+      font-size: 13px; font-weight: 600; z-index: 20;
+    }
+
+    /* ========================================
+       Features
+       ======================================== */
+    .features { padding: 120px 0; background: var(--color-bg-secondary); transition: background var(--transition-base); }
+    .features-header { text-align: center; margin-bottom: 72px; }
+    .features-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
+    .feature-card {
+      background: var(--color-bg); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); padding: 36px 28px; transition: all var(--transition-base);
+      position: relative; overflow: hidden;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: transparent; }
+    .feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--color-primary),var(--color-green)); opacity:0; transition:opacity var(--transition-base); }
+    .feature-card:hover::before { opacity:1; }
+    .feature-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:20px; }
+    .feature-icon.blue { background:rgba(74,144,217,0.1); color:var(--color-primary); }
+    .feature-icon.green { background:rgba(76,175,80,0.1); color:var(--color-green); }
+    .feature-icon.orange { background:rgba(255,152,0,0.1); color:var(--color-orange); }
+    .feature-icon.purple { background:rgba(139,92,246,0.1); color:#8B5CF6; }
+    .feature-icon.red { background:rgba(239,68,68,0.1); color:var(--color-red); }
+    .feature-title { font-size:18px; font-weight:700; margin-bottom:10px; letter-spacing:-0.01em; }
+    .feature-desc { font-size:14px; color:var(--color-text-secondary); line-height:1.65; }
+
+    /* New badge for v1.01 features */
+    .feature-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      background: rgba(74,144,217,0.15); color: var(--color-primary);
+      font-size: 11px; font-weight: 600; margin-left: 8px;
+    }
+
+    /* ========================================
+       How It Works
+       ======================================== */
+    .how-it-works { padding: 120px 0; }
+    .hiw-header { text-align: center; margin-bottom: 72px; }
+    .hiw-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; position: relative; }
+    .hiw-steps::before { content:''; position:absolute; top:36px; left:calc(16.67% + 20px); right:calc(16.67% + 20px); height:2px; background:var(--color-border); z-index:0; }
+    .hiw-step { text-align: center; position: relative; z-index: 1; }
+    .hiw-step-num { width:72px; height:72px; border-radius:50%; background:var(--color-bg-secondary); border:2px solid var(--color-border); display:flex; align-items:center; justify-content:center; margin:0 auto 24px; font-size:28px; font-weight:800; color:var(--color-primary); transition:all var(--transition-base); }
+    .hiw-step:hover .hiw-step-num { background:var(--color-primary); color:white; border-color:var(--color-primary); box-shadow:0 8px 24px rgba(74,144,217,0.3); }
+    .hiw-step-title { font-size:20px; font-weight:700; margin-bottom:8px; letter-spacing:-0.01em; }
+    .hiw-step-desc { font-size:14px; color:var(--color-text-secondary); line-height:1.6; }
+
+    /* ========================================
+       Demo Section
+       ======================================== */
+    .demo { padding: 120px 0; background: var(--color-bg-secondary); }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+    .demo-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .demo-tab {
+      padding: 10px 20px; border-radius: 100px; font-size: 13px; font-weight: 600;
+      background: var(--color-bg-tertiary); color: var(--color-text-secondary);
+      transition: all var(--transition-fast); cursor: pointer; border: 1.5px solid transparent;
+    }
+    .demo-tab.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+    .demo-tab:hover:not(.active) { border-color: var(--color-primary); color: var(--color-primary); }
+
+    /* ========================================
+       Account Features Section (v1.01)
+       ======================================== */
+    .account { padding: 120px 0; }
+    .account-header { text-align: center; margin-bottom: 72px; }
+    .account-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+    .account-methods {
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 20px;
+    }
+    .login-provider-btn {
+      display: flex; align-items: center; gap: 8px; padding: 12px 20px;
+      border: 1.5px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-bg); color: var(--color-text);
+      font-size: 13px; font-weight: 600; transition: all var(--transition-fast);
+    }
+    .login-provider-btn:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+    /* ========================================
+       "My Page" Phone Demo
+       ======================================== */
+    .mypage { padding: 120px 0; background: var(--color-bg-secondary); }
+    .mypage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+
+    /* My Page screen styles */
+    .mypage-screen {
+      width: 100%; height: 100%; background: #1A1D28; position: relative;
+      display: flex; flex-direction: column;
+    }
+    .mypage-header {
+      padding: 20px 20px 12px; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .mypage-header-title { font-size: 14px; font-weight: 700; color: #F5F5F5; }
+    .mypage-profile {
+      display: flex; align-items: center; gap: 14px; padding: 24px 20px;
+      background: linear-gradient(135deg, rgba(74,144,217,0.2), rgba(76,175,80,0.1));
+      margin: 16px; border-radius: 16px; cursor: pointer;
+    }
+    .mypage-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: white; flex-shrink: 0;
+    }
+    .mypage-user-info { flex: 1; }
+    .mypage-username { font-size: 18px; font-weight: 700; color: #F5F5F5; }
+    .mypage-email { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+    .mypage-edit { font-size: 12px; color: var(--color-primary); }
+    .mypage-stats {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 12px;
+      padding: 0 16px; margin-bottom: 16px;
+    }
+    .mypage-stat {
+      background: #252837; border-radius: 12px; padding: 16px 10px; text-align: center;
+    }
+    .mypage-stat-icon { font-size: 22px; margin-bottom: 6px; }
+    .mypage-stat-val { font-size: 16px; font-weight: 700; color: #F5F5F5; }
+    .mypage-stat-label { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+    .mypage-section { padding: 0 16px; margin-bottom: 8px; }
+    .mypage-section-title { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 4px 8px; }
+    .mypage-menu-item {
+      display: flex; align-items: center; gap: 12px; padding: 14px 12px;
+      background: #252837; border-radius: 10px; margin-bottom: 6px;
+      font-size: 13px; color: #F5F5F5; cursor: pointer; transition: background var(--transition-fast);
+    }
+    .mypage-menu-item:hover { background: #2D3045; }
+    .mypage-menu-icon { font-size: 16px; width: 28px; text-align: center; }
+    .mypage-menu-arrow { margin-left: auto; color: rgba(255,255,255,0.3); }
+    .mypage-logout {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 14px; margin: 16px; background: rgba(239,68,68,0.1);
+      border-radius: 12px; font-size: 13px; color: var(--color-red);
+      cursor: pointer; transition: background var(--transition-fast);
+    }
+    .mypage-logout:hover { background: rgba(239,68,68,0.2); }
+    .mypage-sync-badge {
+      position: absolute; top: 18px; right: 18px;
+      display: flex; align-items: center; gap: 4px; padding: 4px 10px;
+      background: rgba(76,175,80,0.2); border-radius: 100px;
+      font-size: 9px; color: var(--color-green-light); z-index: 5;
+    }
+
+    /* ========================================
+       Login Modal
+       ======================================== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity var(--transition-base);
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--color-bg); border-radius: var(--radius-xl);
+      width: 420px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+      box-shadow: var(--shadow-xl); padding: 36px 32px;
+      position: relative; transform: translateY(20px);
+      transition: transform var(--transition-base);
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--color-bg-tertiary); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 18px; color: var(--color-text-muted);
+      transition: all var(--transition-fast);
+    }
+    .modal-close:hover { background: var(--color-border); color: var(--color-text); }
+
+    .modal-title {
+      font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+      text-align: center; margin-bottom: 8px; color: var(--color-text);
+    }
+    .modal-subtitle { font-size: 14px; color: var(--color-text-muted); text-align: center; margin-bottom: 28px; }
+
+    .modal-tabs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+      background: var(--color-bg-tertiary); border-radius: 10px;
+      padding: 4px; margin-bottom: 24px;
+    }
+    .modal-tab {
+      padding: 10px; text-align: center; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      color: var(--color-text-muted); transition: all var(--transition-fast);
+    }
+    .modal-tab.active { background: var(--color-bg); color: var(--color-text); box-shadow: var(--shadow-sm); }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 13px; font-weight: 600; color: var(--color-text); margin-bottom: 6px; display: block; }
+    .form-input {
+      width: 100%; padding: 14px 16px; border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md); font-size: 15px; background: var(--color-bg);
+      color: var(--color-text); transition: border-color var(--transition-fast);
+      font-family: inherit; outline: none;
+    }
+    .form-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(74,144,217,0.1); }
+    .form-input-row { display: flex; gap: 10px; }
+    .form-input-row .form-input { flex: 1; }
+
+    .btn-send-code {
+      padding: 14px 16px; background: var(--color-bg-tertiary);
+      border-radius: var(--radius-md); font-size: 13px; font-weight: 600;
+      color: var(--color-primary); white-space: nowrap; transition: all var(--transition-fast);
+    }
+    .btn-send-code:hover { background: var(--color-primary); color: white; }
+    .btn-send-code:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-full { width: 100%; padding: 14px; font-size: 15px; justify-content: center; }
+
+    .divider {
+      display: flex; align-items: center; gap: 16px;
+      margin: 24px 0; color: var(--color-text-muted); font-size: 12px;
+    }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--color-border); }
+
+    .social-logins { display: flex; gap: 12px; justify-content: center; }
+    .social-btn {
+      width: 56px; height: 56px; border-radius: 14px; border: 1.5px solid var(--color-border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; background: var(--color-bg); transition: all var(--transition-fast);
+    }
+    .social-btn:hover { border-color: var(--color-primary); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .modal-footer {
+      text-align: center; margin-top: 20px; font-size: 12px;
+      color: var(--color-text-muted); line-height: 1.8;
+    }
+    .modal-footer a { color: var(--color-primary); }
+
+    /* ========================================
+       Languages
+       ======================================== */
+    .languages { padding: 120px 0; }
+    .languages-header { text-align: center; margin-bottom: 48px; }
+    .lang-count { display: inline-flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
+    .lang-count-num { font-size: 72px; font-weight: 900; letter-spacing: -0.03em; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-green) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; }
+    .lang-count-plus { font-size: 32px; font-weight: 800; color: var(--color-primary); }
+    .lang-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; max-width: 900px; margin: 0 auto; }
+    .lang-item { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: var(--color-bg-secondary); border-radius: var(--radius-md); font-size: 14px; font-weight: 500; transition: all var(--transition-fast); }
+    .lang-item:hover { background: var(--color-primary); color: white; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .lang-item-flag { font-size: 20px; width: 28px; text-align: center; }
+
+    /* ========================================
+       CTA
+       ======================================== */
+    .cta { padding: 120px 0; background: var(--color-bg-secondary); }
+    .cta-card { background: linear-gradient(135deg, #1A1D28 0%, #252B3D 50%, #1A2836 100%); border-radius: var(--radius-xl); padding: 80px 60px; text-align: center; position: relative; overflow: hidden; }
+    .cta-card::before { content:''; position:absolute; top:-100px; right:-100px; width:400px; height:400px; background:radial-gradient(circle, rgba(74,144,217,0.15) 0%, transparent 70%); border-radius:50%; }
+    .cta-card::after { content:''; position:absolute; bottom:-100px; left:-100px; width:400px; height:400px; background:radial-gradient(circle, rgba(76,175,80,0.1) 0%, transparent 70%); border-radius:50%; }
+    .cta-content { position: relative; z-index: 1; }
+    .cta-title { font-size: clamp(32px,5vw,48px); font-weight: 800; color: white; letter-spacing: -0.02em; margin-bottom: 16px; }
+    .cta-desc { font-size: 18px; color: rgba(255,255,255,0.6); max-width: 500px; margin: 0 auto 36px; }
+    .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn-white { background: white; color: #1A1D28; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    .btn-ghost { border: 1.5px solid rgba(255,255,255,0.3); color: white; background: transparent; }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); }
+
+    /* ========================================
+       Footer
+       ======================================== */
+    .footer { padding: 60px 0 32px; border-top: 1px solid var(--color-border); }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+    .footer-brand-desc { font-size: 14px; color: var(--color-text-muted); margin-top: 16px; line-height: 1.6; max-width: 280px; }
+    .footer-col-title { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; color: var(--color-text); }
+    .footer-links { display: flex; flex-direction: column; gap: 12px; }
+    .footer-links a { font-size: 14px; color: var(--color-text-muted); transition: color var(--transition-fast); }
+    .footer-links a:hover { color: var(--color-primary); }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-muted); }
+
+    /* ========================================
+       Scroll Animation
+       ======================================== */
+    .animate-on-scroll { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease-out, transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+    .animate-on-scroll.visible { opacity: 1; transform: translateY(0); }
+
+    /* ========================================
+       Toast Notification
+       ======================================== */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(100px);
+      background: #1A1D28; color: #F5F5F5; padding: 14px 24px;
+      border-radius: 12px; font-size: 14px; font-weight: 600;
+      box-shadow: var(--shadow-xl); z-index: 3000;
+      transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-left: 3px solid var(--color-green); }
+    .toast.error { border-left: 3px solid var(--color-red); }
+
+    /* ========================================
+       Responsive
+       ======================================== */
+    @media (max-width: 1024px) {
+      .hero-grid, .demo-grid, .mypage-grid { grid-template-columns: 1fr; gap: 60px; }
+      .hero-visual, .demo-visual { order: -1; }
+      .phone-mockup { width: 260px; }
+      .phone-float { display: none; }
+      .features-grid { grid-template-columns: repeat(2,1fr); }
+      .account-grid { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .hiw-steps::before { display: none; }
+      .hiw-steps { grid-template-columns: 1fr; gap: 24px; }
+      .social-logins { flex-wrap: wrap; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding: 120px 0 60px; }
+      .hero-stats { gap: 24px; flex-wrap: wrap; }
+      .features-grid { grid-template-columns: 1fr; }
+      .cta-card { padding: 48px 24px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+      .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+      .section-title { font-size: 28px; }
+      .modal { width: 95vw; padding: 24px 20px; }
+      .lang-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================================================================ -->
+  <!-- NAVIGATION                                                       -->
+  <!-- ================================================================ -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-icon">🌐</div>
+        LiveTrans
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">功能</a></li>
+        <li><a href="#how-it-works">原理</a></li>
+        <li><a href="#account">账户</a></li>
+        <li><a href="#demo">演示</a></li>
+        <li><a href="#languages">语种</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="切换深色/浅色模式" id="themeToggle">🌙</button>
+        <button class="btn btn-outline btn-sm" onclick="openLoginModal()">登录</button>
+        <a href="#cta" class="btn btn-primary btn-sm">下载 App</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================================================================ -->
+  <!-- HERO                                                             -->
+  <!-- ================================================================ -->
+  <section class="hero">
+    <div class="hero-bg"></div><div class="hero-bg-2"></div>
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-content animate-on-scroll">
+          <div class="hero-badge"><span class="hero-badge-dot"></span> v1.01  ·  支持 50+ 语种 · 账户云同步</div>
+          <h1 class="hero-title">打开摄像头<br><span class="hero-title-highlight">即见即译</span>任何文字</h1>
+          <p class="hero-desc">LiveTrans 利用 AI 视觉识别技术，实时翻译摄像头中的外文内容。注册账号即可云端同步翻译记录，多设备漫游，换手机也不丢失。</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" onclick="openLoginModal()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              免费注册
+            </button>
+            <a href="#demo" class="btn btn-outline btn-lg">观看演示 →</a>
+          </div>
+          <div class="hero-stats">
+            <div><div class="hero-stat-value" style="font-size:28px;font-weight:800;color:var(--color-primary);">＜1秒</div><div class="hero-stat-label" style="font-size:13px;color:var(--color-text-muted);margin-top:4px;">端到端翻译延迟</div></div>
+            <div><div class="hero-stat-value" style="font-size:28px;font-weight:800;color:var(--color-primary);">50+</div><div class="hero-stat-label" style="font-size:13px;color:var(--color-text-muted);margin-top:4px;">支持语种</div></div>
+            <div><div class="hero-stat-value" style="font-size:28px;font-weight:800;color:var(--color-primary);">云同步</div><div class="hero-stat-label" style="font-size:13px;color:var(--color-text-muted);margin-top:4px;">多设备漫游</div></div>
+          </div>
+        </div>
+
+        <div class="hero-visual animate-on-scroll">
+          <div class="phone-mockup">
+            <div class="phone-float" style="top:12%;right:-50px;color:var(--color-green);animation:float-el 4s ease-in-out infinite;">🇯🇵→🇨🇳</div>
+            <div class="phone-float" style="bottom:30%;left:-40px;color:var(--color-primary);animation:float-el 4s ease-in-out 1.5s infinite;">☁️ 已同步</div>
+            <div class="phone-frame">
+              <div class="phone-screen">
+                <div class="phone-viewfinder" id="heroViewfinder">
+                  <div class="phone-status"><span class="phone-status-item">📶 5G</span><span class="phone-status-item">🔋 85%</span></div>
+                  <div class="phone-scene"><span class="phone-scene-text" id="heroSceneText">Menu</span></div>
+                  <div class="ocr-box" style="top:38%;left:22%;right:22%;height:10%;pointer-events:none;"></div>
+                  <div class="translation-card" style="top:50%;left:50%;transform:translateX(-50%);">
+                    <span style="color:#4CAF50;">→</span> <span id="heroTranslation">菜单</span>
+                    <div style="font-size:10px;color:#8B8B8B;font-weight:400;" id="heroLang">检测：英语</div>
+                  </div>
+                  <div class="phone-bottom">
+                    <div class="phone-lang-bar"><span>自动检测</span><div class="phone-lang-switch">⇄</div><span>简体中文</span></div>
+                    <div class="phone-actions">
+                      <div class="phone-btn">⏸</div>
+                      <div class="phone-btn-capture"></div>
+                      <div class="phone-btn">📋</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- FEATURES (including v1.01 account features)                      -->
+  <!-- ================================================================ -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="features-header animate-on-scroll">
+        <span class="section-label">核心功能</span>
+        <h2 class="section-title">为什么选择 LiveTrans？</h2>
+        <p class="section-subtitle" style="margin:0 auto;">v1.01 全新升级——支持账户注册与云端同步，翻译记录永不丢失。</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon green">⚡</div>
+          <h3 class="feature-title">实时 OCR 识别</h3>
+          <p class="feature-desc">摄像头对准文字 0.3 秒内完成识别，无需按快门，画面扫到哪里译到哪里。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon blue">📖</div>
+          <h3 class="feature-title">双语同屏显示</h3>
+          <p class="feature-desc">原文保留可见，译文以浮动卡片出现在下方，指示线连接——自然对照阅读。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon purple">📡</div>
+          <h3 class="feature-title">离线翻译引擎</h3>
+          <p class="feature-desc">下载离线包后无需网络也能使用，出境旅行、地下空间、飞机上照样翻译。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon orange">🌍</div>
+          <h3 class="feature-title">50+ 语种覆盖</h3>
+          <p class="feature-desc">从英语、日语到阿拉伯语、泰语，覆盖全球主流语言，支持双向互译。</p>
+        </div>
+        <!-- v1.01 New Features -->
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon blue">👤</div>
+          <h3 class="feature-title">一键注册登录<span class="feature-badge">NEW</span></h3>
+          <p class="feature-desc">手机号验证码即注册即登录，支持微信/Apple/Google 一键登录，无需记忆密码。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon green">☁️</div>
+          <h3 class="feature-title">云端数据同步<span class="feature-badge">NEW</span></h3>
+          <p class="feature-desc">翻译历史、收藏、设置自动同步。换手机无缝迁移，多设备间自由漫游。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon purple">🔒</div>
+          <h3 class="feature-title">账户安全管理<span class="feature-badge">NEW</span></h3>
+          <p class="feature-desc">设备管理、登录异常通知、数据 AES-256 加密。30 天冷静期注销机制。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon orange">👥</div>
+          <h3 class="feature-title">游客模式友好<span class="feature-badge">NEW</span></h3>
+          <p class="feature-desc">不强制注册即可使用全部翻译功能，渐进式引导，需要同步时才邀请登录。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- HOW IT WORKS                                                     -->
+  <!-- ================================================================ -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="hiw-header animate-on-scroll">
+        <span class="section-label">使用原理</span>
+        <h2 class="section-title">三步，轻松读懂世界</h2>
+      </div>
+      <div class="hiw-steps">
+        <div class="hiw-step animate-on-scroll">
+          <div class="hiw-step-num">1</div>
+          <h3 class="hiw-step-title">对准文字</h3>
+          <p class="hiw-step-desc">打开 App，将摄像头对准任何外文——菜单、路牌、说明书，无需拍照。</p>
+        </div>
+        <div class="hiw-step animate-on-scroll">
+          <div class="hiw-step-num">2</div>
+          <h3 class="hiw-step-title">AI 实时识别</h3>
+          <p class="hiw-step-desc">设备端 OCR 引擎毫秒级检测文字区域，自动判断语种并发送翻译请求。</p>
+        </div>
+        <div class="hiw-step animate-on-scroll">
+          <div class="hiw-step-num">3</div>
+          <h3 class="hiw-step-title">译文叠加呈现</h3>
+          <p class="hiw-step-desc">译文以浮动卡片出现在原文下方，双语同屏对照，即见即懂。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- ACCOUNT FEATURES (v1.01)                                         -->
+  <!-- ================================================================ -->
+  <section class="account" id="account">
+    <div class="container">
+      <div class="account-header animate-on-scroll">
+        <span class="section-label">v1.01 全新升级</span>
+        <h2 class="section-title">注册账号，解锁云端能力</h2>
+        <p class="section-subtitle" style="margin:0 auto;">先使用后注册，不强制登录。多端同步、历史备份、安全防护，一账号打通。</p>
+      </div>
+
+      <!-- Login Methods -->
+      <div style="text-align:center;margin-bottom:60px;" class="animate-on-scroll">
+        <h3 style="font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:-0.01em;">多种方式，一键登录</h3>
+        <p style="color:var(--color-text-muted);margin-bottom:32px;">PRD §4.7.2 — 手机号为主，第三方为辅，邮箱备选</p>
+        <div class="account-methods">
+          <button class="login-provider-btn" onclick="openLoginModal()">
+            <span style="font-size:20px;">📱</span> 手机号验证码
+          </button>
+          <button class="login-provider-btn" onclick="openLoginModal()">
+            <span style="font-size:20px;">💬</span> 微信登录
+          </button>
+          <button class="login-provider-btn" onclick="openLoginModal()">
+            <span style="font-size:20px;">🍎</span> Apple ID
+          </button>
+          <button class="login-provider-btn" onclick="openLoginModal()">
+            <span style="font-size:20px;">🔵</span> Google 登录
+          </button>
+          <button class="login-provider-btn" onclick="openLoginModal()">
+            <span style="font-size:20px;">📧</span> 邮箱注册
+          </button>
+        </div>
+      </div>
+
+      <!-- Account Feature Cards -->
+      <div class="account-grid">
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon green">☁️</div>
+          <h3 class="feature-title">5 类数据自动同步</h3>
+          <p class="feature-desc">翻译历史、收藏、离线包列表、应用设置、个人资料 —— 增量同步，流量友好。App 启动 + 后台切换 + 手动三种触发机制。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon blue">🛡️</div>
+          <h3 class="feature-title">企业级安全防护</h3>
+          <p class="feature-desc">JWT + Refresh Token 双令牌机制，AES-256 云端加密，bcrypt 密码哈希。异地登录即时通知，支持远程踢下线。</p>
+        </div>
+        <div class="feature-card animate-on-scroll">
+          <div class="feature-icon purple">📱</div>
+          <h3 class="feature-title">多设备无缝漫游</h3>
+          <p class="feature-desc">手机、平板间自由切换，翻译记录实时同步。登录设备管理面板，随时查看和控制所有活跃设备。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- DEMO / PHONE SIMULATOR WITH TABS                                 -->
+  <!-- ================================================================ -->
+  <section class="demo" id="demo">
+    <div class="container">
+      <div class="demo-grid">
+        <div class="animate-on-scroll">
+          <span class="section-label">产品演示</span>
+          <h2 class="section-title">三个核心界面<br>一览产品全貌</h2>
+          <p class="section-subtitle">PRD v1.01 完整覆盖取景器翻译、登录注册、个人中心三大场景。点击标签切换模拟画面。</p>
+          <div class="demo-tabs" id="demoTabs">
+            <button class="demo-tab active" data-demo="viewfinder">📷 取景器翻译</button>
+            <button class="demo-tab" data-demo="login">🔑 注册/登录</button>
+            <button class="demo-tab" data-demo="mypage">👤 我的页面</button>
+          </div>
+        </div>
+
+        <!-- Phone Simulator -->
+        <div class="demo-visual animate-on-scroll" style="height:650px;display:flex;align-items:center;justify-content:center;">
+          <div class="phone-mockup" id="demoPhoneContainer">
+            <div class="phone-frame">
+              <div class="phone-screen" id="demoPhoneScreen">
+                <!-- Content injected by JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- "MY PAGE" SHOWCASE                                               -->
+  <!-- ================================================================ -->
+  <section class="mypage" id="mypage-section">
+    <div class="container">
+      <div class="mypage-grid">
+        <div class="animate-on-scroll">
+          <span class="section-label">个人中心</span>
+          <h2 class="section-title">"我的"页面<br>一切尽在掌控</h2>
+          <p class="section-subtitle" style="margin-bottom:24px;">
+            PRD §4.7.5 精确定义的个人中心：同步状态一目了然、翻译数据清晰统计、账户安全便捷管理。
+            未登录时顶部展示"立即登录"引导卡片。
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="padding:16px;background:var(--color-bg);border-radius:12px;border:1px solid var(--color-border);">
+              <div style="font-weight:700;font-size:14px;">🔄 同步看板</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">翻译历史、收藏、设置自动同步</div>
+            </div>
+            <div style="padding:16px;background:var(--color-bg);border-radius:12px;border:1px solid var(--color-border);">
+              <div style="font-weight:700;font-size:14px;">📊 数据统计</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">翻译次数、语种偏好一目了然</div>
+            </div>
+            <div style="padding:16px;background:var(--color-bg);border-radius:12px;border:1px solid var(--color-border);">
+              <div style="font-weight:700;font-size:14px;">🔒 账户安全</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">设备管理、注销、隐私设置</div>
+            </div>
+            <div style="padding:16px;background:var(--color-bg);border-radius:12px;border:1px solid var(--color-border);">
+              <div style="font-weight:700;font-size:14px;">📤 数据导出</div>
+              <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">ZIP 导出全部翻译历史含图片</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Page Phone Mockup -->
+        <div class="animate-on-scroll" style="display:flex;justify-content:center;">
+          <div class="phone-mockup">
+            <div class="phone-frame">
+              <!-- Static My Page screen -->
+              <div style="width:100%;aspect-ratio:390/844;background:#1A1D28;position:relative;display:flex;flex-direction:column;border-radius:30px;overflow:hidden;">
+                <div class="mypage-sync-badge">🟢 已同步</div>
+                <div class="mypage-header"><div class="mypage-header-title">我的</div></div>
+                <div class="mypage-profile">
+                  <div class="mypage-avatar">👤</div>
+                  <div class="mypage-user-info">
+                    <div class="mypage-username">旅行者小王</div>
+                    <div class="mypage-email">user@livetrans.app</div>
+                  </div>
+                  <div class="mypage-edit">编辑 →</div>
+                </div>
+                <div class="mypage-stats">
+                  <div class="mypage-stat"><div class="mypage-stat-icon">🔄</div><div class="mypage-stat-val">128</div><div class="mypage-stat-label">已同步</div></div>
+                  <div class="mypage-stat"><div class="mypage-stat-icon">📥</div><div class="mypage-stat-val">3</div><div class="mypage-stat-label">离线包</div></div>
+                  <div class="mypage-stat"><div class="mypage-stat-icon">⭐</div><div class="mypage-stat-val">25</div><div class="mypage-stat-label">收藏</div></div>
+                </div>
+                <div class="mypage-section">
+                  <div class="mypage-section-title">翻译数据</div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">📋</span>翻译历史<span style="margin-left:auto;color:rgba(255,255,255,0.3);">128条</span><span class="mypage-menu-arrow">›</span></div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">⭐</span>我的收藏<span style="margin-left:auto;color:rgba(255,255,255,0.3);">25条</span><span class="mypage-menu-arrow">›</span></div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">📥</span>已下载离线包<span style="margin-left:auto;color:rgba(255,255,255,0.3);">3个语种</span><span class="mypage-menu-arrow">›</span></div>
+                </div>
+                <div class="mypage-section">
+                  <div class="mypage-section-title">设置</div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">⚙️</span>翻译引擎 / 语言 / 显示<span class="mypage-menu-arrow">›</span></div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">🔒</span>账户安全<span class="mypage-menu-arrow">›</span></div>
+                  <div class="mypage-menu-item"><span class="mypage-menu-icon">🛡️</span>隐私设置<span class="mypage-menu-arrow">›</span></div>
+                </div>
+                <div class="mypage-logout">🚪 退出登录</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- LANGUAGES                                                        -->
+  <!-- ================================================================ -->
+  <section class="languages" id="languages">
+    <div class="container">
+      <div class="languages-header animate-on-scroll">
+        <span class="section-label">语种覆盖</span>
+        <div class="lang-count"><span class="lang-count-num">50</span><span class="lang-count-plus">+</span></div>
+        <p class="section-subtitle" style="margin:0 auto;">首批支持 50 余种语言双向互译，持续扩展中</p>
+      </div>
+      <div class="lang-grid">
+        <div class="lang-item"><span class="lang-item-flag">🇬🇧</span> English</div>
+        <div class="lang-item"><span class="lang-item-flag">🇯🇵</span> 日本語</div>
+        <div class="lang-item"><span class="lang-item-flag">🇰🇷</span> 한국어</div>
+        <div class="lang-item"><span class="lang-item-flag">🇫🇷</span> Français</div>
+        <div class="lang-item"><span class="lang-item-flag">🇩🇪</span> Deutsch</div>
+        <div class="lang-item"><span class="lang-item-flag">🇪🇸</span> Español</div>
+        <div class="lang-item"><span class="lang-item-flag">🇮🇹</span> Italiano</div>
+        <div class="lang-item"><span class="lang-item-flag">🇵🇹</span> Português</div>
+        <div class="lang-item"><span class="lang-item-flag">🇷🇺</span> Русский</div>
+        <div class="lang-item"><span class="lang-item-flag">🇹🇭</span> ภาษาไทย</div>
+        <div class="lang-item"><span class="lang-item-flag">🇻🇳</span> Tiếng Việt</div>
+        <div class="lang-item"><span class="lang-item-flag">🇮🇩</span> Bahasa Indonesia</div>
+        <div class="lang-item"><span class="lang-item-flag">🇸🇦</span> العربية</div>
+        <div class="lang-item"><span class="lang-item-flag">🇮🇳</span> हिन्दी</div>
+        <div class="lang-item"><span class="lang-item-flag">🇳🇱</span> Nederlands</div>
+        <div class="lang-item"><span class="lang-item-flag">🇵🇱</span> Polski</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- CTA                                                              -->
+  <!-- ================================================================ -->
+  <section class="cta" id="cta">
+    <div class="container">
+      <div class="cta-card">
+        <div class="cta-content animate-on-scroll">
+          <h2 class="cta-title">准备好看懂世界了吗？</h2>
+          <p class="cta-desc">下载 LiveTrans，注册账号开启云端同步。打开摄像头，语言从此不再是障碍。</p>
+          <div class="cta-actions">
+            <button class="btn btn-white btn-lg" onclick="openLoginModal()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              免费注册 · 体验云同步
+            </button>
+            <button class="btn btn-ghost btn-lg" onclick="showToast('即将跳转到应用商店','success')">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09z"/></svg>
+              App Store
+            </button>
+            <button class="btn btn-ghost btn-lg" onclick="showToast('即将跳转到应用商店','success')">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 2.121l17.665 9.24a.75.75 0 0 1 0 1.338L3.609 21.879a.75.75 0 0 1-1.036-.917l2.493-9.002-2.493-9.002a.75.75 0 0 1 1.036-.917z"/></svg>
+              Google Play
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- FOOTER                                                           -->
+  <!-- ================================================================ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a href="#" class="nav-logo"><div class="nav-logo-icon">🌐</div>LiveTrans</a>
+          <p class="footer-brand-desc">消除现实世界中一切文字阅读障碍，让每个人都能用眼睛"读懂"任何语言。v1.01 全新支持账户云同步。</p>
+        </div>
+        <div>
+          <h4 class="footer-col-title">产品</h4>
+          <ul class="footer-links">
+            <li><a href="#features">功能介绍</a></li>
+            <li><a href="#account">账户系统</a></li>
+            <li><a href="#demo">产品演示</a></li>
+            <li><a href="#languages">支持语种</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">支持</h4>
+          <ul class="footer-links">
+            <li><a href="#">帮助中心</a></li>
+            <li><a href="#">常见问题</a></li>
+            <li><a href="#">隐私政策</a></li>
+            <li><a href="#">用户协议</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-col-title">关注我们</h4>
+          <ul class="footer-links">
+            <li><a href="#">Twitter / X</a></li>
+            <li><a href="#">Product Hunt</a></li>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="#">Blog</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>&copy; 2026 LiveTrans v1.01. All rights reserved.</span>
+        <span>Made with ❤️ for global citizens</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================================================================ -->
+  <!-- LOGIN / REGISTER MODAL                                           -->
+  <!-- ================================================================ -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeLoginModal()">✕</button>
+      <div class="modal-title">欢迎使用 LiveTrans</div>
+      <div class="modal-subtitle">注册后可云端同步翻译记录，多设备漫游</div>
+
+      <!-- Phone / Email Tab Switch -->
+      <div class="modal-tabs" id="modalTabs">
+        <button class="modal-tab active" data-mode="phone" onclick="switchModalTab('phone')">📱 手机号</button>
+        <button class="modal-tab" data-mode="email" onclick="switchModalTab('email')">📧 邮箱</button>
+      </div>
+
+      <!-- Phone Login Form -->
+      <div id="phoneForm">
+        <div class="form-group">
+          <label class="form-label">手机号码</label>
+          <div class="form-input-row">
+            <input type="tel" class="form-input" placeholder="请输入手机号" id="phoneInput" style="flex:1;">
+            <button class="btn-send-code" id="sendCodeBtn" onclick="sendVerificationCode()">获取验证码</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">验证码</label>
+          <input type="text" class="form-input" placeholder="请输入 6 位验证码" id="codeInput" maxlength="6">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="handleLogin('phone')">登录 / 注册</button>
+      </div>
+
+      <!-- Email Login Form -->
+      <div id="emailForm" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">邮箱地址</label>
+          <input type="email" class="form-input" placeholder="请输入邮箱" id="emailInput">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input type="password" class="form-input" placeholder="请输入密码（6-20位）" id="passwordInput">
+        </div>
+        <button class="btn btn-primary btn-full" onclick="handleLogin('email')">登录 / 注册</button>
+      </div>
+
+      <div class="divider">或使用第三方账号登录</div>
+      <div class="social-logins">
+        <button class="social-btn" onclick="handleSocialLogin('wechat')" title="微信登录">💬</button>
+        <button class="social-btn" onclick="handleSocialLogin('apple')" title="Apple ID">🍎</button>
+        <button class="social-btn" onclick="handleSocialLogin('google')" title="Google">🔵</button>
+      </div>
+
+      <div class="modal-footer">
+        登录即表示同意 <a href="#">用户协议</a> 和 <a href="#">隐私政策</a><br>
+        未注册手机号验证后自动创建账号
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ================================================================ -->
+  <!-- SCRIPTS                                                          -->
+  <!-- ================================================================ -->
+  <script>
+    // ========================================
+    // Theme Toggle
+    // ========================================
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('livetrans-theme', next);
+    }
+    (function() {
+      const saved = localStorage.getItem('livetrans-theme');
+      if (saved) { document.documentElement.setAttribute('data-theme', saved); document.getElementById('themeToggle').textContent = saved === 'dark' ? '☀️' : '🌙'; }
+      else if (window.matchMedia('(prefers-color-scheme: dark)').matches) { document.documentElement.setAttribute('data-theme', 'dark'); document.getElementById('themeToggle').textContent = '☀️'; }
+    })();
+
+    // ========================================
+    // Scroll Animation
+    // ========================================
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+
+    // ========================================
+    // Nav shadow on scroll
+    // ========================================
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('nav');
+      nav.style.boxShadow = window.scrollY > 10 ? '0 1px 3px rgba(0,0,0,0.08)' : 'none';
+    });
+
+    // ========================================
+    // Demo Tab Switcher
+    // ========================================
+    const demoScreen = document.getElementById('demoPhoneScreen');
+    const demoTabs = document.querySelectorAll('.demo-tab');
+
+    const demoContent = {
+      viewfinder: `
+        <div class="phone-viewfinder">
+          <div class="phone-status"><span class="phone-status-item">📶 5G</span><span class="phone-status-item">🔋 85%</span></div>
+          <div class="phone-scene"><span class="phone-scene-text" style="transition:all 0.4s;">Bonjour</span></div>
+          <div class="ocr-box" style="top:38%;left:22%;right:22%;height:10%;pointer-events:none;"></div>
+          <div class="translation-card" style="top:50%;left:50%;transform:translateX(-50%);">
+            <span style="color:#4CAF50;">→</span> 你好
+            <div style="font-size:10px;color:#8B8B8B;font-weight:400;">检测：法语</div>
+          </div>
+          <div class="phone-bottom">
+            <div class="phone-lang-bar"><span>自动检测</span><div class="phone-lang-switch">⇄</div><span>简体中文</span></div>
+            <div class="phone-actions">
+              <div class="phone-btn">⏸</div><div class="phone-btn-capture"></div><div class="phone-btn">📋</div>
+            </div>
+          </div>
+        </div>`,
+      login: `
+        <div style="width:100%;height:100%;background:#1A1D28;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;border-radius:30px;">
+          <div style="font-size:28px;margin-bottom:8px;">🌐</div>
+          <div style="font-size:20px;font-weight:800;color:#F5F5F5;margin-bottom:4px;">欢迎使用 LiveTrans</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:24px;">注册后可云端同步翻译记录</div>
+          <div style="width:100%;max-width:260px;display:flex;gap:8px;margin-bottom:12px;">
+            <input style="flex:1;padding:12px;border-radius:10px;border:1px solid #3A3D4A;background:#252837;color:white;font-size:13px;outline:none;" placeholder="请输入手机号">
+            <button style="padding:12px 14px;border-radius:10px;background:var(--color-primary);color:white;font-size:12px;font-weight:600;white-space:nowrap;">获取验证码</button>
+          </div>
+          <input style="width:100%;max-width:260px;padding:12px;border-radius:10px;border:1px solid #3A3D4A;background:#252837;color:white;font-size:13px;margin-bottom:16px;outline:none;" placeholder="请输入验证码">
+          <button style="width:100%;max-width:260px;padding:14px;border-radius:12px;background:var(--color-primary);color:white;font-size:14px;font-weight:700;">登录 / 注册</button>
+          <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:260px;margin:20px 0;color:rgba(255,255,255,0.3);font-size:11px;">
+            <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>其他方式<div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+          </div>
+          <div style="display:flex;gap:16px;">
+            <div style="width:48px;height:48px;border-radius:12px;border:1px solid #3A3D4A;display:flex;align-items:center;justify-content:center;font-size:22px;">💬</div>
+            <div style="width:48px;height:48px;border-radius:12px;border:1px solid #3A3D4A;display:flex;align-items:center;justify-content:center;font-size:22px;">🍎</div>
+            <div style="width:48px;height:48px;border-radius:12px;border:1px solid #3A3D4A;display:flex;align-items:center;justify-content:center;font-size:22px;">🔵</div>
+          </div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:16px;text-align:center;line-height:1.6;">登录即同意 用户协议 和 隐私政策<br>未注册手机号验证后自动创建账号</div>
+        </div>`,
+      mypage: `
+        <div style="width:100%;height:100%;background:#1A1D28;position:relative;display:flex;flex-direction:column;border-radius:30px;">
+          <div class="mypage-sync-badge">🟢 已同步</div>
+          <div class="mypage-header"><div class="mypage-header-title">我的</div></div>
+          <div class="mypage-profile">
+            <div class="mypage-avatar">👤</div>
+            <div class="mypage-user-info"><div class="mypage-username">旅行者小王</div><div class="mypage-email">user@livetrans.app</div></div>
+            <div class="mypage-edit">编辑 →</div>
+          </div>
+          <div class="mypage-stats">
+            <div class="mypage-stat"><div class="mypage-stat-icon">🔄</div><div class="mypage-stat-val">128</div><div class="mypage-stat-label">已同步</div></div>
+            <div class="mypage-stat"><div class="mypage-stat-icon">📥</div><div class="mypage-stat-val">3</div><div class="mypage-stat-label">离线包</div></div>
+            <div class="mypage-stat"><div class="mypage-stat-icon">⭐</div><div class="mypage-stat-val">25</div><div class="mypage-stat-label">收藏</div></div>
+          </div>
+          <div class="mypage-section">
+            <div class="mypage-section-title">翻译数据</div>
+            <div class="mypage-menu-item"><span class="mypage-menu-icon">📋</span>翻译历史<span style="margin-left:auto;color:rgba(255,255,255,0.3);">128条</span><span class="mypage-menu-arrow">›</span></div>
+            <div class="mypage-menu-item"><span class="mypage-menu-icon">⭐</span>我的收藏<span style="margin-left:auto;color:rgba(255,255,255,0.3);">25条</span><span class="mypage-menu-arrow">›</span></div>
+            <div class="mypage-menu-item"><span class="mypage-menu-icon">📥</span>已下载离线包<span style="margin-left:auto;color:rgba(255,255,255,0.3);">3个语种</span><span class="mypage-menu-arrow">›</span></div>
+          </div>
+          <div class="mypage-section">
+            <div class="mypage-section-title">设置</div>
+            <div class="mypage-menu-item"><span class="mypage-menu-icon">🔒</span>账户安全<span class="mypage-menu-arrow">›</span></div>
+            <div class="mypage-menu-item"><span class="mypage-menu-icon">🛡️</span>隐私设置<span class="mypage-menu-arrow">›</span></div>
+          </div>
+          <div class="mypage-logout">🚪 退出登录</div>
+        </div>`
+    };
+
+    function renderDemo(demoType) {
+      demoScreen.innerHTML = demoContent[demoType];
+    }
+
+    demoTabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        demoTabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        renderDemo(this.dataset.demo);
+      });
+    });
+
+    // Initial render
+    renderDemo('viewfinder');
+
+    // ========================================
+    // Login Modal
+    // ========================================
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.getElementById('loginModal').addEventListener('click', function(e) {
+      if (e.target === this) closeLoginModal();
+    });
+
+    function switchModalTab(mode) {
+      document.querySelectorAll('#modalTabs .modal-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+      document.getElementById('phoneForm').style.display = mode === 'phone' ? 'block' : 'none';
+      document.getElementById('emailForm').style.display = mode === 'email' ? 'block' : 'none';
+    }
+
+    // Verification code countdown
+    let codeTimer = null;
+    let countdown = 0;
+    function sendVerificationCode() {
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) { showToast('请先输入手机号码', 'error'); return; }
+      if (countdown > 0) return;
+      countdown = 60;
+      const btn = document.getElementById('sendCodeBtn');
+      btn.disabled = true;
+      btn.textContent = `${countdown}s 后重发`;
+      showToast('验证码已发送', 'success');
+      codeTimer = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) { clearInterval(codeTimer); btn.disabled = false; btn.textContent = '获取验证码'; }
+        else { btn.textContent = `${countdown}s 后重发`; }
+      }, 1000);
+    }
+
+    function handleLogin(method) {
+      if (method === 'phone') {
+        const phone = document.getElementById('phoneInput').value.trim();
+        const code = document.getElementById('codeInput').value.trim();
+        if (!phone) { showToast('请输入手机号码', 'error'); return; }
+        if (!code || code.length < 4) { showToast('请输入验证码', 'error'); return; }
+      } else {
+        const email = document.getElementById('emailInput').value.trim();
+        const pw = document.getElementById('passwordInput').value.trim();
+        if (!email) { showToast('请输入邮箱地址', 'error'); return; }
+        if (!pw || pw.length < 6) { showToast('密码至少 6 位', 'error'); return; }
+      }
+      showToast('登录成功！翻译记录已开启云端同步', 'success');
+      setTimeout(closeLoginModal, 1200);
+    }
+
+    function handleSocialLogin(provider) {
+      const names = { wechat: '微信', apple: 'Apple ID', google: 'Google' };
+      showToast(`正在跳转${names[provider]}授权...`, 'success');
+      setTimeout(closeLoginModal, 1200);
+    }
+
+    // ========================================
+    // Toast
+    // ========================================
+    function showToast(msg, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast ' + type + ' show';
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => { toast.classList.remove('show'); }, 2500);
+    }
+
+    // ========================================
+    // Hero scene auto-rotate
+    // ========================================
+    const heroScenes = [
+      { text: 'Menu', translation: '菜单', lang: '检测：英语' },
+      { text: 'ラーメン', translation: '拉面', lang: '检测：日语' },
+      { text: 'Sortie', translation: '出口', lang: '检测：法语' },
+    ];
+    let heroIdx = 0;
+    setInterval(() => {
+      heroIdx = (heroIdx + 1) % heroScenes.length;
+      const s = heroScenes[heroIdx];
+      document.getElementById('heroSceneText').textContent = s.text;
+      document.getElementById('heroTranslation').textContent = s.translation;
+      document.getElementById('heroLang').textContent = s.lang;
+    }, 3500);
+
+    // ========================================
+    // Keyboard: ESC to close modal
+    // ========================================
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLoginModal();
+    });
+  </script>
+</body>
+</html>

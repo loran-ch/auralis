@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>LiveTrans - 引擎设置</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Inter:wght@400;500;600&family=Public+Sans:wght@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/shared.css">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="../js/shared-config.js"></script>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen">
+
+<main class="max-w-lg mx-auto px-6 py-16">
+  <div class="flex items-center gap-4 mb-12">
+    <a href="viewfinder.html" class="p-2 -ml-2 text-primary active:opacity-70 transition-opacity">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <h1 class="font-display text-2xl font-bold text-on-surface">引擎设置</h1>
+  </div>
+
+  <!-- 翻译引擎 -->
+  <section class="space-y-6">
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">翻译引擎</h3>
+      <div class="glass-panel rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+        <button class="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-container-low transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary">smart_toy</span>
+          </div>
+          <div class="flex-1 text-left">
+            <p class="font-medium text-on-surface">默认引擎</p>
+            <p class="text-xs text-secondary">通用翻译，覆盖50+语种</p>
+          </div>
+          <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL'1;">check_circle</span>
+        </button>
+        <button class="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-container-low transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-brand-green/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-brand-green">translate</span>
+          </div>
+          <div class="flex-1 text-left">
+            <p class="font-medium text-on-surface">DeepL 引擎</p>
+            <p class="text-xs text-secondary">欧洲语种翻译质量更高</p>
+          </div>
+          <span class="material-symbols-outlined text-outline-variant/30">circle</span>
+        </button>
+        <button class="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-container-low transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-brand-orange/10 flex items-center justify-center">
+            <span class="material-symbols-outlined text-brand-orange">book_4</span>
+          </div>
+          <div class="flex-1 text-left">
+            <p class="font-medium text-on-surface">术语库引擎</p>
+            <p class="text-xs text-secondary">支持自定义专业术语表</p>
+          </div>
+          <span class="material-symbols-outlined text-outline-variant/30">circle</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 离线包 -->
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">离线语言包</h3>
+      <div class="glass-panel rounded-xl p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-on-surface">日语 (日本語)</p>
+            <p class="text-xs text-secondary">已下载 · 62MB</p>
+          </div>
+          <span class="material-symbols-outlined text-brand-green" style="font-variation-settings:'FILL'1;">check_circle</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-on-surface">英语 (English)</p>
+            <p class="text-xs text-secondary">已下载 · 48MB</p>
+          </div>
+          <span class="material-symbols-outlined text-brand-green" style="font-variation-settings:'FILL'1;">check_circle</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-on-surface">韩语 (한국어)</p>
+            <p class="text-xs text-secondary">已下载 · 55MB</p>
+          </div>
+          <span class="material-symbols-outlined text-brand-green" style="font-variation-settings:'FILL'1;">check_circle</span>
+        </div>
+        <button class="w-full py-3 border border-dashed border-outline-variant rounded-lg text-sm text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-2">
+          <span class="material-symbols-outlined text-lg">add</span>下载更多语言包
+        </button>
+      </div>
+    </div>
+
+    <!-- 高级设置 -->
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">高级设置</h3>
+      <div class="glass-panel rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+        <div class="flex items-center justify-between px-5 py-4">
+          <span class="text-sm text-on-surface">自动检测刷新频率</span>
+          <select class="text-sm text-primary bg-transparent border-none focus:ring-0 font-medium">
+            <option>中 (300ms)</option>
+            <option>高 (200ms)</option>
+            <option>低 (500ms)</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between px-5 py-4">
+          <span class="text-sm text-on-surface">译文字号</span>
+          <select class="text-sm text-primary bg-transparent border-none focus:ring-0 font-medium">
+            <option>中</option>
+            <option>小</option>
+            <option>大</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between px-5 py-4">
+          <span class="text-sm text-on-surface">暗光自动闪光灯</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input checked type="checkbox" class="sr-only peer">
+            <div class="w-10 h-5 bg-surface-container-highest rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

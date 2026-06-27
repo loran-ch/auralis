@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>LiveTrans - 选择语言</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&family=Inter:wght@400;500;600&family=Public+Sans:wght@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/shared.css">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="../js/shared-config.js"></script>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen">
+
+<main class="max-w-lg mx-auto px-6 py-16">
+  <div class="flex items-center gap-4 mb-12">
+    <a href="viewfinder.html" class="p-2 -ml-2 text-primary active:opacity-70 transition-opacity">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </a>
+    <h1 class="font-display text-2xl font-bold text-on-surface">选择语言</h1>
+  </div>
+
+  <!-- 当前选择 -->
+  <div class="glass-panel rounded-xl p-5 mb-8 flex items-center justify-between">
+    <div>
+      <p class="text-[11px] text-secondary uppercase tracking-widest">当前翻译方向</p>
+      <p class="text-base font-semibold text-on-surface mt-1">自动检测 → 简体中文</p>
+    </div>
+    <span class="material-symbols-outlined text-primary text-2xl">swap_horiz</span>
+  </div>
+
+  <!-- 语言列表 -->
+  <div class="space-y-6">
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">常用语言</h3>
+      <div class="space-y-1">
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-colors">
+          <span class="text-xl">🇨🇳</span>
+          <span class="flex-1 text-left font-medium">简体中文</span>
+          <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL'1;">check</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇬🇧</span><span class="flex-1 text-left font-medium">English</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇯🇵</span><span class="flex-1 text-left font-medium">日本語</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇰🇷</span><span class="flex-1 text-left font-medium">한국어</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">欧洲语言</h3>
+      <div class="space-y-1">
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇫🇷</span><span class="flex-1 text-left font-medium">Français</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇩🇪</span><span class="flex-1 text-left font-medium">Deutsch</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇪🇸</span><span class="flex-1 text-left font-medium">Español</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇮🇹</span><span class="flex-1 text-left font-medium">Italiano</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇵🇹</span><span class="flex-1 text-left font-medium">Português</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇷🇺</span><span class="flex-1 text-left font-medium">Русский</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="label-text text-xs uppercase tracking-widest text-secondary mb-3">亚洲语言</h3>
+      <div class="space-y-1">
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇹🇭</span><span class="flex-1 text-left font-medium">ภาษาไทย</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇻🇳</span><span class="flex-1 text-left font-medium">Tiếng Việt</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇮🇩</span><span class="flex-1 text-left font-medium">Bahasa Indonesia</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇸🇦</span><span class="flex-1 text-left font-medium">العربية</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-surface-container transition-colors">
+          <span class="text-xl">🇮🇳</span><span class="flex-1 text-left font-medium">हिन्दी</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>

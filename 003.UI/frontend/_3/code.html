@@ -1,0 +1,274 @@
+<!DOCTYPE html><html class="light" lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans - 翻译历史</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&amp;family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@300;400;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#1b1c1d",
+                    "surface-variant": "#e3e2e3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efedee",
+                    "inverse-surface": "#303031",
+                    "on-error-container": "#93000a",
+                    "outline": "#737784",
+                    "on-tertiary-fixed-variant": "#524600",
+                    "on-background": "#1b1c1d",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary": "#6d5e00",
+                    "primary": "#094cb2",
+                    "on-secondary-fixed-variant": "#42474b",
+                    "surface-bright": "#faf9fa",
+                    "on-secondary-container": "#606569",
+                    "surface-tint": "#2259bf",
+                    "tertiary-fixed-dim": "#dcc661",
+                    "background": "#faf9fa",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#bfab49",
+                    "on-primary-container": "#e7ebff",
+                    "on-primary-fixed": "#001946",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#e3e2e3",
+                    "on-primary-fixed-variant": "#00419d",
+                    "surface-container-low": "#f5f3f4",
+                    "tertiary-fixed": "#f9e37a",
+                    "secondary-fixed": "#dfe3e8",
+                    "secondary-fixed-dim": "#c2c7cc",
+                    "primary-fixed": "#d9e2ff",
+                    "outline-variant": "#c3c6d5",
+                    "on-surface-variant": "#434653",
+                    "secondary": "#5a5f63",
+                    "inverse-primary": "#b1c5ff",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed": "#171c20",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "on-tertiary-container": "#4a3f00",
+                    "primary-container": "#3366cc",
+                    "surface": "#faf9fa",
+                    "surface-dim": "#dbdadb",
+                    "surface-container-high": "#e9e8e9",
+                    "inverse-on-surface": "#f2f0f1",
+                    "secondary-container": "#dfe3e8",
+                    "on-tertiary-fixed": "#211b00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif SC", "serif"],
+                    "display": ["Noto Serif SC", "serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Public Sans", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .active-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            background-color: #faf9fa;
+            font-family: 'Inter', sans-serif;
+            color: #1b1c1d;
+            -webkit-font-smoothing: antialiased;
+        }
+        .serif-text { font-family: 'Noto Serif SC', serif; }
+        .label-text { font-family: 'Public Sans', sans-serif; }
+        
+        /* Custom scrollbar for lean editorial feel */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e3e2e3; border-radius: 10px; }
+
+        .glass-header {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .history-card {
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .history-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-surface-bright/80 backdrop-blur-xl shadow-sm opacity-95">
+<div class="flex items-center gap-4">
+<a class="text-primary active:opacity-70 transition-opacity flex items-center gap-4" href="{{DATA:SCREEN:SCREEN_14}}">
+<span class="material-symbols-outlined">menu</span>
+<h1 class="font-headline text-2xl font-bold text-primary tracking-tight">LiveTrans</h1>
+</a>
+</div>
+<button class="text-primary active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined">translate</span>
+</button>
+</header>
+<main class="pt-24 px-6 max-w-3xl mx-auto">
+<!-- Page Title & Header Section -->
+<section class="mb-8">
+<h2 class="serif-text text-4xl font-bold text-on-surface mb-2">翻译历史</h2>
+<p class="label-text text-sm text-on-surface-variant tracking-wide opacity-70">ARCHIVAL TRANSLATION RECORDS</p>
+</section>
+<!-- Search Bar -->
+<section class="mb-10">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-12 pr-4 py-4 bg-white border-none rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-outline/60 transition-all" placeholder="搜索历史翻译内容..." type="text">
+</div>
+</section>
+<!-- Timeline / List -->
+<div class="space-y-12">
+<!-- Date Group -->
+<div class="relative">
+<div class="flex items-center gap-4 mb-6">
+<span class="label-text text-xs font-bold tracking-widest text-tertiary uppercase">今天</span>
+<div class="h-[1px] flex-grow bg-surface-variant"></div>
+</div>
+<div class="space-y-1">
+<!-- History Item 1 -->
+<a class="history-card flex gap-5 p-4 rounded-xl bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer" href="{{DATA:SCREEN:SCREEN_21}}">
+<div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="Japanese restaurant menu" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDczxVBnMXDyNxqhKU6PHy3Bwboe0MbTY_s8i_gFbtHYg7pCeHqFkmx6BNGS7DW3t6AZjWF80SqLEsZNXcaFKIHur94RM-r-lC80hC6jx9pd7iR9sxP7xcFg4apZ6lWFOzInIYB81CNvsJxoX7vCjKcRjXRAYVLqO7z0rKCDkCyZH_0P6LaiNGeS6OFvX9GVfAz3YMugY7t5uKmI4mfmAVu439ElALaSuFnBea3PbKuZNg_4H7euG0BSqC7f33gZdo1WKOGe295KA">
+</div>
+<div class="flex flex-col justify-between flex-grow min-w-0">
+<div>
+<div class="flex justify-between items-start mb-1">
+<span class="label-text text-[10px] font-bold text-outline uppercase tracking-tighter">日本语 → 中文</span>
+<span class="label-text text-[10px] text-outline">14:20</span>
+</div>
+<p class="text-sm font-medium text-on-surface truncate">本日の特選：季節の鮮魚の握り盛り合わせ...</p>
+<p class="serif-text text-lg text-primary leading-tight mt-1">今日特选：季节鲜鱼握寿司拼盘</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-outline/40">chevron_right</span>
+</div>
+</a>
+<!-- History Item 2 -->
+<a class="history-card flex gap-5 p-4 rounded-xl bg-transparent hover:bg-surface-container transition-all cursor-pointer" href="{{DATA:SCREEN:SCREEN_21}}">
+<div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="Tokyo street sign" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXbZo5_4236Ba_id7BCiM5czJCaH3kYvTSIQiUXggO724GeuCLv-Z_FI3PlxwnKwLtgdOfV-XQAIexpdy3aeRAr-nOPGzH8poN_SgK_oDE_k8ppLhGjls6T-WKnhgyDZcy5I2vv6xhcsYCKAsazlHMLqX-wuRAfa84mm8pn0h4BKggwRQ0G2gpRMQXnc8tvIiIHxLz-4ON6eqcOR1yJUHuvBlO9b-JWPBOD52cudJ_VeNGgJL0Ynf_szssc22v2NC0cNT-Fhi7Zw">
+</div>
+<div class="flex flex-col justify-between flex-grow min-w-0">
+<div>
+<div class="flex justify-between items-start mb-1">
+<span class="label-text text-[10px] font-bold text-outline uppercase tracking-tighter">日本语 → 中文</span>
+<span class="label-text text-[10px] text-outline">10:05</span>
+</div>
+<p class="text-sm font-medium text-on-surface truncate">車両進入禁止。歩行者専用道路。</p>
+<p class="serif-text text-lg text-primary leading-tight mt-1">车辆禁止进入。行人专用通道。</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-outline/40">chevron_right</span>
+</div>
+</a>
+</div>
+</div>
+<!-- Date Group -->
+<div class="relative">
+<div class="flex items-center gap-4 mb-6">
+<span class="label-text text-xs font-bold tracking-widest text-outline uppercase">昨日</span>
+<div class="h-[1px] flex-grow bg-surface-variant/50"></div>
+</div>
+<div class="space-y-1">
+<!-- History Item 3 -->
+<a class="history-card flex gap-5 p-4 rounded-xl bg-transparent hover:bg-surface-container transition-all cursor-pointer" href="{{DATA:SCREEN:SCREEN_21}}">
+<div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="Gallery plaque" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFip0HqvvT3B7Eh1u22JeOenhGPXJfWXFuYFVdij19-v6S0WUe6XjOaT1sIJaXHTgy_MF1eAw5JFZJIMLaQg26yLG8f5y4EIH5v1EncQcUXSF3Cx-YbVVxDXNZWwe5hQAnbv3xjR5ZJQRg4LvW_2cLQxk9NoQvMGXXCiRw-16aczuKXlERckXsgoZcsfOIcItjbpxnwLDqqV7WCtFB97yV6NKyvREZZ4ZIUqx-PiADoKK57AZ6BceMLSSA0BImGEACePyqFc2c2g">
+</div>
+<div class="flex flex-col justify-between flex-grow min-w-0">
+<div>
+<div class="flex justify-between items-start mb-1">
+<span class="label-text text-[10px] font-bold text-outline uppercase tracking-tighter">英语 → 中文</span>
+<span class="label-text text-[10px] text-outline">昨天 18:45</span>
+</div>
+<p class="text-sm font-medium text-on-surface truncate">The collection features works from the late Edo period...</p>
+<p class="serif-text text-lg text-primary leading-tight mt-1">该藏品收录了江户晚期的作品...</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-outline/40">chevron_right</span>
+</div>
+</a>
+<!-- History Item 4 -->
+<a class="history-card flex gap-5 p-4 rounded-xl bg-transparent hover:bg-surface-container transition-all cursor-pointer" href="{{DATA:SCREEN:SCREEN_21}}">
+<div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="Wine label" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEZxP2l8ERETD1pujA0zJslWZFjB3s3PIMPIgrRaGSS4qE1_3GgOz69w2CGGOJQQsxo0V9XCm1_5qHpYpBqZQEay6BKQ84u2xEV1u3Z-2B0TcHsy7U2Zbv7alTLfenINURfKbhklVxrvnhLa5qWtWgxOoEzOwzH7cGqv9wt3k1Kmrlj90vXnnx9WewmvWM6B_dbZr5I1JZhj8qI-KBORPMIeHGzd8hQDdACphUhoznPLULHKm9NchbHp9NE31_HOQ8RuKNR-XRmw">
+</div>
+<div class="flex flex-col justify-between flex-grow min-w-0">
+<div>
+<div class="flex justify-between items-start mb-1">
+<span class="label-text text-[10px] font-bold text-outline uppercase tracking-tighter">法语 → 中文</span>
+<span class="label-text text-[10px] text-outline">昨天 12:30</span>
+</div>
+<p class="text-sm font-medium text-on-surface truncate">Mis en bouteille au château. Grand Vin de Bordeaux.</p>
+<p class="serif-text text-lg text-primary leading-tight mt-1">酒庄装瓶。波尔多优质葡萄酒。</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-outline/40">chevron_right</span>
+</div>
+</a>
+</div>
+</div>
+</div>
+<!-- Empty State Hint -->
+<div class="mt-20 text-center pb-12">
+<span class="material-symbols-outlined text-surface-variant text-4xl mb-4">folder_open</span>
+<p class="label-text text-xs text-outline tracking-widest uppercase">已加载全部历史记录</p>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.04)] rounded-t-xl">
+<!-- Translate -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-60 hover:opacity-100 transition-opacity" href="{{DATA:SCREEN:SCREEN_27}}">
+<span class="material-symbols-outlined" data-icon="camera">camera</span>
+<span class="font-label text-xs uppercase tracking-widest mt-1">翻译</span>
+</a>
+<!-- History (ACTIVE) -->
+<a class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary font-bold scale-110 transition-transform" href="{{DATA:SCREEN:SCREEN_19}}">
+<span class="material-symbols-outlined active-icon" data-icon="history">history</span>
+<span class="font-label text-xs uppercase tracking-widest mt-1">历史</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline opacity-60 hover:opacity-100 transition-opacity" href="{{DATA:SCREEN:SCREEN_14}}">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label text-xs uppercase tracking-widest mt-1">我的</span>
+</a>
+</nav>
+<script>
+        const searchInput = document.querySelector('input');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.history-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body></html>

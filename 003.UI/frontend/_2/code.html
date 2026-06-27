@@ -1,0 +1,236 @@
+<!DOCTYPE html><html class="light" lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans - 实时翻译取景器</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#094cb2",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed": "#f9e37a",
+                    "primary-container": "#3366cc",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "on-surface": "#1b1c1d",
+                    "secondary": "#5a5f63",
+                    "on-surface-variant": "#434653",
+                    "on-primary-fixed-variant": "#00419d",
+                    "surface-bright": "#faf9fa",
+                    "surface-variant": "#e3e2e3",
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#303031",
+                    "tertiary": "#6d5e00",
+                    "on-tertiary-fixed": "#211b00",
+                    "on-secondary-container": "#606569",
+                    "primary-fixed": "#d9e2ff",
+                    "outline": "#737784",
+                    "surface-container-low": "#f5f3f4",
+                    "surface": "#faf9fa",
+                    "inverse-on-surface": "#f2f0f1",
+                    "on-secondary-fixed-variant": "#42474b",
+                    "tertiary-fixed-dim": "#dcc661",
+                    "on-tertiary-fixed-variant": "#524600",
+                    "surface-dim": "#dbdadb",
+                    "secondary-fixed-dim": "#c2c7cc",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#b1c5ff",
+                    "surface-container-high": "#e9e8e9",
+                    "surface-container-highest": "#e3e2e3",
+                    "secondary-fixed": "#dfe3e8",
+                    "on-secondary-fixed": "#171c20",
+                    "on-primary-container": "#e7ebff",
+                    "surface-tint": "#2259bf",
+                    "background": "#faf9fa",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#dfe3e8",
+                    "tertiary-container": "#bfab49",
+                    "on-background": "#1b1c1d",
+                    "surface-container": "#efedee",
+                    "on-primary-fixed": "#001946",
+                    "outline-variant": "#c3c6d5",
+                    "on-tertiary-container": "#4a3f00",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "action-bar-height": "5rem",
+                    "viewfinder-margin": "1rem",
+                    "safe-area-top": "4rem",
+                    "card-padding": "1.25rem",
+                    "gutter": "1rem"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "display": ["Noto Serif"],
+                    "body": ["Inter"],
+                    "label": ["Public Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .camera-background {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        .breathing-border {
+            animation: breathe 1500ms infinite ease-in-out;
+        }
+        @keyframes breathe {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .shutter-glow {
+            box-shadow: 0 0 20px rgba(9, 76, 178, 0.3);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body overflow-hidden h-screen select-none">
+<!-- Level 0: Viewfinder (Simulated) -->
+<div class="camera-background bg-[#F0F2F5]"></div>
+<!-- Level 3: Fixed Chrome - Top AppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-gutter h-safe-area-top bg-white/70 backdrop-blur-md border-b border-outline-variant/30">
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-all duration-200">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="flash_on">flash_on</span>
+</button>
+</div>
+<div class="flex items-center gap-2 bg-white/50 px-4 py-1.5 rounded-full border border-outline-variant/30 cursor-pointer" onclick="window.location.href='{{DATA:SCREEN:SCREEN_13}}'">
+<span class="font-label text-[10px] text-on-surface-variant uppercase tracking-widest">引擎</span>
+<span class="font-label text-sm text-primary">默认引擎</span>
+<span class="material-symbols-outlined text-sm text-primary" data-icon="expand_more">expand_more</span>
+</div>
+<div class="flex items-center gap-3">
+<a class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-all duration-200" href="{{DATA:SCREEN:SCREEN_14}}">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="account_circle">account_circle</span>
+</a>
+</div>
+</header>
+<!-- Synced Toast -->
+<div class="fixed top-[5.5rem] right-4 z-[55] animate-in fade-in slide-in-from-top-4 duration-500">
+<div class="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/20 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-primary text-[16px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label text-[11px] text-on-surface uppercase tracking-wider">已同步</span>
+</div>
+</div>
+<!-- Level 1 & 2: AR Layers -->
+<main class="relative h-full w-full flex items-center justify-center pt-safe-area-top pb-[12rem] px-gutter z-10">
+<div class="relative w-full max-w-md flex flex-col items-center">
+<!-- Detection Box -->
+<div class="relative">
+<div class="w-48 h-12 border-2 border-primary rounded-lg breathing-border flex items-center justify-center shadow-sm">
+</div>
+<!-- Connector Line -->
+<div class="absolute left-1/2 -bottom-4 w-[1px] h-4 bg-primary"></div>
+<!-- Translation Card -->
+<div class="absolute left-1/2 -translate-x-1/2 top-16 w-max min-w-[220px] glass-panel p-5 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] animate-in zoom-in-95 duration-200 shadow-xl">
+<div class="flex flex-col gap-1">
+<div class="flex items-center justify-between mb-1.5">
+<span class="font-label text-[11px] text-primary/70 uppercase tracking-widest">已检测 • 法语</span>
+<span class="material-symbols-outlined text-sm text-on-surface-variant hover:text-primary cursor-pointer transition-colors" data-icon="volume_up">volume_up</span>
+</div>
+<h2 class="font-headline text-2xl text-on-surface border-b border-primary/10 pb-2 mb-2">蜗牛 <span class="text-lg opacity-70">(法式焗螺)</span></h2>
+<p class="font-body text-sm text-on-surface-variant italic">Escargots (法式焗螺)</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Language Bar -->
+<nav class="fixed left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-sm bottom-[11rem]">
+<div class="glass-panel rounded-full px-6 py-3.5 flex items-center justify-between shadow-lg">
+<button class="flex items-center gap-2 text-primary font-label text-sm uppercase tracking-wide">
+            法语
+            <span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="swap_horiz">swap_horiz</span>
+</div>
+<button class="flex items-center gap-2 text-primary font-label text-sm uppercase tracking-wide">
+            简体中文
+            <span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</nav>
+<!-- Action Bar Area (Middle layer before Global Nav) -->
+<footer class="fixed w-full z-40 h-[6rem] flex justify-around items-center px-gutter pb-safe bottom-0 bg-white/70 backdrop-blur-md">
+<!-- Freeze -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-4 hover:bg-black/5 rounded-full transition-all duration-150 active:scale-95" id="freeze-btn">
+<span class="material-symbols-outlined text-2xl" data-icon="ac_unit">ac_unit</span>
+<span class="font-label text-[10px] mt-1 uppercase tracking-wider">冻结</span>
+</button>
+<!-- Capture Button -->
+<div class="relative flex items-center justify-center">
+<div class="absolute w-20 h-20 rounded-full border border-primary/20 animate-pulse"></div>
+<button class="relative w-16 h-16 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-xl shutter-glow transition-all duration-150 active:scale-90 z-10" id="capture-btn">
+<span class="material-symbols-outlined text-3xl" data-icon="photo_camera" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</button>
+</div>
+<!-- Floating History (Shortcut) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-4 hover:bg-black/5 rounded-full transition-all duration-150 active:scale-95" onclick="window.location.href='{{DATA:SCREEN:SCREEN_19}}'">
+<span class="material-symbols-outlined text-2xl" data-icon="history">history</span>
+<span class="font-label text-[10px] mt-1 uppercase tracking-wider">历史</span>
+</button>
+</footer>
+<!-- Bottom Navigation Bar (Alexandria Design System Standard) -->
+
+<script>
+    // Simple micro-interaction for the capture button
+    const captureBtn = document.getElementById('capture-btn');
+    captureBtn.addEventListener('click', () => {
+        const flash = document.createElement('div');
+        flash.className = 'fixed inset-0 bg-white z-[100] pointer-events-none opacity-0';
+        document.body.appendChild(flash);
+        
+        // Trigger animation
+        flash.animate([
+            { opacity: 0.9 },
+            { opacity: 0 }
+        ], {
+            duration: 300,
+            easing: 'ease-out'
+        }).onfinish = () => flash.remove();
+    });
+
+    // Toggle freeze state
+    const freezeBtn = document.getElementById('freeze-btn');
+    let isFrozen = false;
+    freezeBtn.addEventListener('click', () => {
+        isFrozen = !isFrozen;
+        if (isFrozen) {
+            freezeBtn.classList.add('bg-primary/10', 'text-primary');
+            freezeBtn.classList.remove('text-on-surface-variant');
+        } else {
+            freezeBtn.classList.remove('bg-primary/10', 'text-primary');
+            freezeBtn.classList.add('text-on-surface-variant');
+        }
+    });
+</script>
+
+
+
+
+</body></html>

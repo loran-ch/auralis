@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+build/
+
+# IDE 配置 (保留 .claude 目录)
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 日志
+*.log
+npm-debug.log*

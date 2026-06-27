@@ -1,0 +1,237 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans - 历史记录详情</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&amp;family=Inter:wght@400;500;600&amp;family=Public+Sans:wght@300;400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#1b1c1d",
+                    "surface-variant": "#e3e2e3",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efedee",
+                    "inverse-surface": "#303031",
+                    "on-error-container": "#93000a",
+                    "outline": "#737784",
+                    "on-tertiary-fixed-variant": "#524600",
+                    "on-background": "#1b1c1d",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary": "#6d5e00",
+                    "primary": "#094cb2",
+                    "on-secondary-fixed-variant": "#42474b",
+                    "surface-bright": "#faf9fa",
+                    "on-secondary-container": "#606569",
+                    "surface-tint": "#2259bf",
+                    "tertiary-fixed-dim": "#dcc661",
+                    "background": "#faf9fa",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#f9e37a",
+                    "secondary-fixed": "#dfe3e8",
+                    "secondary-fixed-dim": "#c2c7cc",
+                    "primary-fixed": "#d9e2ff",
+                    "outline-variant": "#c3c6d5",
+                    "on-surface-variant": "#434653",
+                    "secondary": "#5a5f63",
+                    "inverse-primary": "#b1c5ff",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed": "#171c20",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "on-tertiary-container": "#4a3f00",
+                    "primary-container": "#3366cc",
+                    "surface": "#faf9fa",
+                    "surface-dim": "#dbdadb",
+                    "surface-container-high": "#e9e8e9",
+                    "inverse-on-surface": "#f2f0f1",
+                    "secondary-container": "#dfe3e8",
+                    "on-tertiary-fixed": "#211b00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif SC", "serif"],
+                    "display": ["Noto Serif SC", "serif"],
+                    "body": ["Inter", "sans-serif"],
+                    "label": ["Public Sans", "sans-serif"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        .font-headline { font-family: 'Noto Serif SC', serif; }
+        .font-label { font-family: 'Public Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen pb-12">
+<!-- Top AppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center px-6 py-4 bg-surface-bright/80 backdrop-blur-xl shadow-sm opacity-95">
+<div class="flex items-center gap-4 w-full">
+<a class="p-2 -ml-2 text-primary active:opacity-70 transition-opacity" href="{{DATA:SCREEN:SCREEN_19}}">
+<span class="material-symbols-outlined">arrow_back</span>
+</a>
+<h1 class="font-headline text-2xl font-bold text-primary tracking-tight">历史记录详情</h1>
+<div class="ml-auto flex items-center gap-4">
+<button class="p-2 text-tertiary active:scale-90 transition-transform" id="favoriteBtn">
+<span class="material-symbols-outlined" id="favIcon">favorite</span>
+</button>
+<button class="p-2 text-on-surface-variant active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-24 px-4 max-w-4xl mx-auto space-y-8">
+<!-- Metadata Header Section -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-outline-variant/15 pb-6">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="font-label text-xs uppercase tracking-widest text-tertiary bg-tertiary-fixed px-2 py-0.5 rounded-sm">图像识别</span>
+<span class="font-label text-xs uppercase tracking-widest text-outline">ID: LT-8829-01</span>
+</div>
+<h2 class="font-headline text-3xl font-bold text-on-surface">德语菜单翻译</h2>
+<p class="text-on-surface-variant text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-base">calendar_today</span>
+                    2023年11月14日 · 柏林
+                </p>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low px-4 py-3 rounded-xl shadow-sm">
+<div class="text-right">
+<p class="font-label text-[10px] uppercase tracking-tighter text-outline-variant">源语言</p>
+<p class="font-bold text-primary">德语 (DE)</p>
+</div>
+<span class="material-symbols-outlined text-primary-container">arrow_forward</span>
+<div>
+<p class="font-label text-[10px] uppercase tracking-tighter text-outline-variant">目标语言</p>
+<p class="font-bold text-primary">中文 (CN)</p>
+</div>
+</div>
+</section>
+<!-- Visual Content Section -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Hero Image Preview -->
+<div class="lg:col-span-7 space-y-4">
+<div class="group relative overflow-hidden rounded-xl bg-surface-container shadow-sm aspect-[4/3] md:aspect-video transition-all duration-500 hover:shadow-xl">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="A professional high-angle photograph of a rustic wooden restaurant table with a beautifully printed German menu resting on it. Soft sunlight filters through a nearby window, casting long, artistic shadows. The scene is clean, minimalist, and captured in a high-end lifestyle photography style, using a palette of soft whites, warm wood tones, and deep primary blues for brand consistency. The mood is sophisticated and peaceful." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBD9L7NiNZy3OaIJV0hEtBXHtMi3i7XG5rZeee5gaeG3fg55wESbRD2BjdFohIYgXvJuQx2p8y0e6wYn9r1qsFYJbL0AZRHfsKDe9o4HFHK8PvV0yGSvGJsihWuCSquaYbQ2hePFKpve-9RzZsO1DiOGThMHTmLTi25KWsbmc1DT50QNs42mxdb3Io6mRXeuDv_wAdMfnFlc4fxeBn2ujwFUYwqpYhHkEtkeaXIKtcheFknI9Nv3HQUkDjgtKKETz8h4sFmVD8Qcw')">
+</div>
+<div class="absolute bottom-4 left-4 glass-panel px-3 py-1.5 rounded-full shadow-sm border border-white/20">
+<span class="flex items-center gap-2 text-xs font-medium text-primary">
+<span class="material-symbols-outlined text-sm">visibility</span>
+                            原图预览
+                        </span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-3 bg-surface-container-high rounded-lg font-label text-xs uppercase tracking-widest text-on-surface-variant hover:bg-surface-variant transition-colors">
+                        查看标注图
+                    </button>
+<button class="flex-1 py-3 bg-surface-container-high rounded-lg font-label text-xs uppercase tracking-widest text-on-surface-variant hover:bg-surface-variant transition-colors">
+                        重新识别
+                    </button>
+</div>
+</div>
+<!-- Translation Content Section -->
+<div class="lg:col-span-5 space-y-6">
+<!-- Original Text Card -->
+<div class="bg-surface-container-low p-6 rounded-xl space-y-3 relative">
+<div class="flex items-center justify-between">
+<h3 class="font-label text-xs uppercase tracking-widest text-outline">原文 (Original)</h3>
+<button class="text-primary-container hover:opacity-70"><span class="material-symbols-outlined text-lg">content_copy</span></button>
+</div>
+<p class="font-headline text-lg leading-relaxed text-on-surface">
+                        Wiener Schnitzel vom Kalb mit lauwarmem Kartoffel-Gurken-Salat und Preiselbeeren. Dazu ein Glas Riesling aus der Pfalz.
+                    </p>
+</div>
+<!-- Translated Text Card -->
+<div class="bg-white p-8 rounded-xl shadow-sm border-l-4 border-primary space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-label text-xs uppercase tracking-widest text-primary font-bold">译文 (Translated)</h3>
+<div class="flex gap-2">
+<button class="text-primary hover:scale-110 transition-transform"><span class="material-symbols-outlined text-lg">volume_up</span></button>
+<button class="text-primary hover:scale-110 transition-transform"><span class="material-symbols-outlined text-lg">content_copy</span></button>
+</div>
+</div>
+<p class="font-headline text-2xl leading-snug text-on-surface font-bold">
+                        维也纳小牛排配温热土豆黄瓜沙拉及蔓越莓酱。另附一杯来自普法尔茨地区的雷司令白葡萄酒。
+                    </p>
+<div class="pt-4 border-t border-outline-variant/10">
+<p class="text-on-surface-variant text-sm italic">
+                            “雷司令（Riesling）是该地区的特色，具有浓郁的果香。” — 智能百科
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Analysis / Tags Section -->
+<section class="space-y-4">
+<h4 class="font-label text-xs uppercase tracking-widest text-outline">识别标签</h4>
+<div class="flex flex-wrap gap-2">
+<span class="px-4 py-2 bg-surface-container rounded-full text-sm text-on-secondary-container">餐饮服务</span>
+<span class="px-4 py-2 bg-surface-container rounded-full text-sm text-on-secondary-container">德语文化</span>
+<span class="px-4 py-2 bg-surface-container rounded-full text-sm text-on-secondary-container">商务旅行</span>
+<span class="px-4 py-2 bg-surface-container rounded-full text-sm text-on-secondary-container">菜单识别</span>
+</div>
+</section>
+<!-- Actions -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
+<button class="flex items-center justify-center gap-3 py-4 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined">edit_note</span>
+                校对并导出
+            </button>
+<button class="flex items-center justify-center gap-3 py-4 rounded-xl bg-surface-container-highest text-on-surface font-bold active:scale-95 transition-all">
+<span class="material-symbols-outlined">delete</span>
+                删除该记录
+            </button>
+</section>
+</main>
+<script>
+        // Micro-interactions
+        const favoriteBtn = document.getElementById('favoriteBtn');
+        const favIcon = document.getElementById('favIcon');
+        let isFavorited = false;
+
+        favoriteBtn.addEventListener('click', () => {
+            isFavorited = !isFavorited;
+            if(isFavorited) {
+                favIcon.style.fontVariationSettings = "'FILL' 1";
+                favIcon.classList.add('text-error');
+                favoriteBtn.classList.add('scale-110');
+            } else {
+                favIcon.style.fontVariationSettings = "'FILL' 0";
+                favIcon.classList.remove('text-error');
+                favoriteBtn.classList.remove('scale-110');
+            }
+        });
+
+        // Copy interactions
+        document.querySelectorAll('button').forEach(btn => {
+            if(btn.innerHTML.includes('content_copy')) {
+                btn.addEventListener('click', () => {
+                    const originalIcon = btn.innerHTML;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-lg">check</span>';
+                    setTimeout(() => {
+                        btn.innerHTML = originalIcon;
+                    }, 2000);
+                });
+            }
+        });
+    </script>
+</body></html>
