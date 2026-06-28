@@ -16,7 +16,7 @@
 <a href="recorder.html" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface">
 <span class="material-symbols-outlined">arrow_back</span>
 </a>
-<h1 class="ml-2 font-headline text-lg tracking-tight font-semibold text-on-surface">Lecture Notes</h1>
+<h1 class="ml-2 font-headline text-lg tracking-tight font-semibold text-on-surface">LiveTrans Voice</h1>
 <div class="flex-grow"></div>
 <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface-variant">
 <span class="material-symbols-outlined">settings</span>
@@ -37,7 +37,7 @@
 </div>
 <div class="mt-4 text-center">
 <div class="flex items-center justify-center gap-2">
-<h2 class="text-2xl font-bold text-on-surface tracking-tight">学霸小李</h2>
+<h2 class="text-2xl font-bold text-on-surface tracking-tight js-username">学霸小李</h2>
 <span class="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
 <span class="material-symbols-outlined text-[12px] active-icon" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
                     Premium User
@@ -50,12 +50,12 @@
 <section class="grid grid-cols-2 gap-4">
 <div class="bg-surface-container card-shadow p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 group hover:bg-primary-container/30 transition-all duration-300">
 <span class="material-symbols-outlined text-primary mb-1 group-hover:scale-110 transition-transform">schedule</span>
-<span class="text-2xl font-bold text-on-surface">12h</span>
-<span class="text-xs text-on-surface-variant font-medium">本周录制时长</span>
+<span class="text-2xl font-bold text-on-surface js-total-hours">0h</span>
+<span class="text-xs text-on-surface-variant font-medium">总录制时长</span>
 </div>
 <div class="bg-surface-container card-shadow p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 group hover:bg-primary-container/30 transition-all duration-300">
 <span class="material-symbols-outlined text-primary mb-1 group-hover:scale-110 transition-transform">bookmark_manager</span>
-<span class="text-2xl font-bold text-on-surface">48</span>
+<span class="text-2xl font-bold text-on-surface js-bookmark-count">0</span>
 <span class="text-xs text-on-surface-variant font-medium">收藏知识点</span>
 </div>
 </section>
@@ -68,39 +68,39 @@
 </a>
 <!-- Functional Menu -->
 <div class="bg-surface-container card-shadow rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
-<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="history.html">
 <div class="flex items-center gap-4">
 <div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">calendar_month</span>
+<span class="material-symbols-outlined">history</span>
 </div>
-<span class="font-medium text-on-surface">我的课程表</span>
+<span class="font-medium text-on-surface">课堂记录</span>
 </div>
 <span class="material-symbols-outlined text-outline">chevron_right</span>
 </a>
-<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="knowledge-cards.html">
 <div class="flex items-center gap-4">
 <div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">translate</span>
+<span class="material-symbols-outlined">star</span>
 </div>
-<span class="font-medium text-on-surface">翻译设置</span>
+<span class="font-medium text-on-surface">知识卡片</span>
 </div>
 <span class="material-symbols-outlined text-outline">chevron_right</span>
 </a>
-<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="recorder.html">
 <div class="flex items-center gap-4">
 <div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">cloud_download</span>
+<span class="material-symbols-outlined">mic</span>
 </div>
-<span class="font-medium text-on-surface">离线资源管理</span>
+<span class="font-medium text-on-surface">开始录音</span>
 </div>
 <span class="material-symbols-outlined text-outline">chevron_right</span>
 </a>
-<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="review.html">
 <div class="flex items-center gap-4">
 <div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
-<span class="material-symbols-outlined">help_center</span>
+<span class="material-symbols-outlined">replay</span>
 </div>
-<span class="font-medium text-on-surface">反馈与支持</span>
+<span class="font-medium text-on-surface">课堂回顾</span>
 </div>
 <span class="material-symbols-outlined text-outline">chevron_right</span>
 </a>
@@ -130,4 +130,28 @@
 </a>
 </nav>
 
+<script>
+(function(){
+  var TOKEN=localStorage.getItem('livetrans_token');
+
+  function loadStats(){
+    if(!TOKEN)return;
+    fetch('/api/lectures',{headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){return r.json()})
+    .then(function(list){
+      var totalSec=0, bookmarkCount=0;
+      list.forEach(function(l){totalSec+=l.duration_seconds||0;bookmarkCount+=l.bookmark_count||0});
+      var h=Math.floor(totalSec/3600);
+      document.querySelector('.js-total-hours').textContent=h+'h';
+      document.querySelector('.js-bookmark-count').textContent=bookmarkCount;
+    });
+
+    var user=localStorage.getItem('livetrans_user');
+    if(user){try{var u=JSON.parse(user);document.querySelector('.js-username').textContent=u.nickname||'用户'}catch(e){}}
+  }
+
+  if(TOKEN){loadStats()}
+  }
+})();
+</script>
 </body></html>

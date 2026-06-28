@@ -29,7 +29,7 @@
 <label class="block text-sm font-semibold text-on-surface-variant ml-1">手机号码</label>
 <div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
 <span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">smartphone</span>
-<input class="w-full pl-12 pr-4 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入手机号" type="tel">
+<input id="phoneInput" class="w-full pl-12 pr-4 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入手机号" type="tel" value="+8613800000001">
 </div>
 </div>
 <!-- Password Input -->
@@ -40,16 +40,17 @@
 </div>
 <div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
 <span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">lock</span>
-<input class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password">
+<input id="passwordInput" class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password" value="test123">
 <button class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button">
 <span class="material-symbols-outlined">visibility</span>
 </button>
 </div>
 </div>
 <!-- Login Button -->
-<button class="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg tracking-wide shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all mt-2" type="submit" onclick="window.location.href='recorder.html'">
+<button id="loginBtn" class="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg tracking-wide shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all mt-2" type="button">
                     登录
                 </button>
+<p id="loginMsg" class="text-center text-sm mt-3 hidden"></p>
 <!-- Sign Up Link -->
 <div class="text-center pt-2">
 <p class="text-sm text-on-surface-variant">
@@ -87,4 +88,23 @@
 </footer>
 </main>
 
+<script>
+document.getElementById('loginBtn').addEventListener('click', function(){
+  var phone = document.getElementById('phoneInput').value.trim();
+  var pwd = document.getElementById('passwordInput').value.trim();
+  var msg = document.getElementById('loginMsg');
+  if(!phone||!pwd){msg.textContent='请输入手机号和密码';msg.classList.remove('hidden');return}
+  msg.textContent='登录中...';msg.classList.remove('hidden');msg.style.color='#717782';
+  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,password:pwd})})
+  .then(function(r){return r.json()})
+  .then(function(d){
+    if(d.detail){msg.textContent=d.detail;msg.style.color='#EF4444';return}
+    localStorage.setItem('livetrans_token',d.tokens.access_token);
+    localStorage.setItem('livetrans_user',JSON.stringify(d.user));
+    msg.textContent='登录成功，跳转中...';msg.style.color='#4CAF50';
+    setTimeout(function(){window.location.href='recorder.html'},500);
+  })
+  .catch(function(e){msg.textContent='登录失败';msg.style.color='#EF4444'});
+});
+</script>
 </body></html>

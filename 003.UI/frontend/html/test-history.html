@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>历史记录 - 测试</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+body{background:#faf9fa;font-family:Inter,sans-serif;padding:20px}
+.card{margin:12px 0;padding:16px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer}
+.card h3{font-size:18px;font-weight:700;color:#1a1c1d}
+.card p{color:#717782;font-size:13px;margin-top:4px}
+</style></head><body>
+<h1 style="font-size:24px;font-weight:800;margin-bottom:16px">课堂记录</h1>
+<p id="status" style="color:#717782">加载中...</p>
+<div id="list"></div>
+<script>
+var TOKEN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsImV4cCI6MTc4MzI1OTc4MX0.2u7n31uBS3SJQfeya5oJSxEYSQE6iILKU4t0J_6nkMM';
+var USER={id:1,nickname:'学霸小李'};
+localStorage.setItem('livetrans_token',TOKEN);
+localStorage.setItem('livetrans_user',JSON.stringify(USER));
+
+fetch('/api/lectures',{headers:{'Authorization':'Bearer '+TOKEN}})
+.then(function(r){return r.json()})
+.then(function(data){
+  document.getElementById('status').textContent='共 '+data.length+' 条记录';
+  var html='';
+  data.forEach(function(l){
+    html+='<div class="card" onclick="location.href=\'review.html?id='+l.id+'\'">';
+    html+='<h3>'+l.course_name+'</h3>';
+    html+='<p>'+l.sentence_count+'句 | '+l.source_lang+'→'+l.target_lang+' | '+new Date(l.started_at).toLocaleDateString()+'</p>';
+    html+='</div>';
+  });
+  document.getElementById('list').innerHTML=html;
+})
+.catch(function(e){
+  document.getElementById('status').textContent='加载失败: '+e.message;
+});
+</script>
+</body></html>

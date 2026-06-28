@@ -8,7 +8,23 @@
       "Bash(git config *)",
       "Bash(git add *)",
       "Bash(git commit -m 'feat: LiveTrans v1.01 初始化版本 *)",
-      "Bash(dism /online /get-featureinfo /featurename:VirtualMachinePlatform)"
+      "Bash(dism /online /get-featureinfo /featurename:VirtualMachinePlatform)",
+      "Bash(start http://localhost:8000/html/auto-login.html)",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(f'共{len\\(d\\)}条'\\);[print\\(f'  ID={x[\\\\\"id\\\\\"]} {x[\\\\\"course_name\\\\\"]} {x[\\\\\"status\\\\\"]} {x[\\\\\"sentence_count\\\\\"]}句 {x[\\\\\"bookmark_count\\\\\"]}收藏 {x[\\\\\"started_at\\\\\"]}'\\) for x in d[:5]]\")",
+      "Bash(curl -s http://localhost:8000/js/history.js)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} Size: %{size_download}B\" http://localhost:8000/html/history.html)",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -m pip install googletrans==4.0.0rc1)",
+      "Bash(/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe -c ' *)",
+      "Bash(curl -s \"https://api.mymemory.translated.net/get?q=Hello+how+are+you&langpair=en|zh-CN\")",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(d.get\\('responseData',{}\\).get\\('translatedText','FAIL'\\)\\)\")",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(f'{d[\\\\\"course_name\\\\\"]}: {d[\\\\\"sentence_count\\\\\"]}句, status={d[\\\\\"status\\\\\"]}'\\)\")",
+      "Bash(tail -20 \"C:\\\\\\\\Users\\\\\\\\linko\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\d--VSC-project-claude-web\\\\\\\\823c2832-d5b5-4652-8cdf-29966d2f5226\\\\\\\\tasks\\\\\\\\btuvra08i.output\")",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(f'OK: {d[\\\\\"sentence_count\\\\\"]}句'\\)\")",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"import sys,json;d=json.load\\(sys.stdin\\);[print\\(f'  {x[\\\\\"course_name\\\\\"]:12s} {x[\\\\\"sentence_count\\\\\"]}句 {x[\\\\\"started_at\\\\\"][:16]}'\\) for x in d[:3]]\")",
+      "Bash(start http://localhost:8000/html/recorder.html?t=3)",
+      "Bash(tail -30 \"C:\\\\\\\\Users\\\\\\\\linko\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\d--VSC-project-claude-web\\\\\\\\823c2832-d5b5-4652-8cdf-29966d2f5226\\\\\\\\tasks\\\\\\\\btuvra08i.output\")",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(\"/c/Users/linko/AppData/Local/Programs/Python/Python314/python.exe\" -c \"from main import app; print\\('App loaded OK'\\)\")"
     ]
   }
 }

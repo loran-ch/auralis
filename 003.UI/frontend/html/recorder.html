@@ -8,7 +8,9 @@
 
   <link rel="stylesheet" href="../css/recorder.css">
   <script src="../shared/tailwind-config.js"></script>
-  <script defer src="../js/recorder.js"></script>
+  <script>
+</script>
+<script defer src="../js/recorder.js?v=6"></script>
 </head>
 <body class="bg-surface text-on-surface font-display-current-source min-h-screen flex flex-col">
 <!-- Top AppBar -->
@@ -24,14 +26,14 @@
   <a href="login.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-error"><span class="material-symbols-outlined text-xl">logout</span>退出登录</a>
 </div>
 <div class="flex flex-col">
-<h1 class="font-display-current-source text-primary dark:text-primary-fixed-dim font-bold text-lg leading-tight">计算机科学 101</h1>
-<span class="font-label-tag text-label-tag text-on-surface-variant">🇩🇪 德语 → 🇨🇳 中文</span>
+<h1 class="font-display-current-source text-primary dark:text-primary-fixed-dim font-bold text-lg leading-tight" id="course-name">课堂录音</h1>
+<span class="font-label-tag text-label-tag text-on-surface-variant">🇬🇧 英语 → 🇨🇳 中文</span>
 </div>
 </div>
 <div class="flex items-center gap-2">
 <div class="flex items-center bg-success-dim/10 px-3 py-1 rounded-full border border-secondary/20">
-<span class="w-2 h-2 rounded-full bg-secondary mr-2 animate-pulse"></span>
-<span class="text-secondary font-label-tag text-label-tag">正在聆听...</span>
+<span class="w-2 h-2 rounded-full bg-secondary mr-2" id="status-dot"></span>
+<span class="text-secondary font-label-tag text-label-tag" id="status-text">待机中</span>
 </div>
 <a class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center" href="profile.html"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">account_circle</span></a>
 </div>
@@ -39,44 +41,23 @@
 <!-- Main Content Canvas -->
 <main class="flex-1 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col">
 <!-- Transcript History (Faded) -->
-<section class="flex-1 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg">
-<!-- Sentence Block 1 -->
-<div class="space-y-unit opacity-40">
-<p class="font-body-history-source text-body-history-source text-ink-subdued">Heute werden wir die Grundlagen von Algorithmen besprechen.</p>
-<p class="font-body-history-trans text-body-history-trans text-ink-subdued">今天我们将讨论算法的基础知识。</p>
-</div>
-<!-- Sentence Block 2 -->
-<div class="space-y-unit opacity-60">
-<p class="font-body-history-source text-body-history-source text-ink-subdued">Ein Algorithmus ist eine präzise Anweisung zur Lösung eines Problems.</p>
-<p class="font-body-history-trans text-body-history-trans text-ink-subdued">算法是解决问题的精确指令。</p>
-</div>
-<!-- Sentence Block 3 -->
-<div class="space-y-unit opacity-80 border-l-2 border-primary/20 pl-4">
-<div class="flex justify-between items-start">
-<div>
-<p class="font-body-history-source text-body-history-source text-on-surface">Effizienz ist hierbei der wichtigste Faktor für die Softwareentwicklung.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary font-medium">在这里，效率是软件开发中最重要的因素。</p>
-</div>
-<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">star</span>
-</div>
-</div>
+<section class="flex-1 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg" id="history-section" style="display:none">
+<!-- 动态插入字幕 -->
 </section>
 <!-- Current Active Transcription Area -->
-<section class="py-stack-lg border-t border-surface-variant">
+<section class="py-stack-lg border-t border-surface-variant" id="current-section" style="display:none">
 <div class="flex justify-between items-start gap-gutter">
 <div class="space-y-stack-sm flex-1">
-<h2 class="font-display-current-source text-display-current-source text-ink-deep leading-tight">
-                        Wir müssen die Big-O-Notation verstehen, um die Komplexität zu messen.
-                    </h2>
-<p class="font-display-current-trans text-display-current-trans text-secondary">
-                        我们需要理解大O表示法来衡量复杂度。
-                    </p>
+<h2 class="font-display-current-source text-display-current-source text-ink-deep leading-tight" id="current-source"></h2>
+<p class="font-display-current-trans text-display-current-trans text-secondary" id="current-target"></p>
 </div>
-<button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group">
-<span class="material-symbols-outlined text-tertiary text-2xl" id="star-btn">star</span>
+<button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group" id="star-btn">
+<span class="material-symbols-outlined text-tertiary text-2xl">star</span>
 </button>
 </div>
 </section>
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-4 py-2 rounded-full text-sm shadow-lg"></div>
 </main>
 <!-- Bottom Controls & Visualizer -->
 <footer class="fixed bottom-0 w-full z-40 bg-surface-container-lowest dark:bg-inverse-surface rounded-t-xl shadow-[0_-4px_12px_-1px_rgba(0,0,0,0.08)]">
@@ -103,12 +84,12 @@
 </button>
 <!-- Main Controls Group -->
 <div class="flex items-center gap-stack-lg">
-<button class="w-12 h-12 rounded-full flex items-center justify-center bg-surface-variant/50 text-on-surface-variant hover:scale-105 active:scale-95 transition-transform" title="暂停">
+<button class="w-12 h-12 rounded-full flex items-center justify-center bg-surface-variant/50 text-on-surface-variant hover:scale-105 active:scale-95 transition-transform" title="暂停" id="pause-btn">
 <span class="material-symbols-outlined text-2xl">pause</span>
 </button>
-<!-- Pulse Stop Button -->
-<button class="relative w-16 h-16 rounded-full bg-error flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-transform" style="animation: pulse-red 2s infinite;" title="记录">
-<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">stop</span>
+<!-- Record/Stop Button -->
+<button class="relative w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-transform" style="background:#4CAF50;" title="开始录音" id="record-btn">
+<span class="material-symbols-outlined text-3xl" id="record-icon">mic</span>
 </button>
 <a class="w-12 h-12 rounded-full flex items-center justify-center bg-surface-variant/50 text-on-surface-variant hover:scale-105 active:scale-95 transition-transform" title="历史" href="history.html"><span class="material-symbols-outlined text-2xl">history</span></a>
 </div>

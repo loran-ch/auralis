@@ -10,6 +10,48 @@
   <link rel="stylesheet" href="../css/review.css">
   <script src="../shared/tailwind-config.js"></script>
   <script defer src="../js/review.js"></script>
+<script>
+// ─── 自动登录 + 加载课堂回顾 ──────────────────────
+(function(){
+  var LID = new URLSearchParams(window.location.search).get('id') || 1;
+  var TOKEN = localStorage.getItem('livetrans_token');
+
+  function api(path) {
+    return fetch('/api' + path, { headers: { 'Authorization': 'Bearer ' + TOKEN } }).then(function(r) { return r.json(); });
+  }
+
+  function render() {
+    Promise.all([api('/lectures/' + LID + '/transcriptions'), api('/lectures/active')])
+    .then(function(results) {
+      var transcriptions = results[0];
+      var container = document.getElementById('transcript-container');
+      if (!container || !transcriptions.length) return;
+      container.innerHTML = '';
+      transcriptions.forEach(function(t) {
+        var cls = t.is_bookmarked ? 'bg-orange-50/50 p-4 -mx-4 border-l-4 border-tertiary-container' : 'p-2 -mx-2';
+        var tagHtml = t.is_bookmarked ? '<span class="knowledge-tag flex items-center gap-1 bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-label-tag text-[10px] uppercase"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span> 重要</span>' : '';
+        var div = document.createElement('div');
+        div.className = 'cursor-pointer group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
+        div.innerHTML =
+          '<div class="flex flex-col gap-2">' + tagHtml +
+            '<p class="text-body-history-source text-ink-deep">' + t.source_text + '</p>' +
+            '<p class="text-body-history-trans text-secondary">' + t.translated_text + '</p>' +
+          '</div>';
+        container.appendChild(div);
+      });
+      // Update header
+      var titleEl = document.querySelector('h2');
+      if (titleEl) titleEl.textContent = '课堂回顾 #' + LID;
+    });
+  }
+
+  if (TOKEN) { render(); }
+  else {
+    fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:'+8613800000001',password:'test123'}) })
+    .then(function(r){return r.json()}).then(function(d){localStorage.setItem('livetrans_token',d.tokens.access_token);location.reload()});
+  }
+})();
+</script>
 </head>
 <body class="bg-surface text-on-surface font-body-history-source min-h-screen flex flex-col">
 <!-- TopAppBar -->
@@ -45,77 +87,8 @@
 </div>
 </section>
 <!-- Transcript Section -->
-<section class="transcript-container mt-stack-lg space-y-stack-lg overflow-y-auto">
-<!-- Block 1 -->
-<div class="cursor-pointer group relative hover:bg-surface-container-low p-2 -mx-2 rounded-lg transition-colors" onclick="jumpTo(0)">
-<span class="absolute -left-12 top-2 font-caption-timestamp text-caption-timestamp text-outline opacity-0 group-hover:opacity-100 transition-opacity">00:12</span>
-<div class="space-y-stack-sm">
-<p class="font-body-history-source text-body-history-source text-ink-deep">Welcome everyone. Today we are exploring how asymmetric information fundamentally shifts market outcomes.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">欢迎大家。今天我们将探讨信息不对称如何从根本上改变市场结果。</p>
-</div>
-</div>
-<!-- Block 2 (Bookmarked: Important) -->
-<div class="cursor-pointer group relative bg-orange-50/50 p-4 -mx-4 border-l-4 border-tertiary-container transition-all active-sentence" onclick="jumpTo(120)">
-<span class="absolute -left-12 top-4 font-caption-timestamp text-caption-timestamp text-outline">02:04</span>
-<div class="flex flex-col gap-2">
-<div class="flex items-center gap-2 mb-1">
-<span class="knowledge-tag flex items-center gap-1 bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-label-tag text-[10px] uppercase">
-<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">star</span> 重要
-                        </span>
-</div>
-<p class="font-body-history-source text-body-history-source text-ink-deep font-medium">The 'Lemons Problem' suggests that if buyers can't distinguish quality, high-quality goods will eventually leave the market.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">“柠檬问题”表明，如果买家无法区分质量，高质量的商品最终将退出市场。</p>
-</div>
-</div>
-<!-- Block 3 -->
-<div class="cursor-pointer group relative hover:bg-surface-container-low p-2 -mx-2 rounded-lg transition-colors" onclick="jumpTo(310)">
-<span class="absolute -left-12 top-2 font-caption-timestamp text-caption-timestamp text-outline opacity-0 group-hover:opacity-100 transition-opacity">05:10</span>
-<div class="space-y-stack-sm">
-<p class="font-body-history-source text-body-history-source text-ink-deep">This leads to adverse selection, where only the less desirable participants remain active.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">这导致了逆向选择，即只有不太理想的参与者仍然活跃。</p>
-</div>
-</div>
-<!-- Block 4 (Bookmarked: Question) -->
-<div class="cursor-pointer group relative bg-blue-50/50 p-4 -mx-4 border-l-4 border-primary-container transition-all" onclick="jumpTo(450)">
-<span class="absolute -left-12 top-4 font-caption-timestamp text-caption-timestamp text-outline">07:30</span>
-<div class="flex flex-col gap-2">
-<div class="flex items-center gap-2 mb-1">
-<span class="knowledge-tag flex items-center gap-1 bg-primary-container text-on-primary-container px-2 py-0.5 rounded font-label-tag text-[10px] uppercase">
-<span class="material-symbols-outlined text-[12px]">help</span> 问题
-                        </span>
-</div>
-<p class="font-body-history-source text-body-history-source text-ink-deep font-medium">Wait, does this apply to the labor market as well in terms of signaling theory?</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">等等，这是否也适用于劳动力市场的信号传递理论？</p>
-</div>
-</div>
-<!-- Block 5 (Bookmarked: Exam) -->
-<div class="cursor-pointer group relative bg-red-50/50 p-4 -mx-4 border-l-4 border-alert-red transition-all" onclick="jumpTo(620)">
-<span class="absolute -left-12 top-4 font-caption-timestamp text-caption-timestamp text-outline">10:20</span>
-<div class="flex flex-col gap-2">
-<div class="flex items-center gap-2 mb-1">
-<span class="knowledge-tag flex items-center gap-1 bg-alert-red text-white px-2 py-0.5 rounded font-label-tag text-[10px] uppercase">
-<span class="material-symbols-outlined text-[12px]">ads_click</span> 考试
-                        </span>
-</div>
-<p class="font-body-history-source text-body-history-source text-ink-deep font-bold">Expect a question on the final about Spence's Signaling Model vs Akerlof's Market for Lemons.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">预计期末考试会有一个关于斯宾塞信号模型与阿克洛夫柠檬市场的题目。</p>
-</div>
-</div>
-<!-- Block 6 (Bookmarked: Definition) -->
-<div class="cursor-pointer group relative bg-purple-50/50 p-4 -mx-4 border-l-4 border-accent-purple transition-all" onclick="jumpTo(800)">
-<span class="absolute -left-12 top-4 font-caption-timestamp text-caption-timestamp text-outline">13:20</span>
-<div class="flex flex-col gap-2">
-<div class="flex items-center gap-2 mb-1">
-<span class="knowledge-tag flex items-center gap-1 bg-accent-purple text-white px-2 py-0.5 rounded font-label-tag text-[10px] uppercase">
-<span class="material-symbols-outlined text-[12px]">book</span> 定义
-                        </span>
-</div>
-<p class="font-body-history-source text-body-history-source text-ink-deep font-medium">Signaling: An action taken by an informed party to reveal private information to an uninformed party.</p>
-<p class="font-body-history-trans text-body-history-trans text-secondary">信号传递：知情方为向不知情方透露私人信息而采取的行动。</p>
-</div>
-</div>
-</section>
-</main>
+<section id="transcript-container" class="transcript-container mt-stack-lg space-y-stack-lg overflow-y-auto">
+<div id="transcript-loading" class="text-center py-12 text-on-surface-variant">加载中...</div>
 <!-- Bottom Audio Player & Actions -->
 <footer class="fixed bottom-0 w-full z-50 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-t-xl overflow-hidden">
 <!-- Waveform Scrubber -->

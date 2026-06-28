@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Test Recorder</title>
+<style>body{font-family:sans-serif;padding:40px;text-align:center}button{font-size:24px;padding:20px 40px;border-radius:50px;border:none;cursor:pointer;margin:20px}#log{text-align:left;max-width:600px;margin:20px auto;font-size:14px;font-family:monospace;background:#f5f5f5;padding:16px;border-radius:8px;max-height:400px;overflow-y:auto}</style></head><body>
+<h1>Recorder Test</h1>
+<button id="startBtn" style="background:#4CAF50;color:white" onclick="doStart()">🎤 开始录音</button>
+<button id="stopBtn" style="background:#EF4444;color:white;display:none" onclick="doStop()">⏹ 停止录音</button>
+<div id="log"></div>
+<script>
+var TOKEN='',LID=null;
+function log(m){var el=document.getElementById('log');el.innerHTML+='<div>'+new Date().toLocaleTimeString()+' '+m+'</div>';el.scrollTop=el.scrollHeight}
+
+// Auto-login
+fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:'+8613800000001',password:'test123'})})
+.then(function(r){return r.json()})
+.then(function(d){TOKEN=d.tokens.access_token;localStorage.setItem('livetrans_token',TOKEN);log('✅ 已登录: '+d.user.nickname)})
+.catch(function(e){log('❌ 登录失败: '+e)});
+
+function doStart(){
+  if(!TOKEN){log('❌ 未登录');return}
+  fetch('/api/lectures/start',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({course_name:'课堂录音',source_lang:'en',target_lang:'zh-CN'})})
+  .then(function(r){return r.json()}).then(function(d){LID=d.id;log('✅ 课堂开始 ID='+LID);document.getElementById('startBtn').style.display='none';document.getElementById('stopBtn').style.display='inline-block';autoTranscribe()}).catch(function(e){log('❌ 开始失败: '+e)});
+}
+
+function autoTranscribe(){
+  if(!LID)return;
+  fetch('/api/lectures/'+LID+'/transcribe',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN}})
+  .then(function(r){return r.json()}).then(function(d){log('📝 EN: '+d.source_text.substring(0,40)+'... → ZH: '+d.translated_text.substring(0,30)+'...');setTimeout(autoTranscribe,3000)}).catch(function(e){log('⏹ 转录结束');doStop()});
+}
+
+function doStop(){
+  if(!LID)return;
+  fetch('/api/lectures/'+LID+'/stop',{method:'POST',headers:{'Authorization':'Bearer '+TOKEN}})
+  .then(function(r){return r.json()}).then(function(d){log('✅ 已保存: '+d.sentence_count+'句');LID=null;document.getElementById('startBtn').style.display='inline-block';document.getElementById('stopBtn').style.display='none'}).catch(function(e){log('❌ 停止失败: '+e)});
+}
+</script>
+</body></html>
