@@ -1,0 +1,121 @@
+<!DOCTYPE html><html class="light" lang="zh-CN" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans Voice - 实时录音</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/recorder.css">
+  <script src="../shared/tailwind-config.js"></script>
+  <script defer src="../js/recorder.js"></script>
+</head>
+<body class="bg-surface text-on-surface font-display-current-source min-h-screen flex flex-col">
+<!-- Top AppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim flex items-center justify-between px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center relative" onclick="document.getElementById('navMenu').classList.toggle('hidden')"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">menu</span></button>
+<div id="navMenu" class="hidden fixed top-14 left-4 z-[100] bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[180px]">
+  <a href="recorder.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">mic</span>实时录音</a>
+  <a href="history.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">history</span>课堂记录</a>
+  <a href="knowledge-cards.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">star</span>知识卡片</a>
+  <a href="profile.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">person</span>个人中心</a>
+  <div class="border-t border-outline-variant/10 my-1"></div>
+  <a href="login.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-error"><span class="material-symbols-outlined text-xl">logout</span>退出登录</a>
+</div>
+<div class="flex flex-col">
+<h1 class="font-display-current-source text-primary dark:text-primary-fixed-dim font-bold text-lg leading-tight">计算机科学 101</h1>
+<span class="font-label-tag text-label-tag text-on-surface-variant">🇩🇪 德语 → 🇨🇳 中文</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center bg-success-dim/10 px-3 py-1 rounded-full border border-secondary/20">
+<span class="w-2 h-2 rounded-full bg-secondary mr-2 animate-pulse"></span>
+<span class="text-secondary font-label-tag text-label-tag">正在聆听...</span>
+</div>
+<a class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center" href="profile.html"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">account_circle</span></a>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col">
+<!-- Transcript History (Faded) -->
+<section class="flex-1 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg">
+<!-- Sentence Block 1 -->
+<div class="space-y-unit opacity-40">
+<p class="font-body-history-source text-body-history-source text-ink-subdued">Heute werden wir die Grundlagen von Algorithmen besprechen.</p>
+<p class="font-body-history-trans text-body-history-trans text-ink-subdued">今天我们将讨论算法的基础知识。</p>
+</div>
+<!-- Sentence Block 2 -->
+<div class="space-y-unit opacity-60">
+<p class="font-body-history-source text-body-history-source text-ink-subdued">Ein Algorithmus ist eine präzise Anweisung zur Lösung eines Problems.</p>
+<p class="font-body-history-trans text-body-history-trans text-ink-subdued">算法是解决问题的精确指令。</p>
+</div>
+<!-- Sentence Block 3 -->
+<div class="space-y-unit opacity-80 border-l-2 border-primary/20 pl-4">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-body-history-source text-body-history-source text-on-surface">Effizienz ist hierbei der wichtigste Faktor für die Softwareentwicklung.</p>
+<p class="font-body-history-trans text-body-history-trans text-secondary font-medium">在这里，效率是软件开发中最重要的因素。</p>
+</div>
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+</div>
+</section>
+<!-- Current Active Transcription Area -->
+<section class="py-stack-lg border-t border-surface-variant">
+<div class="flex justify-between items-start gap-gutter">
+<div class="space-y-stack-sm flex-1">
+<h2 class="font-display-current-source text-display-current-source text-ink-deep leading-tight">
+                        Wir müssen die Big-O-Notation verstehen, um die Komplexität zu messen.
+                    </h2>
+<p class="font-display-current-trans text-display-current-trans text-secondary">
+                        我们需要理解大O表示法来衡量复杂度。
+                    </p>
+</div>
+<button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group">
+<span class="material-symbols-outlined text-tertiary text-2xl" id="star-btn">star</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Bottom Controls & Visualizer -->
+<footer class="fixed bottom-0 w-full z-40 bg-surface-container-lowest dark:bg-inverse-surface rounded-t-xl shadow-[0_-4px_12px_-1px_rgba(0,0,0,0.08)]">
+<!-- Waveform Visualizer -->
+<div class="flex items-end justify-center gap-1 h-12 w-full pt-2">
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.1s; height: 10px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.3s; height: 23px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.2s; height: 13px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.5s; height: 27px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.4s; height: 11px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.6s; height: 8px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.2s; height: 9px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.8s; height: 8px;"></div>
+<div class="waveform-bar w-1 bg-primary rounded-full" style="animation-delay: 0.1s; height: 24px;"></div>
+</div>
+<!-- Control Bar -->
+<div class="flex justify-around items-center h-24 pb-safe px-margin-mobile max-w-screen-xl mx-auto">
+<!-- Bookmark Tag -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/30 rounded-xl p-2 transition-colors">
+<div class="w-10 h-10 rounded-full flex items-center justify-center bg-accent-purple/10 text-accent-purple mb-1">
+<span class="material-symbols-outlined">label</span>
+</div>
+<span class="font-label-tag text-label-tag">标记</span>
+</button>
+<!-- Main Controls Group -->
+<div class="flex items-center gap-stack-lg">
+<button class="w-12 h-12 rounded-full flex items-center justify-center bg-surface-variant/50 text-on-surface-variant hover:scale-105 active:scale-95 transition-transform" title="暂停">
+<span class="material-symbols-outlined text-2xl">pause</span>
+</button>
+<!-- Pulse Stop Button -->
+<button class="relative w-16 h-16 rounded-full bg-error flex items-center justify-center text-white shadow-lg hover:scale-105 active:scale-95 transition-transform" style="animation: pulse-red 2s infinite;" title="记录">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">stop</span>
+</button>
+<a class="w-12 h-12 rounded-full flex items-center justify-center bg-surface-variant/50 text-on-surface-variant hover:scale-105 active:scale-95 transition-transform" title="历史" href="history.html"><span class="material-symbols-outlined text-2xl">history</span></a>
+</div>
+<!-- More Actions -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/30 rounded-xl p-2 transition-colors" href="knowledge-cards.html"><div class="w-10 h-10 rounded-full flex items-center justify-center bg-tertiary/10 text-tertiary mb-1"><span class="material-symbols-outlined">star</span></div><span class="font-label-tag text-label-tag">收藏</span></a>
+</div>
+</footer>
+<!-- Interactive script for demo micro-interactions -->
+
+</body></html>

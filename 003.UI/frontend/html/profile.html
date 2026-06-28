@@ -1,0 +1,133 @@
+<!DOCTYPE html><html class="light" lang="zh-CN" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans Voice - Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/profile.css">
+  <script src="../shared/tailwind-config.js"></script>
+  <script defer src="../js/profile.js"></script>
+</head>
+<body class="min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 sticky top-0 flex items-center px-4 h-16 w-full z-50">
+<a href="recorder.html" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface">
+<span class="material-symbols-outlined">arrow_back</span>
+</a>
+<h1 class="ml-2 font-headline text-lg tracking-tight font-semibold text-on-surface">Lecture Notes</h1>
+<div class="flex-grow"></div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface-variant">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</header>
+<main class="max-w-2xl mx-auto px-6 pt-8 space-y-8">
+<!-- Profile Section -->
+<section class="flex flex-col items-center">
+<div class="relative group">
+<!-- Avatar Ring -->
+<div class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-primary/20 to-secondary/20 transition-transform duration-500 group-hover:scale-105">
+<div class="w-full h-full rounded-full overflow-hidden border-2 border-surface">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young professional student" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG_K5JOejpuij0T7KeSxYMCT8YR_1D7RxSt1AjIVCi6VfkfLEp7ejzvPJkeNDzoDtW2rSbsW3fJ7r6xX11WA8x87XIuKYy4Hhly5gHyj7vt4WnQTtWxyhza-Iq5qmRdAcedpM9E43C5SZeJ_AC1N4AfrP71YKs2P1Cfull_kaXKjRFCj2Cb26EtZw1WCqVXRwdVdVuODhrpBR8lILPYn6gFyzJk1lRudrYFS9aMZKmljW4eQ36QVwB3Y8ZZbHkETs9Ni17sMBb-w">
+</div>
+</div>
+<!-- Status Badge -->
+<div class="absolute bottom-1 right-1 w-6 h-6 bg-green-500 border-4 border-surface rounded-full"></div>
+</div>
+<div class="mt-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<h2 class="text-2xl font-bold text-on-surface tracking-tight">学霸小李</h2>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] active-icon" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                    Premium User
+                </span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1">Focusing on Computer Science &amp; AI</p>
+</div>
+</section>
+<!-- Stats Section -->
+<section class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container card-shadow p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 group hover:bg-primary-container/30 transition-all duration-300">
+<span class="material-symbols-outlined text-primary mb-1 group-hover:scale-110 transition-transform">schedule</span>
+<span class="text-2xl font-bold text-on-surface">12h</span>
+<span class="text-xs text-on-surface-variant font-medium">本周录制时长</span>
+</div>
+<div class="bg-surface-container card-shadow p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1 group hover:bg-primary-container/30 transition-all duration-300">
+<span class="material-symbols-outlined text-primary mb-1 group-hover:scale-110 transition-transform">bookmark_manager</span>
+<span class="text-2xl font-bold text-on-surface">48</span>
+<span class="text-xs text-on-surface-variant font-medium">收藏知识点</span>
+</div>
+</section>
+<!-- CTA Button -->
+<a href="recorder.html" class="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg shadow-primary/20">
+<div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
+<span class="material-symbols-outlined font-bold">mic</span>
+</div>
+<span class="text-lg font-semibold text-white">开始记录</span>
+</a>
+<!-- Functional Menu -->
+<div class="bg-surface-container card-shadow rounded-2xl overflow-hidden divide-y divide-outline-variant/30">
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">calendar_month</span>
+</div>
+<span class="font-medium text-on-surface">我的课程表</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">translate</span>
+</div>
+<span class="font-medium text-on-surface">翻译设置</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">cloud_download</span>
+</div>
+<span class="font-medium text-on-surface">离线资源管理</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-5 hover:bg-surface-variant/50 transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help_center</span>
+</div>
+<span class="font-medium text-on-surface">反馈与支持</span>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</a>
+</div>
+<!-- Logout -->
+<a href="login.html" class="w-full p-4 text-error hover:text-error/80 transition-colors text-sm font-medium text-center block">退出登录</a>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-6 pb-safe">
+<!-- Translate -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-300" href="history.html">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label text-[10px] font-medium mt-1">History</span>
+</a>
+<!-- Notes -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-300" href="recorder.html">
+<span class="material-symbols-outlined">mic</span>
+<span class="font-label text-[10px] font-medium mt-1">Record</span>
+</a>
+<!-- Profile (Active) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90 duration-300" href="knowledge-cards.html">
+<span class="material-symbols-outlined">style</span>
+<span class="font-label text-[10px] font-medium mt-1">Card</span>
+</a><a class="flex flex-col items-center justify-center text-primary transition-all active:scale-90 duration-300" href="#">
+<span class="material-symbols-outlined active-icon" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label text-[10px] font-medium mt-1">Profile</span>
+</a>
+</nav>
+
+</body></html>

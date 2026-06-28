@@ -1,0 +1,33 @@
+/* review.css */
+.material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;}
+body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;min-height:max(884px,100dvh);}
+
+.material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .waveform-bar {
+            transition: height 0.2s ease-in-out, background-color 0.2s;
+        }
+        .transcript-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .transcript-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .transcript-container::-webkit-scrollbar-thumb {
+            background: #e3e2e3;
+            border-radius: 10px;
+        }
+        .active-sentence {
+            border-left: 3px solid #005ea1;
+            padding-left: 12px;
+            margin-left: -15px;
+        }
+        .knowledge-tag {
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .knowledge-tag:hover {
+            transform: scale(1.05);
+        }

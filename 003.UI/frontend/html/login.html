@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="zh-CN" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans Voice - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../css/login.css">
+  <script src="../shared/tailwind-config.js"></script>
+  <script defer src="../js/login.js"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 bg-surface">
+<!-- Main Content -->
+<main class="w-full max-w-md space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+<!-- Brand Header -->
+<header class="text-center space-y-4">
+<div class="inline-flex items-center justify-center w-20 h-20 bg-white border border-outline-variant/30 rounded-3xl mb-4 brand-shadow">
+<span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">graphic_eq</span>
+</div>
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface">LiveTrans Voice</h1>
+<p class="text-lg font-medium text-on-surface-variant">欢迎回来</p>
+</header>
+<!-- Login Form Card -->
+<section class="bg-white p-8 rounded-[2rem] brand-shadow border border-outline-variant/20 relative overflow-hidden">
+<form class="space-y-6" onsubmit="return false;">
+<!-- Phone Input -->
+<div class="space-y-2">
+<label class="block text-sm font-semibold text-on-surface-variant ml-1">手机号码</label>
+<div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
+<span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">smartphone</span>
+<input class="w-full pl-12 pr-4 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入手机号" type="tel">
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-2">
+<div class="flex justify-between items-center px-1">
+<label class="block text-sm font-semibold text-on-surface-variant">登录密码</label>
+<a class="text-xs font-semibold text-primary hover:opacity-80 transition-opacity" href="#">忘记密码?</a>
+</div>
+<div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
+<span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">lock</span>
+<input class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password">
+<button class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+<!-- Login Button -->
+<button class="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg tracking-wide shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all mt-2" type="submit" onclick="window.location.href='recorder.html'">
+                    登录
+                </button>
+<!-- Sign Up Link -->
+<div class="text-center pt-2">
+<p class="text-sm text-on-surface-variant">
+                        还没有账号? <a class="text-primary font-bold hover:underline underline-offset-4" href="register.html">立即注册</a>
+</p>
+</div>
+</form>
+<!-- Social Logins -->
+<div class="mt-12 space-y-6">
+<div class="relative flex items-center justify-center">
+<div class="w-full border-t border-outline-variant/30"></div>
+<span class="absolute px-4 bg-white text-[10px] font-bold text-outline-variant uppercase tracking-widest">第三方登录</span>
+</div>
+<div class="flex justify-center gap-6">
+<!-- WeChat -->
+<button class="w-14 h-14 rounded-2xl border border-outline-variant/40 bg-white flex items-center justify-center text-on-surface-variant hover:border-primary/50 hover:text-primary transition-all duration-300 brand-shadow">
+<svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+<path d="M8.36 12.18c-.46 0-.83-.37-.83-.83s.37-.83.83-.83.83.37.83.83-.37.83-.83.83zm3.9 0c-.46 0-.83-.37-.83-.83s.37-.83.83-.83.83.37.83.83-.37.83-.83.83zm8.34-.14c0-3.33-3.13-6.04-7-6.04-3.87 0-7 2.71-7 6.04 0 3.33 3.13 6.04 7 6.04.88 0 1.71-.14 2.47-.4l2.53 1.25-.63-2.22c1.64-1.18 2.63-2.88 2.63-4.67zm-11.6.14a1.39 1.39 0 0 1-1.39-1.39c0-.77.62-1.39 1.39-1.39s1.39.62 1.39 1.39c0 .77-.62 1.39-1.39 1.39zm6.5 0a1.39 1.39 0 0 1-1.39-1.39c0-.77.62-1.39 1.39-1.39s1.39.62 1.39 1.39c0 .77-.62 1.39-1.39 1.39z"></path>
+</svg>
+</button>
+<!-- Apple -->
+<button class="w-14 h-14 rounded-2xl border border-outline-variant/40 bg-white flex items-center justify-center text-on-surface-variant hover:border-on-surface/50 hover:text-on-surface transition-all duration-300 brand-shadow">
+<svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+<path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.06.75 1.21-.02 2.1-.81 3.55-.74 1.88.09 3.31 1.07 4.07 2.53-3.71 2.21-3.11 7.15.54 8.71-.73 1.76-1.92 3.23-3.22 4.41V20.28zM12.03 7.25c-.02-2.13 1.74-3.95 3.73-4.14.22 2.48-2.31 4.54-3.73 4.14z"></path>
+</svg>
+</button>
+</div>
+</div>
+</section>
+<!-- Footer Legal -->
+<footer class="text-center">
+<p class="text-xs text-outline font-medium px-8 leading-relaxed">
+                登录即代表您已阅读并同意 <a class="text-on-surface-variant hover:text-primary transition-colors underline decoration-outline-variant" href="#">服务协议</a> 与 <a class="text-on-surface-variant hover:text-primary transition-colors underline decoration-outline-variant" href="#">隐私政策</a>
+</p>
+</footer>
+</main>
+
+</body></html>

@@ -1,0 +1,21 @@
+/* knowledge-cards.css */
+.material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;}
+body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;min-height:max(884px,100dvh);}
+
+.material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .knowledge-card {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .knowledge-card:active {
+            transform: scale(0.98);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
