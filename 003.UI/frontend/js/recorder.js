@@ -194,13 +194,42 @@
 
     api('/lectures/' + lid + '/stop', { method: 'POST' })
       .then(function (l) {
-        var name = prompt('课堂已保存: ' + l.sentence_count + '句\n请输入课堂名称:', '课堂录音');
-        if (name && name.trim()) {
-          api('/lectures/' + lid + '/rename', {
-            method: 'PUT', body: JSON.stringify({ course_name: name.trim() })
-          }).then(function () { toast('已命名: ' + name); });
-        }
+        showNameModal(lid, l.sentence_count);
       }).catch(function () { toast('停止失败'); });
+  }
+
+  // ─── 命名弹窗 ───────────────────────────────────
+  function showNameModal(lid, count) {
+    document.getElementById('nameModalInfo').textContent = '共 ' + count + ' 句话';
+    document.getElementById('nameInput').value = '课堂录音';
+    document.getElementById('nameModal').classList.remove('hidden');
+    document.getElementById('nameInput').focus();
+    document.getElementById('nameInput').select();
+
+    function save() {
+      var name = document.getElementById('nameInput').value.trim();
+      document.getElementById('nameModal').classList.add('hidden');
+      if (name) {
+        api('/lectures/' + lid + '/rename', {
+          method: 'PUT', body: JSON.stringify({ course_name: name })
+        }).then(function () { toast('已命名: ' + name); });
+      }
+      cleanup();
+    }
+    function cancel() {
+      document.getElementById('nameModal').classList.add('hidden');
+      cleanup();
+    }
+    function cleanup() {
+      document.getElementById('nameSave').removeEventListener('click', save);
+      document.getElementById('nameCancel').removeEventListener('click', cancel);
+    }
+    document.getElementById('nameSave').addEventListener('click', save);
+    document.getElementById('nameCancel').addEventListener('click', cancel);
+    document.getElementById('nameInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { save(); }
+      if (e.key === 'Escape') { cancel(); }
+    });
   }
 
   recordBtn.addEventListener('click', function () {

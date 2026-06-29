@@ -38,19 +38,45 @@ def api_stop(lecture_id: int, user: User = Depends(get_current_user),
     return LectureResp.model_validate(lecture)
 
 
-@router.get("", response_model=list[LectureResp])
-def api_list(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get("")
+def api_list(user: User = Depends(get_current_user), db: Session = Depends(get_db),
+             page: int = 1, size: int = 15):
     if not user:
         raise HTTPException(401, "请先登录")
     from models.lecture import Lecture
-    lectures = db.query(Lecture).filter(
+    query = db.query(Lecture).filter(
         Lecture.user_id == user.id, Lecture.status == "completed"
-    ).order_by(Lecture.lecture_date.desc()).limit(50).all()
-    return [LectureResp.model_validate(l) for l in lectures]
+    )
+    total = query.count()
+    lectures = query.order_by(Lecture.lecture_date.asc()).offset((page-1)*size).limit(size).all()
+    return {
+        "items": [LectureResp.model_validate(l) for l in lectures],
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": max(1, (total + size - 1) // size)
+    }
 
 
 class RenameReq(BaseModel):
     course_name: str = Field(..., min_length=1, max_length=256)
+
+
+@router.delete("/{lecture_id}")
+def api_delete(lecture_id: int, user: User = Depends(get_current_user),
+               db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(401, "请先登录")
+    from models.lecture import Lecture, Transcription, Bookmark
+    lecture = db.query(Lecture).filter(Lecture.id == lecture_id, Lecture.user_id == user.id).first()
+    if not lecture:
+        raise HTTPException(404, "课堂不存在")
+    # 级联删除: 收藏 → 转录 → 课堂
+    db.query(Bookmark).filter(Bookmark.lecture_id == lecture_id).delete()
+    db.query(Transcription).filter(Transcription.lecture_id == lecture_id).delete()
+    db.delete(lecture)
+    db.commit()
+    return {"message": "已删除"}
 
 
 @router.put("/{lecture_id}/rename", response_model=LectureResp)
