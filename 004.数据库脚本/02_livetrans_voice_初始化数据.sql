@@ -1,5 +1,6 @@
 -- ============================================================
--- LiveTrans Voice — 初始化数据
+-- LiveTrans Voice — 开发/演示数据
+-- 警告：包含固定测试账号和演示课堂，禁止在生产数据库执行。
 -- 演示数据与前端HTML展示内容一致
 -- ============================================================
 USE livetrans_voice;
@@ -26,18 +27,23 @@ INSERT INTO languages (code, name_native, name_en, flag_emoji, region, supports_
 ('tr','Türkçe','Turkish','🇹🇷','南亚',0,NULL,73);
 
 -- ============================================================
--- 2. 演示用户 (密码均为 test123, bcrypt 12轮)
+-- 2. 演示用户 (密码使用 bcrypt 12轮哈希)
 -- ============================================================
-INSERT INTO users (id, nickname, email, email_verified, phone, phone_verified, password_hash, member_level, university, major, focus_area) VALUES
-(1, '学霸小李', 'demo@livetrans.app', 1, '+8613800000001', 1,
+INSERT INTO users (id, nickname, username, email, email_verified, phone, phone_verified, password_hash, member_level, university, major, focus_area) VALUES
+(1, '学霸小李', 'demo', 'demo@livetrans.app', 1, '+8613800000001', 1,
  '$2b$12$v66WW6U5Otk4qaYlNd3X4eY8OrLui4MRBngIpC/sYgUAX.k3DAj9e',
- 'premium', '慕尼黑工业大学', '机械工程', 'Computer Science & AI');
+ 'premium', '慕尼黑工业大学', '机械工程', 'Computer Science & AI'),
+-- 测试账号: 手机号 +8613800000002，密码 123456
+(2, 'test', 'test', 'test@livetrans.local', 1, '+8613800000002', 1,
+ '$2b$12$ClncTakP0PG9skt4Bxhh5.e2YO4H7SADMVBCY2V7w0mYSyd0NA36G',
+ 'free', NULL, NULL, NULL);
 
 -- ============================================================
 -- 3. 用户设置
 -- ============================================================
 INSERT INTO user_settings (user_id, default_source_lang, default_target_lang, cloud_sync_enabled) VALUES
-(1, 'auto', 'zh-CN', 1);
+(1, 'auto', 'zh-CN', 1),
+(2, 'auto', 'zh-CN', 1);
 
 -- ============================================================
 -- 4. 用户统计 (对应 profile.html)

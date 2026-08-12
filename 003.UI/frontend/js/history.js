@@ -1,11 +1,9 @@
 /**
  * LiveTrans Voice — 课堂记录页
- * 自动登录 + API 加载
+ * 会话检查 + API 加载
  */
 (function () {
   var API = '/api';
-  var DEMO_USER = '学霸小李';
-
   function api(path, method) {
     var token = localStorage.getItem('livetrans_token') || '';
     return fetch(API + path, {
@@ -16,23 +14,19 @@
     });
   }
 
-  // 自动登录 (如果未登录)
+  // 未登录时进入登录页，不在前端内置任何账号密码。
   function ensureLogin() {
     if (localStorage.getItem('livetrans_token')) return Promise.resolve();
-    return api('/auth/login', 'POST').then(function (r) {
-      // Dynamic login not implemented, use known account
-      return fetch(API + '/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: '+8613800000001', password: 'test123' })
-      }).then(function (res) { return res.json(); }).then(function (d) {
-        localStorage.setItem('livetrans_token', d.tokens.access_token);
-        localStorage.setItem('livetrans_user', JSON.stringify(d.user));
-      });
-    }).catch(function () {});
+    window.location.href = 'login.html';
+    return Promise.reject(new Error('未登录'));
   }
 
   function fmSec(s) { var m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); }
+  function escapeHtml(value) {
+    var div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+  }
 
   function renderCard(l) {
     var d = (l.started_at || '').split('T')[0] || '';
@@ -43,14 +37,14 @@
     el.onclick = function () { window.location.href = 'review.html?id=' + l.id; };
     el.innerHTML =
       '<div class="flex justify-between items-start mb-2">' +
-        '<div><h3 class="font-display-current-source text-lg text-ink-deep">' + (l.course_name || '未命名') + '</h3>' +
+        '<div><h3 class="font-display-current-source text-lg text-ink-deep">' + escapeHtml(l.course_name || '未命名') + '</h3>' +
         '<p class="font-caption-timestamp text-ink-subdued">' + d + ' · ' + t + '</p></div>' +
         '<div class="flex flex-col items-end">' +
           '<span class="font-label-tag text-primary bg-primary-container/20 px-2 py-1 rounded-lg">' + fmSec(l.duration_seconds || 0) + '</span>' +
           (l.bookmark_count > 0 ? '<div class="flex items-center gap-1 mt-1 text-tertiary"><span class="material-symbols-outlined text-[14px]" style="font-variation-settings:\'FILL\' 1;">star</span><span class="font-label-tag">' + l.bookmark_count + '</span></div>' : '') +
         '</div></div>' +
       '<p class="font-body-history-trans text-on-surface-variant line-clamp-2 mt-2 italic border-l-2 border-primary-container pl-3">' +
-        (l.source_lang || '') + ' → ' + (l.target_lang || '') + ' | ' + (l.sentence_count || 0) + ' 句话</p>';
+        escapeHtml(l.source_lang || '') + ' → ' + escapeHtml(l.target_lang || '') + ' | ' + (l.sentence_count || 0) + ' 句话</p>';
     return el;
   }
 

@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+# ffmpeg — 百度 ASR 音频格式转换依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY ../003.UI/backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ../003.UI/backend/ .
+COPY ../003.UI/frontend/ /app/frontend/
+
+# 生产环境禁止热重载
+ENV ENVIRONMENT=production
+ENV HOST=0.0.0.0
+ENV PORT=8010
+
+EXPOSE 8010
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8010", "--workers", "4"]

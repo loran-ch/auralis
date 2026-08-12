@@ -1,0 +1,47 @@
+/* LiveTrans Voice — admin.css */
+.material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;}
+body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;}
+
+/* Sidebar */
+.sidebar{transition:transform 0.3s ease;}
+@media (max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  #sidebar-toggle{display:flex !important;}
+}
+
+/* Tab content */
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* Table */
+.admin-table{width:100%;border-collapse:collapse;}
+.admin-table th{text-align:left;padding:12px 16px;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#717782;border-bottom:1px solid #e3e2e3;white-space:nowrap;background:#faf9fa;}
+.admin-table td{padding:12px 16px;font-size:0.813rem;border-bottom:1px solid #f4f3f4;color:#1A1C1D;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:#faf9fa;}
+
+/* Status badges */
+.badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:0.688rem;font-weight:600;white-space:nowrap;}
+.badge-active{background:#e8f5e9;color:#2e7d32;}
+.badge-disabled{background:#fff3e0;color:#e65100;}
+.badge-deleted{background:#fce4ec;color:#c62828;}
+.badge-deleting{background:#fff8e1;color:#f57f17;}
+.badge-completed{background:#e8f5e9;color:#2e7d32;}
+.badge-recording{background:#e3f2fd;color:#1565c0;}
+.badge-paused{background:#f3e5f5;color:#7b1fa2;}
+.badge-failed{background:#fce4ec;color:#c62828;}
+.badge-admin{background:#e8eaf6;color:#283593;}
+.badge-super{background:#fce4ec;color:#880e4f;}
+.badge-free{background:#f5f5f5;color:#616161;}
+.badge-premium{background:#fff8e1;color:#f57f17;}
+
+/* Pagination */
+.pagination-btn{min-width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;transition:all 0.2s;font-size:0.813rem;font-weight:500;border:none;background:transparent;color:#414751;}
+.pagination-btn:hover{background:#f4f3f4;}
+.pagination-btn.active{background:#005ea1;color:#fff;}
+.pagination-btn:disabled{opacity:0.4;cursor:default;}
+
+/* Toast animation */
+#toast.show{display:block;animation:toast-in 0.3s ease-out;}
+@keyframes toast-in{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}

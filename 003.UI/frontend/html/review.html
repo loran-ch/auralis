@@ -9,49 +9,8 @@
 
   <link rel="stylesheet" href="../css/review.css">
   <script src="../shared/tailwind-config.js"></script>
-  <script defer src="../js/review.js"></script>
-<script>
-// ─── 自动登录 + 加载课堂回顾 ──────────────────────
-(function(){
-  var LID = new URLSearchParams(window.location.search).get('id') || 1;
-  var TOKEN = localStorage.getItem('livetrans_token');
-
-  function api(path) {
-    return fetch('/api' + path, { headers: { 'Authorization': 'Bearer ' + TOKEN } }).then(function(r) { return r.json(); });
-  }
-
-  function render() {
-    Promise.all([api('/lectures/' + LID + '/transcriptions'), api('/lectures/active')])
-    .then(function(results) {
-      var transcriptions = results[0];
-      var container = document.getElementById('transcript-container');
-      if (!container || !transcriptions.length) return;
-      container.innerHTML = '';
-      transcriptions.forEach(function(t) {
-        var cls = t.is_bookmarked ? 'bg-orange-50/50 p-4 -mx-4 border-l-4 border-tertiary-container' : 'p-2 -mx-2';
-        var tagHtml = t.is_bookmarked ? '<span class="knowledge-tag flex items-center gap-1 bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded font-label-tag text-[10px] uppercase"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span> 重要</span>' : '';
-        var div = document.createElement('div');
-        div.className = 'cursor-pointer group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
-        div.innerHTML =
-          '<div class="flex flex-col gap-2">' + tagHtml +
-            '<p class="text-body-history-source text-ink-deep">' + t.source_text + '</p>' +
-            '<p class="text-body-history-trans text-secondary">' + t.translated_text + '</p>' +
-          '</div>';
-        container.appendChild(div);
-      });
-      // Update header
-      var titleEl = document.querySelector('h2');
-      if (titleEl) titleEl.textContent = '课堂回顾 #' + LID;
-    });
-  }
-
-  if (TOKEN) { render(); }
-  else {
-    fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone:'+8613800000001',password:'test123'}) })
-    .then(function(r){return r.json()}).then(function(d){localStorage.setItem('livetrans_token',d.tokens.access_token);location.reload()});
-  }
-})();
-</script>
+  <script src="../shared/auth-client.js?v=2"></script>
+  <script defer src="../js/review.js?v=2"></script>
 </head>
 <body class="bg-surface text-on-surface font-body-history-source min-h-screen flex flex-col">
 <!-- TopAppBar -->
@@ -60,7 +19,7 @@
 <button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full ease-out duration-200" onclick="window.location.href='history.html'"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">arrow_back</span></button>
 <div class="flex flex-col">
 <h1 class="font-display-current-source text-[18px] font-bold text-primary dark:text-primary-fixed-dim leading-none">LiveTrans Voice</h1>
-<p class="text-[12px] text-ink-subdued">高级宏观经济学 • 10月24日</p>
+<p id="review-subtitle" class="text-[12px] text-ink-subdued">正在加载课堂信息…</p>
 </div>
 </div>
 <div class="flex items-center gap-2">
@@ -78,76 +37,63 @@
 <section class="py-stack-lg border-b border-outline-variant/30">
 <div class="flex justify-between items-start">
 <div>
-<h2 class="font-display-current-source text-display-current-source text-ink-deep">市场均衡与信息不对称</h2>
-<p class="font-caption-timestamp text-caption-timestamp text-ink-subdued mt-1 uppercase">录制于大学礼堂 • 1小时12分钟</p>
-</div>
-<div class="flex gap-2">
-<span class="bg-surface-container-high px-3 py-1 rounded-full font-label-tag text-label-tag text-on-surface-variant">经济学</span>
+<h2 id="review-title" class="font-display-current-source text-display-current-source text-ink-deep">课堂回顾</h2>
+<p id="review-meta" class="font-caption-timestamp text-caption-timestamp text-ink-subdued mt-1 uppercase">正在加载…</p>
 </div>
 </div>
 </section>
 <!-- Transcript Section -->
 <section id="transcript-container" class="transcript-container mt-stack-lg space-y-stack-lg overflow-y-auto">
 <div id="transcript-loading" class="text-center py-12 text-on-surface-variant">加载中...</div>
-<!-- Bottom Audio Player & Actions -->
-<footer class="fixed bottom-0 w-full z-50 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-t-xl overflow-hidden">
-<!-- Waveform Scrubber -->
-<div class="h-12 w-full flex items-end justify-center gap-0.5 px-4 bg-surface-container-low/50 relative group cursor-pointer" id="waveform-container">
-<div class="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 bg-primary/5 transition-opacity"></div>
-<!-- Mock Waveform Bars -->
-<div class="waveform-bar w-1 bg-primary/20 rounded-t-full h-[40%]" style="height: 44.5423%;"></div>
-<div class="waveform-bar w-1 bg-primary/20 rounded-t-full h-[60%]" style="height: 69.1179%;"></div>
-<div class="waveform-bar w-1 bg-primary/20 rounded-t-full h-[30%]" style="height: 36.3578%;"></div>
-<div class="waveform-bar w-1 bg-primary/60 rounded-t-full h-[80%]" style="height: 41.2392%;"></div>
-<div class="waveform-bar w-1 bg-primary/60 rounded-t-full h-[50%]" style="height: 41.29%;"></div>
-<div class="waveform-bar w-1 bg-primary rounded-t-full h-[90%]" style="height: 89.457%;"></div>
-<div class="waveform-bar w-1 bg-primary rounded-t-full h-[70%]" style="height: 44.0711%;"></div>
-<div class="waveform-bar w-1 bg-primary rounded-t-full h-[40%]" style="height: 48.2413%;"></div>
-<div class="waveform-bar w-1 bg-primary rounded-t-full h-[65%]" style="height: 64.4347%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[30%]" style="height: 23.8977%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[55%]" style="height: 28.9441%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[85%]" style="height: 70.6084%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[45%]" style="height: 26.7004%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[25%]" style="height: 55.357%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[60%]" style="height: 47.3268%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[40%]" style="height: 55.4533%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[70%]" style="height: 63.0051%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[30%]" style="height: 40.6311%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[50%]" style="height: 73.7259%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[20%]" style="height: 88.2153%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[40%]" style="height: 38.5699%;"></div>
-<div class="waveform-bar w-1 bg-outline-variant rounded-t-full h-[60%]" style="height: 43.0517%;"></div>
-<!-- Progress Line -->
-<div class="absolute left-[30%] top-0 bottom-0 w-0.5 bg-primary z-20">
-<div class="w-3 h-3 bg-primary rounded-full absolute -top-1 -left-[5px] shadow-sm"></div>
-</div>
-</div>
-<!-- Controls Wrapper -->
-<div class="flex justify-around items-center h-20 pb-2 px-margin-mobile">
-<div class="flex items-center gap-6">
-<!-- Speed Control -->
-<button class="font-label-tag text-label-tag text-on-surface-variant hover:bg-surface-variant/30 px-3 py-1 rounded-lg transition-colors" id="speed-toggle">
-                    1.5x 倍速
-                </button>
-<!-- Audio Controls -->
-<div class="flex items-center gap-4">
-<button class="text-on-surface-variant hover:text-primary transition-colors">
-<span class="material-symbols-outlined text-[28px]">replay_10</span>
-</button>
-<button class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform" id="play-pause">
-<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-</button>
-<button class="text-on-surface-variant hover:text-primary transition-colors">
-<span class="material-symbols-outlined text-[28px]">forward_10</span>
-</button>
-</div>
-<!-- Export Button -->
-<button class="flex items-center gap-2 bg-primary-container text-on-primary-container px-4 py-2 rounded-full font-label-tag text-label-tag hover:opacity-90 transition-opacity">
-<span class="material-symbols-outlined text-[18px]">download</span>
-                    导出
-                </button>
-</div>
-</div>
+</section>
+
+<!-- Bottom Audio Player -->
+<footer class="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-t-xl">
+  <audio id="lecture-audio" preload="metadata"></audio>
+  <!-- Waveform -->
+  <div class="h-10 w-full flex items-end justify-center gap-0.5 px-4 bg-surface-container-low/50" id="waveform-container">
+    <div class="waveform-bar w-1 bg-primary/20 rounded-t-full" style="height:40%"></div>
+    <div class="waveform-bar w-1 bg-primary/20 rounded-t-full" style="height:65%"></div>
+    <div class="waveform-bar w-1 bg-primary/40 rounded-t-full" style="height:35%"></div>
+    <div class="waveform-bar w-1 bg-primary/60 rounded-t-full" style="height:78%"></div>
+    <div class="waveform-bar w-1 bg-primary/60 rounded-t-full" style="height:50%"></div>
+    <div class="waveform-bar w-1 bg-primary rounded-t-full" style="height:88%"></div>
+    <div class="waveform-bar w-1 bg-primary rounded-t-full" style="height:72%"></div>
+    <div class="waveform-bar w-1 bg-primary rounded-t-full" style="height:45%"></div>
+    <div class="waveform-bar w-1 bg-primary rounded-t-full" style="height:62%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:28%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:55%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:80%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:42%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:30%"></div>
+    <div class="waveform-bar w-1 bg-outline-variant rounded-t-full" style="height:58%"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="grid grid-cols-3 items-center h-16 px-4 max-w-lg mx-auto">
+    <!-- Left: 倍速 -->
+    <div class="flex justify-start">
+      <button id="speed-toggle" class="text-xs font-medium text-on-surface-variant hover:bg-surface-variant/40 px-3 py-1.5 rounded-lg transition-colors">1.5x 倍速</button>
+    </div>
+    <!-- Center: 播放控制 -->
+    <div class="flex justify-center items-center gap-3">
+      <button id="rewind-10" class="text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-2xl">replay_10</span>
+      </button>
+      <button id="play-pause" class="w-11 h-11 bg-primary text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+        <span class="material-symbols-outlined text-3xl" style="font-variation-settings:'FILL'1">play_arrow</span>
+      </button>
+      <button id="forward-10" class="text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-2xl">forward_10</span>
+      </button>
+    </div>
+    <!-- Right: 导出 -->
+    <div class="flex justify-end">
+      <button id="export-btn" class="flex items-center gap-1.5 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-xs font-medium hover:opacity-90 transition-opacity">
+        <span class="material-symbols-outlined text-base">download</span>导出
+      </button>
+    </div>
+  </div>
 </footer>
 <!-- Bottom Navigation (Shared Component) -->
 <nav class="fixed bottom-0 w-full flex justify-around items-center h-20 pb-2 px-4 bg-surface-container-lowest dark:bg-inverse-surface z-[60] hidden">
@@ -164,5 +110,403 @@
 <span class="font-label-tag text-label-tag">回顾</span>
 </div>
 </nav>
+
+</main>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-28 left-1/2 -translate-x-1/2 z-[100] bg-gray-900 text-white px-4 py-2 rounded-full text-sm shadow-lg"></div>
+
+<!-- 标签选择弹窗 -->
+<div id="tagPicker" class="hidden fixed z-70 bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[160px]" style="left:0;top:0;">
+  <div class="px-3 py-1.5 text-xs text-on-surface-variant font-medium">选择收藏标签</div>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="important">
+    <span class="text-base">⭐</span> 重要
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="question">
+    <span class="text-base">❓</span> 疑问
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="exam">
+    <span class="text-base">🎯</span> 考点
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="definition">
+    <span class="text-base">📖</span> 定义
+  </button>
+</div>
+
+<!-- 导出弹窗 -->
+<div id="exportModal" class="hidden fixed inset-0 z-80 bg-black/30 flex items-center justify-center">
+  <div class="bg-white rounded-2xl w-[90%] max-w-sm p-6 shadow-2xl">
+    <h3 class="text-lg font-bold text-on-surface mb-4">导出课堂记录</h3>
+    <!-- 格式选择 -->
+    <p class="text-sm text-on-surface-variant mb-2">选择导出格式</p>
+    <div class="flex gap-2 mb-5">
+      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-format="word">Word</button>
+      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="pdf">PDF</button>
+      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="txt">TXT</button>
+    </div>
+    <!-- 字号选择 -->
+    <p class="text-sm text-on-surface-variant mb-2">选择字号</p>
+    <div class="flex gap-2 mb-6">
+      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="12">小号</button>
+      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-size="16">中号</button>
+      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="20">大号</button>
+    </div>
+    <!-- 操作按钮 -->
+    <div class="flex gap-3">
+      <button id="exportCancel" class="flex-1 py-3 text-secondary font-medium hover:bg-surface-container-low rounded-xl transition-colors">取消</button>
+      <button id="exportConfirm" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">导出</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 课堂回顾 — 加载 + 收藏 ──────────────────────
+(function(){
+  var LID = new URLSearchParams(window.location.search).get('id') || 1;
+  var TOKEN = localStorage.getItem('livetrans_token');
+  var tagPicker = document.getElementById('tagPicker');
+  var toastEl = document.getElementById('toast');
+  var tagPickerCallback = null;
+  var transcriptionsData = [];  // 存储转录数据用于导出
+
+  var tagNames = { important: '⭐重要', question: '❓疑问', exam: '🎯考点', definition: '📖定义' };
+  var tagColors = {
+    important: 'bg-orange-500',
+    question: 'bg-primary',
+    exam: 'bg-alert-red',
+    definition: 'bg-accent-purple'
+  };
+
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = { 'Authorization': 'Bearer ' + TOKEN };
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    return fetch('/api' + path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body || undefined
+    }).then(function(r) {
+      return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || 'fail'); return d; });
+    });
+  }
+
+  function toast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.remove('hidden');
+    setTimeout(function () { toastEl.classList.add('hidden'); }, 2500);
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str || ''));
+    return div.innerHTML;
+  }
+
+  function formatDuration(totalSeconds) {
+    totalSeconds = Number(totalSeconds || 0);
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hours) return hours + '小时' + minutes + '分钟';
+    return minutes + '分钟';
+  }
+
+  function loadLectureInfo() {
+    return api('/lectures/' + LID).then(function (lecture) {
+      var title = lecture.course_name || '课堂回顾';
+      var dateText = lecture.lecture_date
+        ? new Date(lecture.lecture_date + 'T00:00:00').toLocaleDateString('zh-CN') : '';
+      document.getElementById('review-title').textContent = title;
+      document.getElementById('review-subtitle').textContent = title + (dateText ? ' • ' + dateText : '');
+      var location = [lecture.location_name, lecture.room].filter(Boolean).join(' · ');
+      document.getElementById('review-meta').textContent =
+        (location ? '录制于' + location + ' • ' : '') + formatDuration(lecture.duration_seconds);
+      document.title = title + ' - LiveTrans Voice';
+      var audio = document.getElementById('lecture-audio');
+      if (audio && lecture.audio_url) {
+        audio.src = lecture.audio_url;
+        audio.dispatchEvent(new CustomEvent('lecture-audio-ready'));
+      }
+      return lecture;
+    }).catch(function (error) {
+      toast(error.message || '课堂信息加载失败');
+      throw error;
+    });
+  }
+
+  // ─── 标签弹窗 ─────────────────────────────────
+  function showTagPicker(anchorEl, callback) {
+    if (!tagPicker) return;
+    var rect = anchorEl.getBoundingClientRect();
+    var left = Math.max(8, Math.min(rect.left + rect.width / 2 - 80, window.innerWidth - 168));
+    var top = rect.bottom + 6;
+    if (top + 220 > window.innerHeight) top = rect.top - 220;
+    tagPicker.style.left = left + 'px';
+    tagPicker.style.top = top + 'px';
+    tagPicker.classList.remove('hidden');
+    tagPickerCallback = callback;
+  }
+
+  function hideTagPicker() {
+    if (!tagPicker) return;
+    tagPicker.classList.add('hidden');
+    tagPickerCallback = null;
+  }
+
+  if (tagPicker) {
+    tagPicker.querySelectorAll('.tag-option').forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var tag = this.getAttribute('data-tag');
+        if (tag && tagPickerCallback) tagPickerCallback(tag);
+        hideTagPicker();
+      });
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!tagPicker || tagPicker.classList.contains('hidden')) return;
+    if (!tagPicker.contains(e.target)) hideTagPicker();
+  });
+
+  // ─── 渲染 ─────────────────────────────────────
+  function render() {
+    api('/lectures/' + LID + '/transcriptions')
+    .then(function(transcriptions) {
+      var container = document.getElementById('transcript-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!transcriptions || !transcriptions.length) {
+        container.innerHTML = '<div class="text-center py-12 text-on-surface-variant">暂无转录内容</div>';
+        transcriptionsData = [];
+        return;
+      }
+
+      transcriptionsData = transcriptions;
+
+      transcriptions.forEach(function(t) {
+        var isBookmarked = t.is_bookmarked;
+        var cls = isBookmarked ? 'bg-orange-50/50 p-4 border-l-4 border-tertiary-container' : 'p-3';
+        var starFilled = isBookmarked ? "'FILL' 1" : "'FILL' 0";
+        var tagLabel = isBookmarked ? (tagNames[t.bookmark_tag] || '⭐已收藏') : '';
+
+        var div = document.createElement('div');
+        div.className = 'group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
+        div.setAttribute('data-trans-id', t.id);
+        div.innerHTML =
+          '<div class="flex justify-between items-start gap-3">' +
+            '<div class="flex-1 flex flex-col gap-2">' +
+              (tagLabel ? '<span class="bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[t.bookmark_tag] || 'bg-primary') + '"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagLabel) + '</span>' : '') +
+              '<p class="text-body-history-source text-ink-deep">' + escapeHtml(t.source_text || '') + '</p>' +
+              '<p class="text-body-history-trans text-secondary">' + escapeHtml(t.translated_text || '') + '</p>' +
+            '</div>' +
+            '<button class="js-bookmark-btn flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center hover:bg-tertiary-fixed/50 transition-colors" title="' + (isBookmarked ? '取消收藏' : '收藏') + '">' +
+              '<span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings:' + starFilled + ';">star</span>' +
+            '</button>' +
+          '</div>';
+        container.appendChild(div);
+
+        // 收藏按钮事件
+        var btn = div.querySelector('.js-bookmark-btn');
+        var starSpan = btn.querySelector('span');
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var tid = parseInt(div.getAttribute('data-trans-id'));
+          if (!tid) return;
+
+          if (isBookmarked) {
+            api('/bookmarks/by-transcription/' + tid, { method: 'DELETE' })
+              .then(function () {
+                toast('已取消收藏');
+                starSpan.style.fontVariationSettings = "'FILL' 0";
+                btn.title = '收藏';
+                div.classList.remove('bg-orange-50/50', 'border-l-4', 'border-tertiary-container');
+                div.classList.add('p-3');
+                var badge = div.querySelector('.bookmark-badge');
+                if (badge) badge.remove();
+                isBookmarked = false;
+              })
+              .catch(function (err) { toast(err.message || '取消失败'); });
+          } else {
+            showTagPicker(btn, function (tag) {
+              api('/bookmarks', {
+                method: 'POST',
+                body: JSON.stringify({ transcription_id: tid, tag: tag })
+              })
+                .then(function () {
+                  toast('已收藏');
+                  starSpan.style.fontVariationSettings = "'FILL' 1";
+                  btn.title = '取消收藏';
+                  div.classList.add('bg-orange-50/50', 'border-l-4', 'border-tertiary-container');
+                  div.classList.remove('p-3');
+                  var firstChild = div.querySelector('.flex-1');
+                  if (firstChild) {
+                    var badge = document.createElement('span');
+                    badge.className = 'bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[tag] || 'bg-primary');
+                    badge.innerHTML = '<span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagNames[tag] || tag);
+                    firstChild.insertBefore(badge, firstChild.firstChild);
+                  }
+                  isBookmarked = true;
+                })
+                .catch(function (err) { toast(err.message || '收藏失败'); });
+            });
+          }
+        });
+      });
+
+      var titleEl = document.querySelector('h2');
+      if (titleEl) titleEl.textContent = '课堂回顾';
+    })
+    .catch(function (err) {
+      var container = document.getElementById('transcript-container');
+      if (container) container.innerHTML = '<div class="text-center py-12 text-error">加载失败: ' + escapeHtml(err.message) + '</div>';
+    });
+  }
+
+  // ─── 导出功能 ─────────────────────────────────
+  var exportModal = document.getElementById('exportModal');
+  var exportFormat = 'word';
+  var exportFontSize = 16;
+
+  // 导出按钮 → 打开弹窗
+  var exportBtn = document.getElementById('export-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function () {
+      if (!transcriptionsData.length) { toast('暂无数据可导出'); return; }
+      exportModal.classList.remove('hidden');
+    });
+  }
+
+  // 格式选择
+  if (exportModal) {
+    exportModal.querySelectorAll('.export-format').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        exportModal.querySelectorAll('.export-format').forEach(function (b) {
+          b.classList.remove('border-primary', 'bg-primary/5', 'text-primary', 'font-semibold');
+          b.classList.add('border-outline-variant', 'text-on-surface-variant', 'font-medium');
+        });
+        this.classList.add('border-primary', 'bg-primary/5', 'text-primary', 'font-semibold');
+        this.classList.remove('border-outline-variant', 'text-on-surface-variant', 'font-medium');
+        exportFormat = this.getAttribute('data-format');
+      });
+    });
+
+    // 字号选择
+    exportModal.querySelectorAll('.export-fontsize').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        exportModal.querySelectorAll('.export-fontsize').forEach(function (b) {
+          b.classList.remove('border-primary', 'bg-primary/5', 'text-primary', 'font-semibold');
+          b.classList.add('border-outline-variant', 'text-on-surface-variant', 'font-medium');
+        });
+        this.classList.add('border-primary', 'bg-primary/5', 'text-primary', 'font-semibold');
+        this.classList.remove('border-outline-variant', 'text-on-surface-variant', 'font-medium');
+        exportFontSize = parseInt(this.getAttribute('data-size'));
+      });
+    });
+
+    // 取消
+    document.getElementById('exportCancel').addEventListener('click', function () {
+      exportModal.classList.add('hidden');
+    });
+
+    // 确认导出
+    document.getElementById('exportConfirm').addEventListener('click', function () {
+      exportModal.classList.add('hidden');
+      doExport(exportFormat, exportFontSize);
+    });
+
+    // 点击遮罩关闭
+    exportModal.addEventListener('click', function (e) {
+      if (e.target === exportModal) exportModal.classList.add('hidden');
+    });
+  }
+
+  function doExport(format, fontSize) {
+    if (!transcriptionsData.length) { toast('暂无数据可导出'); return; }
+    var title = (document.querySelector('h2') || {}).textContent || '课堂回顾';
+    var date = new Date().toLocaleDateString('zh-CN');
+
+    if (format === 'txt') {
+      exportTxt(title, date, fontSize);
+    } else if (format === 'pdf') {
+      exportPdf(title, date, fontSize);
+    } else {
+      exportWord(title, date, fontSize);
+    }
+    api('/lectures/' + LID, {
+      method: 'PATCH', body: JSON.stringify({ exported: true })
+    }).catch(function () {});
+  }
+
+  function buildContent(title, date, fontSize) {
+    var lines = [];
+    lines.push(title);
+    lines.push('导出日期: ' + date);
+    lines.push('');
+    transcriptionsData.forEach(function (t, i) {
+      lines.push('【' + (i + 1) + '】' + (t.is_bookmarked ? ' [已收藏]' : ''));
+      lines.push(t.source_text || '');
+      lines.push(t.translated_text || '');
+      lines.push('');
+    });
+    return lines.join('\n');
+  }
+
+  function buildHtml(title, date, fontSize) {
+    var html = '<html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>';
+    html += '<style>body{font-family:"Microsoft YaHei",SimSun,sans-serif;font-size:' + fontSize + 'px;line-height:2;padding:40px;max-width:800px;margin:0 auto;color:#333}h1{font-size:' + (fontSize + 8) + 'px;text-align:center;margin-bottom:8px}.date{text-align:center;color:#999;font-size:' + (fontSize - 2) + 'px;margin-bottom:30px}.item{margin-bottom:24px;padding:12px 16px;border-left:3px solid #1a73e8;background:#f8f9fa}.item.bookmarked{border-left-color:#f97316;background:#fff7ed}.source{color:#1a1c1d;margin-bottom:4px}.trans{color:#5f6368;font-style:italic}.badge{display:inline-block;background:#f97316;color:#fff;padding:2px 8px;border-radius:4px;font-size:' + (fontSize - 4) + 'px;margin-bottom:6px}</style></head><body>';
+    html += '<h1>' + escapeHtml(title) + '</h1>';
+    html += '<p class="date">导出日期: ' + date + '</p>';
+    transcriptionsData.forEach(function (t, i) {
+      var cls = t.is_bookmarked ? 'item bookmarked' : 'item';
+      html += '<div class="' + cls + '">';
+      if (t.is_bookmarked) html += '<span class="badge">⭐ 已收藏</span>';
+      html += '<p class="source">' + escapeHtml(t.source_text || '') + '</p>';
+      html += '<p class="trans">' + escapeHtml(t.translated_text || '') + '</p>';
+      html += '</div>';
+    });
+    html += '</body></html>';
+    return html;
+  }
+
+  function downloadBlob(content, filename, mimeType) {
+    var blob = new Blob(['﻿' + content], { type: mimeType + ';charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('导出完成');
+  }
+
+  function exportWord(title, date, fontSize) {
+    var html = buildHtml(title, date, fontSize);
+    downloadBlob(html, title + '.doc', 'application/msword');
+  }
+
+  function exportTxt(title, date, fontSize) {
+    var text = buildContent(title, date, fontSize);
+    downloadBlob(text, title + '.txt', 'text/plain');
+  }
+
+  function exportPdf(title, date, fontSize) {
+    var html = buildHtml(title, date, fontSize);
+    html = html.replace('<style>', '<style>@media print{@page{size:A4;margin:15mm}}');
+    var w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(function () { w.print(); }, 500);
+  }
+
+  if (TOKEN) { loadLectureInfo().then(render).catch(function () {}); }
+  else {
+    document.getElementById('transcript-container').innerHTML = '<div class="text-center py-12 text-error">请先<a href="login.html" class="text-primary font-bold">登录</a></div>';
+  }
+})();
+</script>
 
 </body></html>

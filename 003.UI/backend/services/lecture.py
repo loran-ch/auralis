@@ -1,17 +1,16 @@
 """LiveTrans Voice — 课堂录音 + 转录服务"""
 import random
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
+from models.lecture import Lecture, Transcription
 
 def _now():
-    """返回北京时间"""
-    return datetime.now(timezone(timedelta(hours=8))).replace(tzinfo=None)
-from typing import Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
-
-from models.user import User
-from database import SessionLocal
-from models.lecture import Lecture, Transcription
+    """返回本地时间"""
+    return datetime.now()
 
 
 # ─── 演示用 ASR 数据 (英文→中文，课堂场景) ──────────────
@@ -53,6 +52,8 @@ def stop_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture
     ).first()
     if not lecture:
         return None
+    if lecture.status == "completed":
+        return lecture
     lecture.status = "completed"
     lecture.ended_at = _now()
     # 更新统计数据
@@ -74,8 +75,44 @@ def stop_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture
 
 def get_active_lecture(db: Session, user_id: int) -> Optional[Lecture]:
     return db.query(Lecture).filter(
-        Lecture.user_id == user_id, Lecture.status == "recording"
+        Lecture.user_id == user_id,
+        Lecture.status.in_(("recording", "paused")),
     ).order_by(desc(Lecture.started_at)).first()
+
+
+def pause_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]:
+    lecture = db.query(Lecture).filter(
+        Lecture.id == lecture_id,
+        Lecture.user_id == user_id,
+        Lecture.status == "recording",
+    ).first()
+    if not lecture:
+        return None
+    lecture.status = "paused"
+    db.commit()
+    db.refresh(lecture)
+    return lecture
+
+
+def resume_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]:
+    lecture = db.query(Lecture).filter(
+        Lecture.id == lecture_id,
+        Lecture.user_id == user_id,
+        Lecture.status == "paused",
+    ).first()
+    if not lecture:
+        return None
+    lecture.status = "recording"
+    db.commit()
+    db.refresh(lecture)
+    return lecture
+
+
+def get_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]:
+    return db.query(Lecture).filter(
+        Lecture.id == lecture_id,
+        Lecture.user_id == user_id,
+    ).first()
 
 
 # ─── 转录 (演示模式) ──────────────────────────────────────
@@ -86,15 +123,14 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
     """
     保存转录句子。如果有前端传来的真实识别文本则使用，否则使用演示数据
     """
+    # 锁定课堂行，确保多请求并发写入时 sentence_order 唯一且连续。
     lecture = db.query(Lecture).filter(
         Lecture.id == lecture_id, Lecture.user_id == user_id
-    ).first()
+    ).with_for_update().first()
     if not lecture or lecture.status != "recording":
         return None
 
-    count = db.query(Transcription).filter(
-        Transcription.lecture_id == lecture_id
-    ).count()
+    count = int(lecture.sentence_count or 0)
 
     # 如果前端传来了真实识别文本，直接保存
     if source_text:
@@ -121,6 +157,7 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
         ocr_confidence=round(random.uniform(0.88, 0.98), 2),
     )
     db.add(transcription)
+    lecture.sentence_count = count + 1
     db.commit()
     db.refresh(transcription)
 
@@ -132,6 +169,12 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
         "translated_text": transcription.translated_text,
         "target_lang": transcription.target_lang,
         "is_bookmarked": transcription.is_bookmarked,
+        "ocr_confidence": transcription.ocr_confidence,
+        "engine": transcription.engine,
+        "mode": transcription.mode,
+        "start_offset_ms": transcription.start_offset_ms,
+        "end_offset_ms": transcription.end_offset_ms,
+        "recorded_at": transcription.recorded_at,
     }
 
 

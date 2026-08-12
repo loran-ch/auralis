@@ -26,10 +26,10 @@
 <form class="space-y-6" onsubmit="return false;">
 <!-- Phone Input -->
 <div class="space-y-2">
-<label class="block text-sm font-semibold text-on-surface-variant ml-1">手机号码</label>
+<label class="block text-sm font-semibold text-on-surface-variant ml-1">账号</label>
 <div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
-<span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">smartphone</span>
-<input id="phoneInput" class="w-full pl-12 pr-4 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入手机号" type="tel" value="+8613800000001">
+<span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">person</span>
+<input id="accountInput" class="w-full pl-12 pr-4 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="用户名或手机号" type="text" autocomplete="username">
 </div>
 </div>
 <!-- Password Input -->
@@ -40,7 +40,7 @@
 </div>
 <div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
 <span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">lock</span>
-<input id="passwordInput" class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password" value="test123">
+<input id="passwordInput" class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password" autocomplete="current-password">
 <button class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button">
 <span class="material-symbols-outlined">visibility</span>
 </button>
@@ -88,23 +88,30 @@
 </footer>
 </main>
 
-<script>
-document.getElementById('loginBtn').addEventListener('click', function(){
-  var phone = document.getElementById('phoneInput').value.trim();
-  var pwd = document.getElementById('passwordInput').value.trim();
-  var msg = document.getElementById('loginMsg');
-  if(!phone||!pwd){msg.textContent='请输入手机号和密码';msg.classList.remove('hidden');return}
-  msg.textContent='登录中...';msg.classList.remove('hidden');msg.style.color='#717782';
-  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,password:pwd})})
-  .then(function(r){return r.json()})
-  .then(function(d){
-    if(d.detail){msg.textContent=d.detail;msg.style.color='#EF4444';return}
-    localStorage.setItem('livetrans_token',d.tokens.access_token);
-    localStorage.setItem('livetrans_user',JSON.stringify(d.user));
-    msg.textContent='登录成功，跳转中...';msg.style.color='#4CAF50';
-    setTimeout(function(){window.location.href='recorder.html'},500);
-  })
-  .catch(function(e){msg.textContent='登录失败';msg.style.color='#EF4444'});
-});
-</script>
-</body></html>
+	<script>
+	document.getElementById('loginBtn').addEventListener('click', function(){
+	  var account = document.getElementById('accountInput').value.trim();
+	  // 手机号格式自动加 +86
+	  if (/^1[3-9]\d{9}$/.test(account.replace(/[\s-]/g, ''))) {
+	    account = '+86' + account.replace(/[\s-]/g, '');
+	  }
+	  var pwd = document.getElementById('passwordInput').value;
+	  var msg = document.getElementById('loginMsg');
+	  var button = this;
+	  if(!account||!pwd){msg.textContent='请输入账号和密码';msg.classList.remove('hidden');return}
+	  msg.textContent='登录中...';msg.classList.remove('hidden');msg.style.color='#717782';
+	  button.disabled = true;
+	  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account:account,password:pwd})})
+	  .then(function(r){return r.json().catch(function(){return {}}).then(function(d){if(!r.ok) throw new Error(d.detail||'登录失败');return d})})
+	  .then(function(d){
+	    if(!d.tokens||!d.tokens.access_token||!d.user) throw new Error('登录响应格式异常');
+	    localStorage.setItem('livetrans_token',d.tokens.access_token);
+	    if(d.tokens.refresh_token) localStorage.setItem('livetrans_refresh_token',d.tokens.refresh_token);
+	    localStorage.setItem('livetrans_user',JSON.stringify(d.user));
+	    msg.textContent='登录成功，跳转中...';msg.style.color='#4CAF50';
+	    setTimeout(function(){window.location.href='recorder.html'},500);
+	  })
+	  .catch(function(e){msg.textContent=e.message||'登录失败';msg.style.color='#EF4444'})
+	  .finally(function(){button.disabled=false});
+	});
+	</script>

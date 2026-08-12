@@ -1,18 +1,14 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Test Recorder</title>
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>Test Recorder</title><script src="../shared/auth-client.js?v=2"></script>
 <style>body{font-family:sans-serif;padding:40px;text-align:center}button{font-size:24px;padding:20px 40px;border-radius:50px;border:none;cursor:pointer;margin:20px}#log{text-align:left;max-width:600px;margin:20px auto;font-size:14px;font-family:monospace;background:#f5f5f5;padding:16px;border-radius:8px;max-height:400px;overflow-y:auto}</style></head><body>
 <h1>Recorder Test</h1>
 <button id="startBtn" style="background:#4CAF50;color:white" onclick="doStart()">🎤 开始录音</button>
 <button id="stopBtn" style="background:#EF4444;color:white;display:none" onclick="doStop()">⏹ 停止录音</button>
 <div id="log"></div>
 <script>
-var TOKEN='',LID=null;
-function log(m){var el=document.getElementById('log');el.innerHTML+='<div>'+new Date().toLocaleTimeString()+' '+m+'</div>';el.scrollTop=el.scrollHeight}
+var TOKEN=localStorage.getItem('livetrans_token')||'',LID=null;
+function log(m){var el=document.getElementById('log');var row=document.createElement('div');row.textContent=new Date().toLocaleTimeString()+' '+m;el.appendChild(row);el.scrollTop=el.scrollHeight}
 
-// Auto-login
-fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:'+8613800000001',password:'test123'})})
-.then(function(r){return r.json()})
-.then(function(d){TOKEN=d.tokens.access_token;localStorage.setItem('livetrans_token',TOKEN);log('✅ 已登录: '+d.user.nickname)})
-.catch(function(e){log('❌ 登录失败: '+e)});
+if(!TOKEN){log('❌ 请先在登录页面登录');setTimeout(function(){location.href='login.html'},800)}
 
 function doStart(){
   if(!TOKEN){log('❌ 未登录');return}

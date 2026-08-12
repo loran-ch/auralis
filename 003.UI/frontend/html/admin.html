@@ -1,0 +1,264 @@
+<!DOCTYPE html><html class="light" lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>LiveTrans Voice - 管理后台</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/admin.css">
+<script src="../shared/tailwind-config.js"></script>
+<script src="../shared/auth-client.js?v=2"></script>
+<script defer src="../js/admin.js"></script>
+</head>
+<body class="flex h-screen bg-surface overflow-hidden">
+
+<!-- ===== Sidebar ===== -->
+<aside id="sidebar" class="sidebar w-60 bg-white border-r border-outline-variant/20 flex flex-col z-40 flex-shrink-0">
+  <!-- Brand -->
+  <div class="px-5 py-6 border-b border-outline-variant/10">
+    <div class="flex items-center gap-3">
+      <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings:'FILL' 1;">graphic_eq</span>
+      <div>
+        <h2 class="text-sm font-bold text-on-surface tracking-tight">LiveTrans Voice</h2>
+        <p class="text-xs text-on-surface-variant">管理后台</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav Items -->
+  <nav class="flex-1 py-4 space-y-1 px-3" id="sidebar-nav">
+    <button class="sidebar-nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 bg-primary/10 text-primary" data-tab="dashboard">
+      <span class="material-symbols-outlined text-xl">space_dashboard</span>
+      <span>仪表盘</span>
+    </button>
+    <button class="sidebar-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface" data-tab="users">
+      <span class="material-symbols-outlined text-xl">group</span>
+      <span>用户管理</span>
+    </button>
+    <button class="sidebar-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface" data-tab="lectures">
+      <span class="material-symbols-outlined text-xl">menu_book</span>
+      <span>课堂管理</span>
+    </button>
+    <button class="sidebar-nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface" data-tab="audit-log" id="nav-audit-log" style="display:none;">
+      <span class="material-symbols-outlined text-xl">receipt_long</span>
+      <span>审计日志</span>
+    </button>
+  </nav>
+
+  <!-- Bottom -->
+  <div class="px-5 py-4 border-t border-outline-variant/10">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center overflow-hidden">
+        <span class="material-symbols-outlined text-on-surface-variant">person</span>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-on-surface truncate" id="admin-name">管理员</p>
+        <p class="text-xs text-on-surface-variant" id="admin-role">--</p>
+      </div>
+    </div>
+    <a href="recorder.html" class="flex items-center gap-2 text-xs text-on-surface-variant hover:text-primary transition-colors">
+      <span class="material-symbols-outlined text-sm">arrow_back</span>返回前台
+    </a>
+  </div>
+</aside>
+
+<!-- ===== Mobile Toggle ===== -->
+<button id="sidebar-toggle" class="hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-full bg-white shadow-lg border border-outline-variant/20 items-center justify-center md:hidden" style="display:none;">
+  <span class="material-symbols-outlined text-on-surface">menu</span>
+</button>
+
+<!-- ===== Main Content ===== -->
+<main class="flex-1 overflow-y-auto">
+
+  <!-- ===== Dashboard Tab ===== -->
+  <section id="tab-dashboard" class="tab-content active p-6 lg:p-8">
+    <header class="mb-8">
+      <h1 class="text-2xl font-bold text-on-surface tracking-tight">仪表盘</h1>
+      <p class="text-sm text-on-surface-variant mt-1">系统运行概览</p>
+    </header>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" id="stat-cards">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- System Info -->
+    <div class="bg-white rounded-2xl border border-outline-variant/10 p-6" id="system-info-card">
+      <h3 class="text-sm font-semibold text-on-surface mb-4">系统信息</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm" id="system-info">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Users Tab ===== -->
+  <section id="tab-users" class="tab-content p-6 lg:p-8" style="display:none;">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-on-surface tracking-tight">用户管理</h1>
+      <p class="text-sm text-on-surface-variant mt-1">管理所有注册用户</p>
+    </header>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 mb-6">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+        <input id="users-search" class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="搜索昵称/手机号/邮箱..." type="text">
+      </div>
+      <select id="users-status-filter" class="px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none">
+        <option value="">全部状态</option>
+        <option value="active">活跃</option>
+        <option value="disabled">已禁用</option>
+        <option value="deleting">待删除</option>
+        <option value="deleted">已删除</option>
+      </select>
+      <select id="users-role-filter" class="px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none">
+        <option value="">全部角色</option>
+        <option value="user">普通用户</option>
+        <option value="admin">管理员</option>
+        <option value="super_admin">超级管理员</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-outline-variant/10 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>昵称</th>
+              <th>手机号</th>
+              <th>角色</th>
+              <th>状态</th>
+              <th>会员</th>
+              <th>注册时间</th>
+              <th class="text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="users-table-body">
+            <tr><td colspan="8" class="text-center py-12 text-on-surface-variant">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10" id="users-pagination">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Lectures Tab ===== -->
+  <section id="tab-lectures" class="tab-content p-6 lg:p-8" style="display:none;">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-on-surface tracking-tight">课堂管理</h1>
+      <p class="text-sm text-on-surface-variant mt-1">管理所有课堂记录</p>
+    </header>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 mb-6">
+      <div class="relative flex-1 min-w-[200px] max-w-sm">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+        <input id="lectures-search" class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all" placeholder="搜索课程名/用户..." type="text">
+      </div>
+      <select id="lectures-status-filter" class="px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none">
+        <option value="">全部状态</option>
+        <option value="recording">录制中</option>
+        <option value="paused">已暂停</option>
+        <option value="completed">已完成</option>
+        <option value="failed">失败</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-outline-variant/10 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>用户</th>
+              <th>课程名</th>
+              <th>语言对</th>
+              <th>时长</th>
+              <th>句子数</th>
+              <th>状态</th>
+              <th>日期</th>
+              <th class="text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="lectures-table-body">
+            <tr><td colspan="9" class="text-center py-12 text-on-surface-variant">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10" id="lectures-pagination">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Audit Log Tab ===== -->
+  <section id="tab-audit-log" class="tab-content p-6 lg:p-8" style="display:none;">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-on-surface tracking-tight">审计日志</h1>
+      <p class="text-sm text-on-surface-variant mt-1">管理员操作记录</p>
+    </header>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 mb-6">
+      <select id="audit-action-filter" class="px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none">
+        <option value="">全部操作</option>
+        <option value="user.status_active">用户启用</option>
+        <option value="user.status_disabled">用户禁用</option>
+        <option value="user.role_admin">提升管理员</option>
+        <option value="user.role_super_admin">提升超管</option>
+        <option value="user.role_user">降级用户</option>
+        <option value="user.delete">删除用户</option>
+        <option value="lecture.delete">删除课堂</option>
+      </select>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-outline-variant/10 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>管理员</th>
+              <th>操作</th>
+              <th>目标</th>
+              <th>IP</th>
+              <th>时间</th>
+              <th>详情</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body">
+            <tr><td colspan="7" class="text-center py-12 text-on-surface-variant">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="flex items-center justify-between px-6 py-4 border-t border-outline-variant/10" id="audit-pagination">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Toast -->
+<div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-ink-deep text-white px-6 py-3 rounded-2xl shadow-lg text-sm font-medium z-[100] max-w-sm text-center transition-all duration-300"></div>
+
+<!-- Confirm Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-[90] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl">
+    <h3 class="text-lg font-semibold text-on-surface mb-2">确认操作</h3>
+    <p class="text-sm text-on-surface-variant mb-6" id="confirm-message">确定要执行此操作吗？</p>
+    <div class="flex gap-3 justify-end">
+      <button id="confirm-cancel" class="px-5 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors">取消</button>
+      <button id="confirm-ok" class="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-error hover:opacity-90 transition-opacity">确认</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

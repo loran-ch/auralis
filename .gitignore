@@ -7,10 +7,13 @@ build/
 
 # IDE 配置 (保留 .claude 目录)
 .vscode/
+.claude/
+.hbuilderx/
 
 # 系统文件
 .DS_Store
 Thumbs.db
+*.lnk
 *.tmp
 *.swp
 *.swo
@@ -19,9 +22,26 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+
+# App 签名与发布证书（只保存在密钥管理服务或发布机）
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+*.pem
+*.key
 
 # 日志
 *.log
 npm-debug.log*
 __pycache__/
 *.pyc
+
+# 用户上传内容（运行时数据）
+003.UI/frontend/uploads/
+
+# 部署机生成的证书和前端产物
+deploy/ssl/
+deploy/h5_dist/

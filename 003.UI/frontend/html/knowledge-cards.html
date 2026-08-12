@@ -1,15 +1,14 @@
-<!DOCTYPE html><html lang="zh-CN"><head>  <link rel="stylesheet" href="../css/knowledge-cards.css">
-  <script src="../shared/tailwind-config.js"></script>
-  <script defer src="../js/knowledge-cards.js"></script>
-</head><body class="bg-background text-on-background font-sans min-h-screen pb-24">
-
+<!DOCTYPE html><html lang="zh-CN"><head>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-
 <title>LiveTrans Voice - 知识卡片</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/knowledge-cards.css">
+<script src="../shared/tailwind-config.js"></script>
+<script src="../shared/auth-client.js?v=2"></script>
+</head><body class="bg-background text-on-background font-sans min-h-screen pb-24">
 
 <!-- Top AppBar -->
 <header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim">
@@ -37,28 +36,20 @@
 </div>
 <div>
 <p class="font-body-history-source text-on-surface font-semibold">本周进度</p>
-<p class="font-body-history-trans text-on-surface-variant">你本周已收藏 24 个知识点</p>
+<p class="font-body-history-trans text-on-surface-variant">你本周已收藏 <span id="summary-count">0</span> 个知识点</p>
 </div>
 </section>
 <!-- Filter Chips -->
 <nav class="flex gap-2 overflow-x-auto hide-scrollbar pb-4 -mx-margin-mobile px-margin-mobile mb-4 sticky top-16 bg-background z-40 py-2">
-<button class="flex-none px-4 py-1.5 rounded-full bg-primary text-on-primary text-label-tag font-label-tag">全部</button>
-<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]" data-icon="star" style="font-variation-settings: 'FILL' 1; color: #F97316;">star</span>
-                重要
-            </button>
-<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]" data-icon="help" style="font-variation-settings: 'FILL' 1; color: #005ea1;">help</span>
-                疑问
-            </button>
-<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]" data-icon="target" style="font-variation-settings: 'FILL' 1; color: #EF4444;">target</span>
-                考点
-            </button>
-<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1">
-<span class="material-symbols-outlined text-[16px]" data-icon="book" style="font-variation-settings: 'FILL' 1; color: #8B5CF6;">book</span>
-                定义
-            </button>
+<button class="flex-none px-4 py-1.5 rounded-full bg-primary text-on-primary text-label-tag font-label-tag filter-chip active" data-filter="all">全部</button>
+<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1 filter-chip" data-filter="important">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1; color: #F97316;">star</span>重要</button>
+<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1 filter-chip" data-filter="question">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1; color: #005ea1;">help</span>疑问</button>
+<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1 filter-chip" data-filter="exam">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1; color: #EF4444;">target</span>考点</button>
+<button class="flex-none px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-label-tag font-label-tag flex items-center gap-1 filter-chip" data-filter="definition">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1; color: #8B5CF6;">book</span>定义</button>
 </nav>
 <!-- Knowledge Cards Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter mt-stack-md" id="cards-grid">
@@ -78,43 +69,135 @@
 </div>
 <span class="font-label-tag text-label-tag">记录</span>
 </a>
-<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform duration-200" href="#">
-<span class="material-symbols-outlined mb-1" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
-<span class="font-label-tag text-label-tag">复习</span>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform duration-200" href="profile.html">
+<span class="material-symbols-outlined mb-1" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-tag text-label-tag">主页</span>
 </a>
 </div>
 </footer>
-<!-- Micro-interaction Script -->
 
 <script>
-(function(){
-  var TOKEN=localStorage.getItem('livetrans_token');
-  var tagNames={important:'⭐重要',question:'❓疑问',exam:'🎯考点',definition:'📖定义'};
-  var tagColors={important:'bg-orange-500',question:'bg-primary',exam:'bg-alert-red',definition:'bg-accent-purple'};
+// ─── 知识卡片 — 内联脚本（无外部依赖）──────────────
+(function () {
+  var TOKEN = localStorage.getItem('livetrans_token');
+  var grid = document.getElementById('cards-grid');
+  var summaryCount = document.getElementById('summary-count');
 
-  function loadCards(){
-    fetch('/api/bookmarks',{headers:{'Authorization':'Bearer '+TOKEN}})
-    .then(function(r){return r.json()})
-    .then(function(list){
-      var grid=document.getElementById('cards-grid');
-      if(!grid)return;
-      grid.innerHTML='';
-      if(!list||!list.length){grid.innerHTML='<div class="col-span-full text-center py-12 text-on-surface-variant">还没有收藏，去<a class="text-primary font-bold" href="recorder.html">录音</a>吧</div>';return}
-      list.forEach(function(b){
-        var d=document.createElement('div');
-        d.className='knowledge-card bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-stack-md flex flex-col gap-stack-sm shadow-sm';
-        d.innerHTML=
-          '<div class="flex justify-between items-start mb-1"><span class="'+(tagColors[b.tag]||'bg-primary')+' text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">'+(tagNames[b.tag]||b.tag)+'</span><span class="font-caption-timestamp text-ink-subdued">'+(b.created_at?new Date(b.created_at).toLocaleString('zh-CN'):'')+'</span></div>'+
-          '<div class="flex flex-col gap-2"><p class="text-ink-deep leading-relaxed">'+(b.source_text||'')+'</p><p class="text-secondary leading-relaxed italic">'+(b.translated_text||'')+'</p></div>'+
-          '<div class="mt-4 pt-4 border-t border-outline-variant/20 flex gap-2"><a class="flex-1 py-2 rounded-lg bg-surface-container text-primary font-label-tag hover:bg-primary/5 transition-colors flex items-center justify-center gap-2" href="recorder.html"><span class="material-symbols-outlined text-[18px]">play_circle</span>去听录音</a></div>';
-        grid.appendChild(d);
-      })
+  var tagNames = { important: '⭐重要', question: '❓疑问', exam: '🎯考点', definition: '📖定义' };
+  var tagColors = { important: 'bg-orange-500', question: 'bg-primary', exam: 'bg-alert-red', definition: 'bg-accent-purple' };
+
+  var allBookmarks = [];
+  var currentFilter = 'all';
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str || ''));
+    return div.innerHTML;
+  }
+
+  function show(msg) {
+    if (!grid) return;
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-on-surface-variant">' + msg + '</div>';
+  }
+
+  function renderCards(list) {
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    if (!list || !Array.isArray(list) || !list.length) {
+      var label = currentFilter === 'all' ? '' : (tagNames[currentFilter] || currentFilter) + ' ';
+      show('还没有' + label + '收藏，去<a class="text-primary font-bold" href="recorder.html">录音</a>吧');
+      if (summaryCount) summaryCount.textContent = '0';
+      return;
+    }
+
+    if (summaryCount) summaryCount.textContent = String(list.length);
+
+    list.forEach(function (b) {
+      var card = document.createElement('div');
+      card.className = 'knowledge-card bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-stack-md flex flex-col gap-stack-sm shadow-sm hover:shadow-md transition-all duration-200';
+      card.style.cssText = 'hover:shadow-md;';
+      card.innerHTML =
+        '<div class="flex justify-between items-start mb-1">' +
+          '<span class="' + (tagColors[b.tag] || 'bg-primary') + ' text-white px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">' + escapeHtml(tagNames[b.tag] || b.tag || '') + '</span>' +
+          '<span class="font-caption-timestamp text-ink-subdued">' + (b.created_at ? new Date(b.created_at).toLocaleString('zh-CN') : '') + '</span>' +
+        '</div>' +
+        '<div class="flex flex-col gap-2">' +
+          '<p class="text-ink-deep leading-relaxed">' + escapeHtml(b.source_text || '') + '</p>' +
+          '<p class="text-secondary leading-relaxed italic">' + escapeHtml(b.translated_text || '') + '</p>' +
+        '</div>' +
+        '<div class="mt-4 pt-4 border-t border-outline-variant/20 flex gap-2">' +
+          '<span class="flex-1 py-2 rounded-lg text-center bg-surface-container text-on-surface-variant font-label-tag">' + escapeHtml(b.course_name || '') + '</span>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  // ─── 筛选逻辑 ─────────────────────────────────
+  function filterAndRender(tag) {
+    currentFilter = tag;
+    var filtered = tag === 'all' ? allBookmarks : allBookmarks.filter(function (b) { return b.tag === tag; });
+    renderCards(filtered);
+  }
+
+  function setActiveChip(activeBtn) {
+    var chips = document.querySelectorAll('.filter-chip');
+    chips.forEach(function (chip) {
+      chip.classList.remove('bg-primary', 'text-on-primary');
+      chip.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+    });
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+      activeBtn.classList.add('bg-primary', 'text-on-primary');
+    }
+  }
+
+  // ─── 绑定筛选按钮 ─────────────────────────────
+  var chips = document.querySelectorAll('.filter-chip');
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var tag = this.getAttribute('data-filter');
+      if (!tag) return;
+      setActiveChip(this);
+      filterAndRender(tag);
+    });
+  });
+
+  // ─── 主流程 ───────────────────────────────────
+  if (!grid) return;
+
+  if (!TOKEN) {
+    show('请先<a class="text-primary font-bold" href="login.html">登录</a>');
+    return;
+  }
+
+  fetch('/api/bookmarks', {
+    headers: { 'Authorization': 'Bearer ' + TOKEN }
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
     })
-    .catch(function(){document.getElementById('cards-grid').innerHTML='<div class="col-span-full text-center py-12 text-error">加载失败</div>'})
-  }
-
-  if(TOKEN){loadCards()}
-  }
+    .then(function (list) {
+      allBookmarks = Array.isArray(list) ? list : [];
+      filterAndRender('all');
+      return fetch('/api/auth/stats', {
+        headers: { 'Authorization': 'Bearer ' + TOKEN }
+      });
+    })
+    .then(function (response) {
+      if (!response || !response.ok) return null;
+      return response.json();
+    })
+    .then(function (stats) {
+      if (stats && summaryCount) {
+        summaryCount.textContent = String(stats.weekly_bookmark_count || 0);
+      }
+    })
+    .catch(function (err) {
+      console.error('知识卡片加载失败:', err);
+      show('加载失败（' + escapeHtml(err.message) + '），请确认已<a class="text-primary font-bold underline" href="login.html">登录</a>');
+    });
 })();
 </script>
 </body></html>

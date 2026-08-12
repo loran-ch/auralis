@@ -1,9 +1,12 @@
 """LiveTrans Voice — JWT + bcrypt"""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import hashlib
+import secrets
 import bcrypt
 from jose import jwt, JWTError
-from config import JWT_SECRET, JWT_ALGORITHM, ACCESS_EXPIRE_DAYS, REFRESH_EXPIRE_DAYS
+from config import (JWT_SECRET, JWT_ALGORITHM, ACCESS_EXPIRE_MINUTES,
+                    REFRESH_EXPIRE_DAYS)
 
 
 def hash_password(password: str) -> str:
@@ -11,18 +14,27 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except (TypeError, ValueError):
+        return False
 
 
 def create_access_token(user_id: int) -> tuple[str, datetime]:
-    expire = datetime.now(timezone.utc) + timedelta(days=ACCESS_EXPIRE_DAYS)
-    payload = {"sub": str(user_id), "type": "access", "exp": expire}
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_EXPIRE_MINUTES)
+    payload = {
+        "sub": str(user_id), "type": "access", "exp": expire,
+        "jti": secrets.token_urlsafe(16),
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM), expire
 
 
 def create_refresh_token(user_id: int) -> tuple[str, datetime]:
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRE_DAYS)
-    payload = {"sub": str(user_id), "type": "refresh", "exp": expire}
+    payload = {
+        "sub": str(user_id), "type": "refresh", "exp": expire,
+        "jti": secrets.token_urlsafe(16),
+    }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM), expire
 
 
@@ -43,5 +55,23 @@ def decode_token(token: str) -> Optional[dict]:
 def get_user_id_from_token(token: str) -> Optional[int]:
     payload = decode_token(token)
     if payload and payload.get("type") == "access":
-        return int(payload.get("sub"))
+        try:
+            return int(payload.get("sub"))
+        except (TypeError, ValueError):
+            return None
     return None
+
+
+def get_refresh_user_id(token: str) -> Optional[int]:
+    payload = decode_token(token)
+    if payload and payload.get("type") == "refresh":
+        try:
+            return int(payload.get("sub"))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def hash_token(token: str) -> str:
+    """令牌仅以不可逆摘要形式保存，降低数据库泄露后的会话风险。"""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

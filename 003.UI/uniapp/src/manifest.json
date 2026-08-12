@@ -1,0 +1,79 @@
+{
+  "name": "LiveTrans Voice",
+  "appid": "__UNI__LIVETRANSVOICE",
+  "description": "课堂实时语音识别、翻译与知识点收藏",
+  "versionName": "1.0.0",
+  "versionCode": 100,
+  "vueVersion": "3",
+  "transformPx": false,
+  "networkTimeout": {
+    "request": 15000,
+    "uploadFile": 120000,
+    "downloadFile": 120000
+  },
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "privacyRegisterMode": "manual",
+    "modules": {
+      "Audio": {},
+      "Share": {}
+    },
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "distribute": {
+      "android": {
+        "packagename": "com.livetrans.voice",
+        "minSdkVersion": 23,
+        "targetSdkVersion": 35,
+        "enableOAID": false,
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.INTERNET\" />",
+          "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />",
+          "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\" />"
+        ]
+      },
+      "ios": {
+        "appid": "com.livetrans.voice",
+        "devices": "universal",
+        "deploymentTarget": "13.0",
+        "privacyDescription": {
+          "NSMicrophoneUsageDescription": "用于录制课堂声音并生成实时双语字幕",
+          "NSPhotoLibraryUsageDescription": "用于选择并更新个人头像",
+          "NSPhotoLibraryAddUsageDescription": "用于保存导出的课堂笔记"
+        }
+      }
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "projectname": "LiveTrans Voice",
+    "usingComponents": true,
+    "setting": {
+      "urlCheck": true,
+      "es6": true,
+      "postcss": true,
+      "minified": true,
+      "bigPackageSizeSupport": true
+    },
+    "permission": {
+      "scope.record": {
+        "desc": "用于录制课堂声音并生成实时双语字幕"
+      }
+    },
+    "optimization": {
+      "subPackages": true
+    }
+  },
+  "h5": {
+    "title": "LiveTrans Voice"
+  },
+  "uniStatistics": {
+    "enable": false
+  }
+}

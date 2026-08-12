@@ -10,6 +10,7 @@ class User(Base):
 
     id             = Column(BigInteger, primary_key=True, autoincrement=True)
     nickname       = Column(String(64), nullable=False)
+    username       = Column(String(64), unique=True)
     avatar_url     = Column(String(512))
     email          = Column(String(128), unique=True)
     email_verified = Column(Boolean, default=False)
@@ -21,6 +22,7 @@ class User(Base):
     apple_user_id  = Column(String(256), unique=True)
     google_openid  = Column(String(128), unique=True)
     member_level   = Column(Enum("free", "premium"), default="free")
+    role           = Column(Enum("user", "admin", "super_admin"), default="user")
     university     = Column(String(256))
     major          = Column(String(256))
     focus_area     = Column(String(256))
@@ -47,6 +49,7 @@ class VerificationCode(Base):
 
 class UserToken(Base):
     __tablename__ = "user_tokens"
+    __table_args__ = (Index("idx_access_token", "access_token", mysql_length=64),)
 
     id              = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id         = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)

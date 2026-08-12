@@ -17,6 +17,7 @@ USE livetrans_voice;
 CREATE TABLE users (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT  COMMENT '用户ID',
     nickname        VARCHAR(64)     NOT NULL                  COMMENT '昵称',
+    username        VARCHAR(64)     DEFAULT NULL              COMMENT '登录用户名',
     avatar_url      VARCHAR(512)    DEFAULT NULL              COMMENT '头像URL',
     email           VARCHAR(128)    DEFAULT NULL              COMMENT '邮箱',
     email_verified  TINYINT(1)      NOT NULL DEFAULT 0        COMMENT '邮箱已验证',
@@ -32,6 +33,7 @@ CREATE TABLE users (
 
     -- 会员
     member_level    ENUM('free','premium') NOT NULL DEFAULT 'free',
+    role            ENUM('user','admin','super_admin') NOT NULL DEFAULT 'user',
 
     -- 学业信息 (profile.html 展示)
     university      VARCHAR(256)    DEFAULT NULL              COMMENT '学校',
@@ -45,6 +47,7 @@ CREATE TABLE users (
     updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
+    UNIQUE KEY uk_username (username),
     UNIQUE KEY uk_phone (phone),
     UNIQUE KEY uk_email (email),
     UNIQUE KEY uk_wechat (wechat_openid),
@@ -77,7 +80,7 @@ CREATE TABLE verification_codes (
 
 -- ============================================================
 -- 3. 用户令牌表
--- JWT Access Token 7天 + Refresh Token 30天
+-- JWT Access Token 默认15分钟 + Refresh Token 默认30天（数据库仅保存SHA-256摘要）
 -- ============================================================
 CREATE TABLE user_tokens (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -94,6 +97,7 @@ CREATE TABLE user_tokens (
 
     PRIMARY KEY (id),
     INDEX idx_user (user_id),
+    INDEX idx_access_token (access_token(64)),
     INDEX idx_refresh (refresh_token(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户令牌表';
 
@@ -192,6 +196,7 @@ CREATE TABLE lectures (
 
     PRIMARY KEY (id),
     INDEX idx_user_date (user_id, lecture_date DESC),
+    INDEX idx_user_status_date (user_id, status, lecture_date DESC),
     INDEX idx_user_course (user_id, course_name),
     INDEX idx_date (lecture_date),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -234,6 +239,7 @@ CREATE TABLE transcriptions (
 
     PRIMARY KEY (id),
     INDEX idx_lecture_order (lecture_id, sentence_order),
+    UNIQUE KEY uk_lecture_sentence_order (lecture_id, sentence_order),
     INDEX idx_user_bookmarked (user_id, is_bookmarked),
     INDEX idx_lecture_bookmarked (lecture_id, is_bookmarked),
     FULLTEXT INDEX ft_search (source_text, translated_text),
@@ -318,6 +324,26 @@ CREATE TABLE course_schedule (
     INDEX idx_user_day (user_id, day_of_week),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程表';
+
+
+-- ============================================================
+-- 11. 管理员审计日志
+-- ============================================================
+CREATE TABLE admin_audit_logs (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    admin_id    BIGINT UNSIGNED NOT NULL,
+    admin_name  VARCHAR(64) DEFAULT NULL COMMENT '管理员昵称（冗余快照）',
+    action      VARCHAR(64) NOT NULL COMMENT '操作类型: user.disable, lecture.delete 等',
+    target_type VARCHAR(32) DEFAULT NULL COMMENT '目标类型: user, lecture',
+    target_id   BIGINT UNSIGNED DEFAULT NULL COMMENT '目标记录 ID',
+    detail      JSON DEFAULT NULL COMMENT '变更摘要',
+    ip_address  VARCHAR(45) DEFAULT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_admin_action (admin_id, action),
+    INDEX idx_created_at (created_at),
+    CONSTRAINT fk_audit_admin FOREIGN KEY (admin_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员操作审计日志';
 
 
 -- ============================================================

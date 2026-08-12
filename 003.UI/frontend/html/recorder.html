@@ -8,9 +8,10 @@
 
   <link rel="stylesheet" href="../css/recorder.css">
   <script src="../shared/tailwind-config.js"></script>
+  <script src="../shared/auth-client.js?v=2"></script>
   <script>
 </script>
-<script defer src="../js/recorder.js?v=7"></script>
+<script defer src="../js/recorder.js?v=10"></script>
 </head>
 <body class="bg-surface text-on-surface font-display-current-source min-h-screen flex flex-col">
 <!-- Top AppBar -->
@@ -27,7 +28,15 @@
 </div>
 <div class="flex flex-col">
 <h1 class="font-display-current-source text-primary dark:text-primary-fixed-dim font-bold text-lg leading-tight" id="course-name">课堂录音</h1>
-<span class="font-label-tag text-label-tag text-on-surface-variant">🇬🇧 英语 → 🇨🇳 中文</span>
+<div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
+  <select id="source-lang" class="bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer" title="识别语言">
+    <option value="en">🇬🇧 English</option>
+  </select>
+  <span>→</span>
+  <select id="target-lang" class="bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer" title="翻译语言">
+    <option value="zh-CN">🇨🇳 简体中文</option>
+  </select>
+</div>
 </div>
 </div>
 <div class="flex items-center gap-2">
@@ -98,6 +107,23 @@
 </div>
 </footer>
 <!-- Interactive script for demo micro-interactions -->
+
+<!-- 标签选择弹窗 -->
+<div id="tagPicker" class="hidden fixed z-70 bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[160px]" style="left:0;top:0;">
+  <div class="px-3 py-1.5 text-xs text-on-surface-variant font-medium">选择收藏标签</div>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="important">
+    <span class="text-base">⭐</span> 重要
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="question">
+    <span class="text-base">❓</span> 疑问
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="exam">
+    <span class="text-base">🎯</span> 考点
+  </button>
+  <button class="tag-option w-full flex items-center gap-2 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface" data-tag="definition">
+    <span class="text-base">📖</span> 定义
+  </button>
+</div>
 
 <!-- 命名弹窗 -->
 <div id="nameModal" class="hidden fixed inset-0 z-60 bg-black/30 flex items-center justify-center">
