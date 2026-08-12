@@ -86,3 +86,23 @@ bash deploy/deploy.sh
 ```
 
 不要删除 Docker volume；MySQL 数据和上传文件保存在命名卷中。执行升级 SQL 前应先备份数据库。
+
+## 8. 修复语言名称或国旗乱码
+
+如果语言列表出现 `FranÃ§ais`、`ðŸ...` 等内容，说明语言基础数据曾通过非 UTF-8 的 MySQL 客户端导入。先拉取本修复，再在项目根目录执行一次：
+
+```bash
+git pull --ff-only
+docker compose --env-file .env.production exec -T db sh -c \
+  'exec mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" livetrans_voice' \
+  < "004.数据库脚本/06_languages_utf8mb4_修复.sql"
+```
+
+随后重新构建服务并验证接口：
+
+```bash
+bash deploy/deploy.sh
+curl "https://YOUR_DOMAIN/api/languages"
+```
+
+响应应包含 `Français`、`Español` 和正常国旗。浏览器若仍显示旧内容，请强制刷新页面或清除站点缓存。

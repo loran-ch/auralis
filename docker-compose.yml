@@ -3,6 +3,9 @@ services:
     image: mysql:8.0
     container_name: livetrans-db
     restart: always
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 .env.production 中配置 MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: livetrans_voice

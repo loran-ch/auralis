@@ -1,7 +1,20 @@
--- LiveTrans Voice — 生产环境基础数据（可重复执行）
--- 仅包含业务运行必需的语言配置，不创建演示用户或演示课堂。
+-- LiveTrans Voice — 语言数据乱码修复（可重复执行）
+-- 修复 UTF-8 数据曾以 latin1/Windows-1252 解码后写入造成的乱码，
+-- 例如 Français -> FranÃ§ais、🇬🇧 -> ðŸ...。
+
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER DATABASE livetrans_voice
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
 USE livetrans_voice;
+
+ALTER TABLE languages
+  CONVERT TO CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+START TRANSACTION;
 
 INSERT INTO languages
   (code, name_native, name_en, flag_emoji, region, supports_offline, offline_size_mb, sort_order)
@@ -30,3 +43,5 @@ ON DUPLICATE KEY UPDATE
   supports_offline = VALUES(supports_offline),
   offline_size_mb = VALUES(offline_size_mb),
   sort_order = VALUES(sort_order);
+
+COMMIT;
