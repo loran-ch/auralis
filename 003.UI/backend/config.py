@@ -81,7 +81,10 @@ TRANSLATION_PROVIDER_ORDER = tuple(
     for provider in os.getenv("TRANSLATION_PROVIDER_ORDER", "google,mymemory").split(",")
     if provider.strip()
 )
-if not TRANSLATION_PROVIDER_ORDER or any(
+if not TRANSLATION_PROVIDER_ORDER:
+    import warnings
+    warnings.warn("没有可用的翻译服务，翻译将保留原文")
+elif any(
     provider not in {"enterprise", "google", "mymemory", "baidu"}
     for provider in TRANSLATION_PROVIDER_ORDER
 ):
@@ -108,7 +111,11 @@ BAIDU_TRANSLATE_API_URL = os.getenv(
     "https://fanyi-api.baidu.com/api/trans/vip/translate",
 )
 if "baidu" in TRANSLATION_PROVIDER_ORDER and not (BAIDU_TRANSLATE_APP_ID and BAIDU_TRANSLATE_SECRET_KEY):
-    raise RuntimeError("启用 baidu 翻译时必须配置 BAIDU_TRANSLATE_APP_ID 和 BAIDU_TRANSLATE_SECRET_KEY")
+    import warnings
+    warnings.warn("TRANSLATION_PROVIDER_ORDER 包含 baidu 但未配置 APP_ID/SECRET_KEY，翻译将保留原文")
+    TRANSLATION_PROVIDER_ORDER = tuple(
+        p for p in TRANSLATION_PROVIDER_ORDER if p != "baidu"
+    )
 TRANSLATION_TIMEOUT_SECONDS = float(os.getenv("TRANSLATION_TIMEOUT_SECONDS", "3"))
 TRANSLATION_CACHE_TTL_SECONDS = int(os.getenv("TRANSLATION_CACHE_TTL_SECONDS", "3600"))
 if TRANSLATION_TIMEOUT_SECONDS <= 0 or TRANSLATION_CACHE_TTL_SECONDS < 0:
