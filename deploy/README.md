@@ -1,53 +1,88 @@
-# LiveTrans Voice 生产部署
+# LiveTrans Voice 腾讯云生产部署
 
-此模板面向 4 核 4GB Linux 服务器，语音识别和翻译由外部 API 提供，服务器不运行本地 ASR 模型。
+本方案面向 Ubuntu 22.04/24.04 CVM，通过 Docker Compose 运行 MySQL、FastAPI 和 Nginx。Nginx 镜像会自动构建 UniApp H5，云服务器无需单独安装 Node.js。
 
-## 1. 数据库
+## 1. 上线前提
 
-全新生产数据库只执行：
+- 将公网域名 A 记录解析到 CVM 公网 IP。
+- 中国大陆 CVM 使用的网站和 App 必须先完成 ICP 备案。
+- 腾讯云安全组对公网开放 TCP `80/443`；`22` 只向管理 IP 开放。不要开放 `3306/8010`。
+- 准备匹配该域名的公网 SSL 证书，不能使用自签名证书。
+- 安装 Git、Docker Engine 和 Docker Compose plugin。
 
-1. `004.数据库脚本/01_livetrans_voice_建表.sql`
-2. `004.数据库脚本/02_livetrans_voice_生产基础数据.sql`
+## 2. 下载项目
 
-不要在生产环境执行 `02_livetrans_voice_初始化数据.sql`，其中包含固定测试账号和演示课堂。旧数据库按实际版本依次执行 `03`、`04`、`05`，这些升级脚本可以重复运行。
-
-## 2. 后端环境
-
-创建专用系统用户 `livetrans`，将项目部署到 `/opt/livetrans`，虚拟环境放在 `/opt/livetrans/.venv`。复制：
-
-- `backend.env.example` → `/etc/livetrans/backend.env`
-- `livetrans-backend.service.example` → `/etc/systemd/system/livetrans-backend.service`
-
-生产密钥只能写入服务器环境文件或密钥管理服务，不得提交到 Git。环境文件权限应设置为 `600`。
-
-`ENTERPRISE_TRANSLATION_API_URL` 指向企业选定的翻译网关。网关接收 JSON：
-
-```json
-{"text":"hello","source":"en","target":"zh-CN"}
+```bash
+sudo mkdir -p /opt/livetrans
+sudo chown "$USER":"$USER" /opt/livetrans
+git clone git@github.com:loran-ch/stock.git /opt/livetrans
+cd /opt/livetrans
 ```
 
-并返回 `translated_text`、`translation` 或 `text` 字段。这样可在网关内适配腾讯云、阿里云、Azure 等不同签名方式，而无需更新三个客户端。
+## 3. 生产环境变量
 
-安装依赖后执行 `systemctl daemon-reload`、`systemctl enable --now livetrans-backend`，并确认 `http://127.0.0.1:8010/health/ready` 返回 `ready`。
+```bash
+cp .env.production.example .env.production
+chmod 600 .env.production
+nano .env.production
+```
 
-## 3. HTTPS 入口
+替换所有 `replace-*` 和 `example.com`。可使用 `openssl rand -hex 24` 生成 MySQL 密码，使用 `openssl rand -hex 48` 生成 `JWT_SECRET`。`DATABASE_URL` 中的密码必须和 `MYSQL_APP_PASSWORD` 相同，建议只用随机十六进制字符，避免 URL 转义问题。
 
-复制 `nginx-livetrans.conf.example` 到 Nginx 配置目录，替换域名和证书路径。模板已包含登录和语音识别接口的基础限流，但多实例部署时仍应使用 Redis/API 网关实现用户级配额。
+中国大陆服务器不建议把 Google/MyMemory 作为生产翻译依赖。模板默认使用百度翻译和百度 ASR，需要填入对应的 App ID/API Key/Secret。
 
-只开放公网 `80/443`；后端 `8010` 和 MySQL `3306` 仅监听本机或内网。配置完成后检查：
+## 4. HTTPS 证书
 
-- `https://app.example.com/health/live`
-- `https://app.example.com/health/ready`
-- `https://app.example.com/html/login.html`
+在腾讯云 SSL 证书控制台下载 Nginx 格式证书，将证书链和私钥放到：
 
-## 4. UniApp 发布
+```text
+deploy/ssl/fullchain.pem
+deploy/ssl/privkey.pem
+```
 
-复制 `003.UI/uniapp/.env.production.example` 为 `.env.production`，填写同一个 HTTPS API 域名并保持 `VITE_ENABLE_DEMO_MODE=false`。然后分别构建 H5、微信小程序和 App；小程序后台还需要配置 request、uploadFile 和 downloadFile 合法域名。
+例如：
 
-## 5. 上线检查
+```bash
+mkdir -p deploy/ssl
+cp /path/to/your_domain_bundle.crt deploy/ssl/fullchain.pem
+cp /path/to/your_domain.key deploy/ssl/privkey.pem
+chmod 600 deploy/ssl/privkey.pem
+```
 
-- 备份数据库并验证一次恢复流程。
-- 确认生产库没有 `test`、`demo` 固定账号。
-- 验证 ASR 的 MP3、WEBM、OGG、WAV、M4A 格式。
-- 验证 ASR/翻译超时、欠费和限额场景不会丢失录音。
-- 对登录和音频接口进行并发压测，并观察 CPU、内存、数据库连接数和 P95 延迟。
+## 5. 启动
+
+```bash
+bash deploy/deploy.sh
+```
+
+脚本会检查环境变量和证书，然后构建 H5/后端镜像，初始化新数据库并启动三个服务。全新数据卷只会执行建表脚本和生产基础数据，不会创建演示账号。
+
+```bash
+docker compose --env-file .env.production ps
+docker compose --env-file .env.production logs -f backend
+curl -I "https://YOUR_DOMAIN/"
+curl "https://YOUR_DOMAIN/health/ready"
+```
+
+`/health/ready` 应返回 `{"status":"ready"}`。
+
+## 6. Android/iOS 发布包
+
+H5 已使用同域 API。Android/iOS 安装包仍需要在本地项目中创建 `003.UI/uniapp/.env.production`：
+
+```dotenv
+VITE_API_BASE_URL=https://YOUR_DOMAIN
+VITE_ENABLE_DEMO_MODE=false
+```
+
+然后在 HBuilderX 重新发行 Android/iOS；旧安装包不会自动知道新的腾讯云域名。
+
+## 7. 更新版本
+
+```bash
+cd /opt/livetrans
+git pull --ff-only
+bash deploy/deploy.sh
+```
+
+不要删除 Docker volume；MySQL 数据和上传文件保存在命名卷中。执行升级 SQL 前应先备份数据库。

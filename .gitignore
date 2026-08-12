@@ -45,3 +45,4 @@ __pycache__/
 # 部署机生成的证书和前端产物
 deploy/ssl/
 deploy/h5_dist/
+deploy/certbot/

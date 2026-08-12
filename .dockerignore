@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.vscode
+.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/dist
+**/*.log
+**/.env
+**/.env.production
+003.UI/frontend/uploads
+deploy/ssl
+deploy/certbot

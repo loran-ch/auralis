@@ -5,13 +5,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+WORKDIR /app/003.UI/backend
 
-COPY ../003.UI/backend/requirements.txt .
+COPY 003.UI/backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ../003.UI/backend/ .
-COPY ../003.UI/frontend/ /app/frontend/
+COPY 003.UI/backend/ .
+COPY 003.UI/frontend/ /app/003.UI/frontend/
+COPY website/ /app/website/
 
 # 生产环境禁止热重载
 ENV ENVIRONMENT=production
@@ -20,4 +21,4 @@ ENV PORT=8010
 
 EXPOSE 8010
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8010", "--workers", "4"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8010", "--workers", "2"]
