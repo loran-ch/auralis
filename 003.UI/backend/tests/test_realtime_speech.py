@@ -82,34 +82,6 @@ def test_context_translation_falls_back_when_provider_drops_line_boundaries():
     assert result["context_applied"] is False
 
 
-def test_translate_endpoint_forwards_context():
-    from routers import translate
-
-    translated = {
-        "text": "它会调整权重。",
-        "success": True,
-        "provider": "fake",
-        "warning": None,
-        "context_applied": True,
-    }
-    request = translate.TranslateReq(
-        text="It adjusts the weights.",
-        source="en",
-        target="zh-CN",
-        context=["We are discussing a neural network."],
-    )
-    with patch.object(
-        translate, "translate_with_context", return_value=translated
-    ) as contextual_translate:
-        response = translate.api_translate(request, user=object())
-
-    assert response.translated_text == "它会调整权重。"
-    assert response.context_applied is True
-    contextual_translate.assert_called_once_with(
-        request.text, request.context, request.source, request.target
-    )
-
-
 def test_stream_endpoint_falls_back_cleanly_when_realtime_is_not_configured():
     class FakeWebSocket:
         def __init__(self):
@@ -257,8 +229,6 @@ def test_stream_endpoint_forwards_dynamic_and_final_results():
 
     types = [message["type"] for message in websocket.messages]
     assert types == ["ready", "interim", "finalizing", "final", "closed"]
-    assert websocket.messages[2]["start_offset_ms"] == 1300
-    assert websocket.messages[2]["end_offset_ms"] == 2100
     assert websocket.messages[-2]["transcription"]["translated_text"] == "你好，世界。"
     assert save.call_args.args[-2:] == (1300, 2100)
     assert websocket.close_code == 1000

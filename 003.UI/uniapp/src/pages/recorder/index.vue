@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import AppHeader from '../../components/AppHeader.vue'
 import Waveform from '../../components/Waveform.vue'
@@ -146,7 +146,6 @@ let speechErrorShown = false
 let realtimeErrorShown = false
 let liveRevision = 0
 let liveUtteranceId = ''
-const realtimePending = new Map()
 let transcriptTouching = false
 let lastTranscriptScrollTop = 0
 let transcriptTouchTimer = null
@@ -209,14 +208,6 @@ async function appendTranscript(sentence) {
   if (followLatest.value) await scrollToLatest()
   else unseenTranscriptCount.value += 1
   return true
-}
-
-function recentSourceContext(limit = 3) {
-  return transcripts.value
-    // 前一句即使仍在翻译，也已经是稳定原文，可以供下一句消歧。
-    .filter((item) => item.source_text)
-    .slice(-limit)
-    .map((item) => item.source_text)
 }
 
 async function setScrollTarget(id) {
@@ -289,59 +280,12 @@ function applyRealtimePreview(message) {
   if (liveTranscript.value) scrollToLatest()
 }
 
-function realtimeDraftKey(message) {
-  return String(message?.utterance_id || `revision-${Number(message?.revision || 0)}`)
-}
-
-async function applyRealtimeFinalizing(message) {
-  const text = String(message?.source_text || '').trim()
-  if (!text) return
-  const key = realtimeDraftKey(message)
-  let item = realtimePending.get(key)
-  if (!item) {
-    item = reactive({
-      client_id: `realtime-${key}`,
-      realtime_utterance_id: key,
-      source_text: text,
-      translated_text: liveUtteranceId === key ? liveTranslation.value : '',
-      start_offset_ms: message.start_offset_ms,
-      end_offset_ms: message.end_offset_ms,
-      pending: true,
-      is_bookmarked: false,
-    })
-    realtimePending.set(key, item)
-    transcripts.value.push(item)
-    if (!followLatest.value) unseenTranscriptCount.value += 1
-  } else {
-    item.source_text = text
-    item.start_offset_ms = message.start_offset_ms ?? item.start_offset_ms
-    item.end_offset_ms = message.end_offset_ms ?? item.end_offset_ms
-  }
-  const revision = Number(message?.revision || 0)
-  if (revision >= liveRevision || liveUtteranceId === key) {
-    liveTranscript.value = ''
-    liveTranslation.value = ''
-    liveUtteranceId = ''
-  }
-  liveRevision = Math.max(liveRevision, revision)
-  statusText.value = '正在整理上一句…'
-  if (followLatest.value) await scrollToLatest()
-}
-
 async function applyRealtimeFinal(message) {
   const sentence = message?.transcription
   if (!sentence) return
-  const key = realtimeDraftKey(message)
-  const pendingItem = realtimePending.get(key)
-  if (pendingItem) {
-    Object.assign(pendingItem, sentence, { pending: false, translation_error: '' })
-    realtimePending.delete(key)
-  } else {
-    await appendTranscript(sentence)
-  }
+  await appendTranscript(sentence)
   const revision = Number(message?.revision || 0)
   const finalizedCurrentDraft = revision >= liveRevision
-    && (!liveUtteranceId || liveUtteranceId === key)
   if (finalizedCurrentDraft) {
     liveTranscript.value = ''
     liveTranslation.value = ''
@@ -366,23 +310,13 @@ function realtimeCallbacks() {
     },
     onInterim: applyRealtimeInterim,
     onPreview: applyRealtimePreview,
-    onFinalizing: applyRealtimeFinalizing,
+    onFinalizing: applyRealtimeInterim,
     onFinal: applyRealtimeFinal,
     onNoSpeech: () => {
       // 静音分片不应清掉可能已开始的下一句动态草稿。
       if (recording.value && !paused.value) statusText.value = '正在聆听…'
     },
     onError: (message) => {
-      if (message?.code === 'finalization_failed') {
-        const item = realtimePending.get(realtimeDraftKey(message))
-        if (item) {
-          item.pending = false
-          item.translation_error = message.message || '当前句保存或翻译失败'
-          realtimePending.delete(realtimeDraftKey(message))
-        }
-        uni.showToast({ title: message.message || '当前句保存或翻译失败', icon: 'none' })
-        return
-      }
       if (!message?.fallback || realtimeErrorShown) return
       realtimeErrorShown = true
       uni.showToast({ title: message.message || '实时识别已切换分片模式', icon: 'none' })
@@ -405,7 +339,6 @@ function translateAndSave(text) {
   const normalized = text.trim()
   if (!normalized || !lectureId.value) return Promise.resolve()
   const targetLectureId = lectureId.value
-  const context = recentSourceContext()
   const clientId = `pending-${++pendingTextId}`
   const item = {
     client_id: clientId,
@@ -427,7 +360,6 @@ function translateAndSave(text) {
         text: normalized,
         source: sourceLang.value,
         target: targetLang.value,
-        context,
       })
     } catch (error) {
       translation = {
@@ -586,7 +518,6 @@ async function startRecording() {
     realtimeErrorShown = false
     liveRevision = 0
     liveUtteranceId = ''
-    realtimePending.clear()
     uploadChain = Promise.resolve()
     await startCapture(queueSegment)
     recording.value = true

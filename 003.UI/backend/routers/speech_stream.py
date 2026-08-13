@@ -161,46 +161,31 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
         _recent_source_sentences, lecture_id, user_id
     )
     final_queue: asyncio.Queue[dict | None] = asyncio.Queue()
-    preview_event = asyncio.Event()
-    latest_preview: dict | None = None
+    preview_task: asyncio.Task | None = None
     latest_revision = 0
 
-    async def preview_worker():
-        """持续语音中按固定频率翻译最新草稿，避免纯防抖一直不触发。"""
-        last_preview_revision = 0
-        while True:
-            try:
-                await preview_event.wait()
-                preview_event.clear()
-                await asyncio.sleep(ASR_REALTIME_PREVIEW_INTERVAL_MS / 1000)
-                item = latest_preview
-                if not item or item["revision"] <= last_preview_revision:
-                    continue
-                last_preview_revision = item["revision"]
-                translation = await asyncio.to_thread(
-                    translate_with_context,
-                    item["source_text"],
-                    list(recent_context),
-                    source_lang,
-                    target_lang,
-                )
-                if item["revision"] != latest_revision:
-                    continue
-                await send({
-                    "type": "preview",
-                    "utterance_id": item["utterance_id"],
-                    "revision": item["revision"],
-                    "source_text": item["source_text"],
-                    "translated_text": translation["text"],
-                    "translation_success": translation["success"],
-                })
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                # 一次预览失败不能中断后续实时识别和最终翻译。
-                logger.warning("实时翻译预览失败: %s", exc)
-
-    preview_worker_task = asyncio.create_task(preview_worker())
+    async def preview_translation(text: str, utterance_id: str, revision: int):
+        try:
+            await asyncio.sleep(ASR_REALTIME_PREVIEW_INTERVAL_MS / 1000)
+            translation = await asyncio.to_thread(
+                translate_with_context,
+                text,
+                list(recent_context),
+                source_lang,
+                target_lang,
+            )
+            if revision != latest_revision:
+                return
+            await send({
+                "type": "preview",
+                "utterance_id": utterance_id,
+                "revision": revision,
+                "source_text": text,
+                "translated_text": translation["text"],
+                "translation_success": translation["success"],
+            })
+        except asyncio.CancelledError:
+            return
 
     async def final_worker():
         while True:
@@ -242,8 +227,6 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
                     "code": "finalization_failed",
                     "message": "当前句保存或翻译失败，请继续录音",
                     "fallback": False,
-                    "utterance_id": item.get("utterance_id"),
-                    "revision": item.get("revision"),
                 })
             finally:
                 final_queue.task_done()
@@ -297,7 +280,7 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
                         return
 
             async def receive_upstream_results():
-                nonlocal latest_preview, latest_revision
+                nonlocal preview_task, latest_revision
                 async for raw in upstream:
                     if not isinstance(raw, str):
                         continue
@@ -333,34 +316,31 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
                             "revision": revision,
                             "source_text": text,
                         })
-                        latest_preview = {
-                            "source_text": text,
-                            "utterance_id": utterance_id,
-                            "revision": revision,
-                        }
-                        preview_event.set()
+                        if preview_task:
+                            preview_task.cancel()
+                        preview_task = asyncio.create_task(
+                            preview_translation(text, utterance_id, revision)
+                        )
                     elif result_type == "FIN_TEXT":
-                        start_offset_ms = stream_offset_ms + max(
-                            0, int(result.get("start_time") or 0)
-                        )
-                        end_offset_ms = stream_offset_ms + max(
-                            0, int(result.get("end_time") or 0)
-                        )
-                        latest_preview = None
+                        if preview_task:
+                            preview_task.cancel()
+                            preview_task = None
                         await send({
                             "type": "finalizing",
                             "utterance_id": utterance_id,
                             "revision": revision,
                             "source_text": text,
-                            "start_offset_ms": start_offset_ms,
-                            "end_offset_ms": end_offset_ms,
                         })
                         await final_queue.put({
                             "utterance_id": utterance_id,
                             "revision": revision,
                             "source_text": text,
-                            "start_offset_ms": start_offset_ms,
-                            "end_offset_ms": end_offset_ms,
+                            "start_offset_ms": stream_offset_ms + max(
+                                0, int(result.get("start_time") or 0)
+                            ),
+                            "end_offset_ms": stream_offset_ms + max(
+                                0, int(result.get("end_time") or 0)
+                            ),
                         })
 
             client_task = asyncio.create_task(receive_client_audio())
@@ -387,11 +367,8 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
         await send({"type": "error", "code": "upstream_unavailable",
                     "message": "实时识别连接失败，已切换分片识别", "fallback": True})
     finally:
-        preview_worker_task.cancel()
-        try:
-            await preview_worker_task
-        except asyncio.CancelledError:
-            pass
+        if preview_task:
+            preview_task.cancel()
         await final_queue.join()
         await final_queue.put(None)
         await final_worker_task
