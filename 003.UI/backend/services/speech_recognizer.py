@@ -25,7 +25,15 @@ _AUDIO_CONTENT_TYPES = {
     ".m4a": "audio/mp4",
 }
 
-_BAIDU_SUPPORTED = {".pcm", ".wav", ".amr", ".m4a"}
+_BAIDU_NATIVE_FORMATS = {".pcm", ".wav", ".amr"}
+_BAIDU_LANGUAGE_MODELS = {
+    "zh": 1537,
+    "zh-cn": 1537,
+    "zh-tw": 1537,
+    "en": 1737,
+    "en-us": 1737,
+    "en-gb": 1737,
+}
 
 
 class SpeechRecognitionUnavailable(RuntimeError):
@@ -134,7 +142,14 @@ def _convert_to_wav(contents: bytes, source_ext: str) -> bytes:
 
 def _recognize_baidu(contents: bytes, extension: str, language: str) -> str:
     ext = extension.lower()
-    if ext not in _BAIDU_SUPPORTED:
+    language_code = (language or "zh-CN").strip().lower()
+    dev_pid = _BAIDU_LANGUAGE_MODELS.get(language_code)
+    if dev_pid is None:
+        raise SpeechRecognitionUnavailable(
+            f"百度短语音识别暂不支持源语言 {language or '未知'}，请切换中文或英语"
+        )
+
+    if ext not in _BAIDU_NATIVE_FORMATS:
         logger.info("百度 ASR 不支持 %s 格式，尝试用 ffmpeg 转换为 wav", ext)
         contents = _convert_to_wav(contents, ext)
         ext = ".wav"
@@ -147,10 +162,17 @@ def _recognize_baidu(contents: bytes, extension: str, language: str) -> str:
         "channel": 1,
         "cuid": uuid.uuid4().hex[:16],
         "token": _get_baidu_token(),
+        "dev_pid": dev_pid,
         "speech": base64.b64encode(contents).decode("ascii"),
         "len": len(contents),
     }
-    logger.info("百度 ASR 请求: format=%s size=%d", baidu_format, len(contents))
+    logger.info(
+        "百度 ASR 请求: format=%s language=%s dev_pid=%d size=%d",
+        baidu_format,
+        language_code,
+        dev_pid,
+        len(contents),
+    )
     try:
         resp = requests.post(
             ASR_API_URL,

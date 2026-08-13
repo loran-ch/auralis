@@ -13,6 +13,11 @@ class _Response:
         return {"text": "recognized sentence"}
 
 
+class _BaiduResponse(_Response):
+    def json(self):
+        return {"err_no": 0, "err_msg": "success.", "result": ["Hello world"]}
+
+
 def test_unconfigured_recognizer_fails_explicitly():
     with patch.object(speech_recognizer, "ASR_API_URL", ""):
         with pytest.raises(speech_recognizer.SpeechRecognitionUnavailable):
@@ -42,3 +47,41 @@ def test_recognizer_sends_the_real_audio_content_type():
     ):
         speech_recognizer.recognize_speech(b"\x1aE\xdf\xa3-audio", ".webm", "zh-CN")
     assert post.call_args.kwargs["files"]["file"][2] == "audio/webm"
+
+
+def test_baidu_english_uses_english_model():
+    with (
+        patch.object(speech_recognizer, "ASR_API_URL", "https://vop.baidu.com/server_api"),
+        patch.object(speech_recognizer, "_get_baidu_token", return_value="token"),
+        patch.object(speech_recognizer.requests, "post", return_value=_BaiduResponse()) as post,
+    ):
+        result = speech_recognizer.recognize_speech(b"RIFFxxxxWAVEaudio", ".wav", "en")
+
+    assert result == "Hello world"
+    assert post.call_args.kwargs["json"]["dev_pid"] == 1737
+
+
+def test_baidu_converts_iphone_m4a_before_recognition():
+    wav = b"RIFFxxxxWAVEconverted"
+    with (
+        patch.object(speech_recognizer, "ASR_API_URL", "https://vop.baidu.com/server_api"),
+        patch.object(speech_recognizer, "_get_baidu_token", return_value="token"),
+        patch.object(speech_recognizer, "_convert_to_wav", return_value=wav) as convert,
+        patch.object(speech_recognizer.requests, "post", return_value=_BaiduResponse()) as post,
+    ):
+        speech_recognizer.recognize_speech(b"m4a-audio", ".m4a", "zh-CN")
+
+    convert.assert_called_once_with(b"m4a-audio", ".m4a")
+    request = post.call_args.kwargs["json"]
+    assert request["format"] == "wav"
+    assert request["dev_pid"] == 1537
+    assert request["len"] == len(wav)
+
+
+def test_baidu_rejects_unsupported_source_language():
+    with patch.object(speech_recognizer, "ASR_API_URL", "https://vop.baidu.com/server_api"):
+        with pytest.raises(
+            speech_recognizer.SpeechRecognitionUnavailable,
+            match="暂不支持源语言 de",
+        ):
+            speech_recognizer.recognize_speech(b"RIFFxxxxWAVEaudio", ".wav", "de")
