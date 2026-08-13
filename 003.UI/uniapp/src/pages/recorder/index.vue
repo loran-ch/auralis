@@ -35,7 +35,8 @@
       <view v-if="liveTranscript" id="live-transcript" class="transcript-card live-preview current">
         <view class="transcript-main">
           <text class="source-text">{{ liveTranscript }}</text>
-          <text class="recognizing-text">正在识别…</text>
+          <text v-if="liveTranslation" class="translated-text live-translation">{{ liveTranslation }}</text>
+          <text v-else class="recognizing-text">正在识别与理解上下文…</text>
         </view>
       </view>
       <view class="scroll-spacer" />
@@ -85,6 +86,7 @@ import { clearAuth, requireAuth } from '../../api/session'
 import { ENABLE_DEMO_MODE } from '../../config/env'
 import { finishCapture, pauseCapture, resumeCapture, startCapture, abortCapture } from '../../platform/recorder'
 import { abortSpeechRecognition, isSpeechRecognitionSupported, resumeSpeechRecognition, startSpeechRecognition, stopSpeechRecognition } from '../../platform/speech-recognition'
+import { abortRealtimeSpeech, isRealtimeSpeechSupported, startRealtimeSpeech, stopRealtimeSpeech } from '../../platform/realtime-speech'
 import { formatClock, languageLabel, showError } from '../../platform/format'
 import { useTheme } from '../../platform/theme'
 
@@ -97,7 +99,9 @@ const statusText = ref('待机中')
 const elapsed = ref(0)
 const transcripts = ref([])
 const liveTranscript = ref('')
+const liveTranslation = ref('')
 const browserRecognition = ref(false)
+const realtimeRecognition = ref(false)
 const languages = ref([])
 const sourceLang = ref('en')
 const targetLang = ref('zh-CN')
@@ -117,6 +121,9 @@ let asrAvailable = null
 let pendingTextId = 0
 const pendingTextJobs = new Set()
 let speechErrorShown = false
+let realtimeErrorShown = false
+let liveRevision = 0
+let liveUtteranceId = ''
 
 const menuItems = [
   { label: '实时录音', icon: '●', url: '/pages/recorder/index' },
@@ -144,6 +151,7 @@ onLoad(async () => {
 onUnload(() => {
   clearTimers()
   abortSpeechRecognition()
+  abortRealtimeSpeech()
   if (recording.value) abortCapture()
 })
 
@@ -154,7 +162,7 @@ function saveLanguageSettings() { preferenceApi.saveSettings({ default_source_la
 function beginTimers() {
   clearInterval(timer)
   timer = setInterval(() => { if (!paused.value) elapsed.value += 1 }, 1000)
-  if (browserRecognition.value) return
+  if (browserRecognition.value || realtimeRecognition.value) return
   if (ENABLE_DEMO_MODE && asrAvailable === false) startDemoMode()
   else if (ENABLE_DEMO_MODE && asrAvailable !== true && !demoTimer) {
     demoTimer = setTimeout(() => {
@@ -182,6 +190,81 @@ function scrollToTranscript(id) {
 function showLiveTranscript(text) {
   liveTranscript.value = text
   if (text) scrollToTranscript('live-transcript')
+}
+
+function applyRealtimeInterim(message) {
+  const revision = Number(message?.revision || 0)
+  if (revision < liveRevision) return
+  liveRevision = revision
+  liveUtteranceId = message.utterance_id || liveUtteranceId
+  liveTranscript.value = message.source_text || ''
+  if (message.type !== 'preview') liveTranslation.value = ''
+  if (liveTranscript.value) scrollToTranscript('live-transcript')
+  statusText.value = '正在实时识别…'
+}
+
+function applyRealtimePreview(message) {
+  const revision = Number(message?.revision || 0)
+  if (revision < liveRevision) return
+  liveRevision = revision
+  liveUtteranceId = message.utterance_id || liveUtteranceId
+  liveTranscript.value = message.source_text || liveTranscript.value
+  liveTranslation.value = message.translated_text || ''
+  if (liveTranscript.value) scrollToTranscript('live-transcript')
+}
+
+async function applyRealtimeFinal(message) {
+  const sentence = message?.transcription
+  if (!sentence) return
+  await appendTranscript(sentence)
+  const revision = Number(message?.revision || 0)
+  const finalizedCurrentDraft = revision >= liveRevision
+  if (finalizedCurrentDraft) {
+    liveTranscript.value = ''
+    liveTranslation.value = ''
+    liveRevision = 0
+    liveUtteranceId = ''
+  }
+  asrAvailable = true
+  if (sentence.translation_success === false) {
+    uni.showToast({ title: sentence.translation_warning || '翻译服务暂时不可用，已保留原文', icon: 'none' })
+  }
+  if (finalizedCurrentDraft && recording.value && !paused.value) statusText.value = '正在聆听…'
+}
+
+function realtimeCallbacks() {
+  return {
+    onReady: () => {
+      realtimeRecognition.value = true
+      asrAvailable = true
+      stopDemoMode()
+      statusText.value = '正在实时聆听…'
+    },
+    onInterim: applyRealtimeInterim,
+    onPreview: applyRealtimePreview,
+    onFinalizing: applyRealtimeInterim,
+    onFinal: applyRealtimeFinal,
+    onNoSpeech: () => {
+      // 静音分片不应清掉可能已开始的下一句动态草稿。
+      if (recording.value && !paused.value) statusText.value = '正在聆听…'
+    },
+    onError: (message) => {
+      if (!message?.fallback || realtimeErrorShown) return
+      realtimeErrorShown = true
+      uni.showToast({ title: message.message || '实时识别已切换分片模式', icon: 'none' })
+    },
+    onFallback: (message) => {
+      realtimeRecognition.value = false
+      liveTranscript.value = ''
+      liveTranslation.value = ''
+      liveUtteranceId = ''
+      statusText.value = '已切换分片语音识别'
+      if (!realtimeErrorShown && message?.message) {
+        realtimeErrorShown = true
+        uni.showToast({ title: message.message, icon: 'none' })
+      }
+    },
+  }
 }
 
 function translateAndSave(text) {
@@ -290,7 +373,7 @@ function releaseSegment(segment) {
   }
 }
 
-function queueSegment(segment) {
+function queueSegment(segment, forceAudioOnly = false) {
   const filePath = segment && typeof segment === 'object' && segment.filePath
     ? segment.filePath
     : segment
@@ -299,12 +382,15 @@ function queueSegment(segment) {
     return uploadChain
   }
   const id = lectureId.value
+  // 在分片产生时就固定其处理方式。实时链路随后断开时，已经由流式 ASR
+  // 覆盖的音频只做录音保存，避免整段重新识别造成重复字幕。
+  const audioOnly = forceAudioOnly || browserRecognition.value || realtimeRecognition.value
   uploadChain = uploadChain
     .then(async () => {
       const append = segmentCount > 0
       segmentCount += 1
       try {
-        if (browserRecognition.value) {
+        if (audioOnly) {
           await lectureApi.uploadAudio(id, filePath, append)
           return
         }
@@ -352,15 +438,28 @@ async function startRecording() {
     courseName.value = lecture.course_name
     transcripts.value = []
     liveTranscript.value = ''
+    liveTranslation.value = ''
     elapsed.value = 0
     segmentCount = 0
     asrAvailable = null
     speechErrorShown = false
+    realtimeErrorShown = false
+    liveRevision = 0
+    liveUtteranceId = ''
     uploadChain = Promise.resolve()
     await startCapture(queueSegment)
     recording.value = true
     paused.value = false
-    browserRecognition.value = isSpeechRecognitionSupported()
+    realtimeRecognition.value = false
+    if (isRealtimeSpeechSupported()) {
+      try {
+        realtimeRecognition.value = await startRealtimeSpeech(
+          lecture.id, realtimeCallbacks(), { offsetMs: 0 },
+        )
+      }
+      catch (_) { realtimeRecognition.value = false }
+    }
+    browserRecognition.value = !realtimeRecognition.value && isSpeechRecognitionSupported()
     if (browserRecognition.value) {
       try { browserRecognition.value = await startSpeechRecognition(speechOptions()) }
       catch (_) { browserRecognition.value = false }
@@ -380,9 +479,13 @@ async function stopRecording() {
   statusText.value = '正在保存录音与翻译…'
   clearTimers()
   try {
+    const realtimeWasActive = realtimeRecognition.value
+    const realtimeStop = realtimeWasActive ? stopRealtimeSpeech() : Promise.resolve(false)
     const speechStop = stopSpeechRecognition()
     const finalPath = await finishCapture()
-    if (finalPath) await queueSegment(finalPath)
+    if (finalPath) await queueSegment(finalPath, realtimeWasActive)
+    await realtimeStop
+    realtimeRecognition.value = false
     await speechStop
     await Promise.allSettled(Array.from(pendingTextJobs))
     await uploadChain
@@ -407,16 +510,28 @@ async function togglePause() {
       // 先收取浏览器语音识别可能产生的最后一句；课堂仍处于 recording，
       // 最终原文和译文可以正常保存，再切换服务端暂停状态。
       await stopSpeechRecognition()
+      const realtimeWasActive = realtimeRecognition.value
+      if (realtimeWasActive) await stopRealtimeSpeech()
+      realtimeRecognition.value = false
       await Promise.allSettled(Array.from(pendingTextJobs))
       await lectureApi.pause(lectureId.value)
       paused.value = true
       clearTimers()
       statusText.value = '已暂停'
       const filePath = await pauseCapture()
-      if (filePath) await queueSegment(filePath)
+      if (filePath) await queueSegment(filePath, realtimeWasActive)
     } else {
       await lectureApi.resume(lectureId.value)
       await resumeCapture(queueSegment)
+      if (isRealtimeSpeechSupported()) {
+        try {
+          realtimeRecognition.value = await startRealtimeSpeech(
+            lectureId.value, realtimeCallbacks(), { offsetMs: elapsed.value * 1000 },
+          )
+        }
+        catch (_) { realtimeRecognition.value = false }
+      }
+      browserRecognition.value = !realtimeRecognition.value && isSpeechRecognitionSupported()
       if (browserRecognition.value) await resumeSpeechRecognition(speechOptions())
       paused.value = false
       statusText.value = '正在聆听…'
@@ -493,6 +608,7 @@ async function logout() {
 .translation-error { color: var(--error); font-size: 23rpx; }
 .recognizing-text { display: block; margin-top: 10rpx; color: var(--muted); font-size: 23rpx; }
 .live-preview { opacity: .72; border-left-style: dashed; }
+.live-translation { opacity: .78; }
 .star-button { width: 72rpx; height: 72rpx; margin-left: 16rpx; padding: 0; border-radius: 50%; background: #ffdcbe; color: var(--tertiary); font-size: 34rpx; line-height: 72rpx; }
 .star-button[disabled] { opacity: .35; }
 .star-button.bookmarked { background: #aa6400; color: #fff; }

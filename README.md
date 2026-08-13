@@ -51,6 +51,6 @@ LiveTrans Voice 是一个 FastAPI + MySQL 的课堂实时翻译原型。后端�
 - 显式配置 `CORS_ORIGINS`；生产模式默认关闭 API 文档和测试页面。
 - 在反向代理启用 HTTPS、请求体限制和分布式限流。
 - 使用多 worker 部署 API；将语音识别/翻译任务迁移到独立任务队列，并为第三方翻译服务增加超时、熔断、配额与监控。
-- 为 App/微信实时识别配置 `ASR_API_URL`、`ASR_API_KEY` 和 `ASR_MODEL`；未配置时客户端只运行明确标记的演示降级。
+- 手机 H5 的动态识别需配置百度 `ASR_APP_ID`、`ASR_API_KEY` 和 WSS 反向代理；旧的分片接口仍使用 `ASR_API_URL`、`ASR_API_SECRET` 作为自动降级。
 - 将音频和头像迁移到 S3/OSS 等对象存储，并通过 CDN 或签名 URL 访问；当前本地上传目录只适合单机开发。
 - 将浏览器令牌迁移到 Secure、HttpOnly、SameSite Cookie，并接入 Redis 会话/限流、数据库迁移工具、集中日志和指标告警。

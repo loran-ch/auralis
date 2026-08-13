@@ -18,6 +18,7 @@ from routers.bookmark import router as bookmark_router
 from routers.translate import router as translate_router
 from routers.preferences import router as preferences_router
 from routers.admin import router as admin_router
+from routers.speech_stream import router as speech_stream_router
 
 app = FastAPI(
     title="LiveTrans Voice API",
@@ -72,6 +73,7 @@ app.include_router(bookmark_router)
 app.include_router(translate_router)
 app.include_router(preferences_router)
 app.include_router(admin_router)
+app.include_router(speech_stream_router)
 
 
 @app.get("/health/live", include_in_schema=False)

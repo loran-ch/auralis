@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 _cache: dict[tuple[str, str, str], tuple[float, str]] = {}
 _cache_lock = threading.Lock()
 _CACHE_MAX_ITEMS = 1000
+_CONTEXT_CURRENT_MARKER = "[[[LTV_CONTEXT_CURRENT_7F31]]]"
 
 
 def _get_cached(key: tuple[str, str, str]) -> str | None:
@@ -186,6 +187,57 @@ def translate_with_status(text: str, source: str = "en", target: str = "zh-CN") 
         "provider": "fallback",
         "warning": "翻译服务暂时不可用，已保留原文",
     }
+
+
+def translate_with_context(
+    text: str,
+    previous_sentences: list[str] | tuple[str, ...],
+    source: str = "en",
+    target: str = "zh-CN",
+) -> dict:
+    """使用最近几句作为翻译上下文，但只返回当前句的译文。
+
+    通用机器翻译没有独立的 context 参数，因此翻译一个短滑动窗口，
+    并用稳定标记分隔历史与当前句。服务商保留标记时只返回标记后的译文；
+    若标记丢失，自动回退为仅翻译当前句，避免重复显示历史内容。
+    """
+    current = text.strip()[:500]
+    # 上游根据 ASR_CONTEXT_SENTENCES 控制句数，这里只负责字符预算。
+    context = [item.strip() for item in previous_sentences if item.strip()]
+    if not current or not context:
+        result = translate_with_status(current, source, target)
+        return {**result, "context_applied": False}
+
+    # 通用翻译入口最多处理 500 字符，必须优先完整保留当前句；
+    # 从最近的上一句开始向前填充剩余预算。
+    # 一个换行用于分隔标记与当前句；每条上下文再占一个换行。
+    remaining = max(0, 500 - len(current) - len(_CONTEXT_CURRENT_MARKER) - 1)
+    selected_context = []
+    for sentence in reversed(context):
+        if remaining <= 0:
+            break
+        clipped = sentence[-remaining:]
+        selected_context.append(clipped)
+        remaining -= len(clipped) + 1
+    selected_context.reverse()
+    block_lines = [*selected_context, _CONTEXT_CURRENT_MARKER, current]
+    contextual = translate_with_status("\n".join(block_lines), source, target)
+    translated_block = contextual["text"]
+    if contextual["success"] and _CONTEXT_CURRENT_MARKER in translated_block:
+        current_translation = translated_block.rsplit(
+            _CONTEXT_CURRENT_MARKER, 1
+        )[-1].strip()
+    else:
+        current_translation = ""
+    if current_translation:
+        return {
+            **contextual,
+            "text": current_translation,
+            "context_applied": True,
+        }
+
+    result = translate_with_status(current, source, target)
+    return {**result, "context_applied": False}
 
 
 def translate(text: str, source: str = "en", target: str = "zh-CN") -> str:

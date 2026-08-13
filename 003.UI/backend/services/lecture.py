@@ -119,7 +119,10 @@ def get_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]
 
 def transcribe_audio(db: Session, lecture_id: int, user_id: int,
                      source_text: str = None,
-                     translated_text: str = None) -> Optional[dict]:
+                     translated_text: str = None,
+                     start_offset_ms: int | None = None,
+                     end_offset_ms: int | None = None,
+                     engine: str = "default") -> Optional[dict]:
     """
     保存转录句子。如果有前端传来的真实识别文本则使用，否则使用演示数据
     """
@@ -145,16 +148,18 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
         from services.translator import translate
         tgt = translate(src, lecture.source_lang, lecture.target_lang)
 
-    offset = count * 8000
+    offset = count * 8000 if start_offset_ms is None else max(0, start_offset_ms)
+    end_offset = offset + 8000 if end_offset_ms is None else max(offset, end_offset_ms)
 
     transcription = Transcription(
         lecture_id=lecture_id, user_id=user_id,
         source_text=src, source_lang=lecture.source_lang,
         translated_text=tgt, target_lang=lecture.target_lang,
         sentence_order=count + 1,
-        start_offset_ms=offset, end_offset_ms=offset + 8000,
+        start_offset_ms=offset, end_offset_ms=end_offset,
         recorded_at=_now(),
         ocr_confidence=round(random.uniform(0.88, 0.98), 2),
+        engine=engine,
     )
     db.add(transcription)
     lecture.sentence_count = count + 1

@@ -202,6 +202,12 @@ export function abortCapture() {
   }
 }
 
+export function startPcmCapture() {
+  return Promise.resolve(false)
+}
+
+export function stopPcmCapture() {}
+
 // #endif
 
 // #ifdef H5
@@ -214,6 +220,13 @@ let segmentTimer = null
 let chunkIndex = 0
 let restartPromise = null
 const H5_SEGMENT_DURATION = 4000
+const PCM_SAMPLE_RATE = 16000
+const PCM_FRAME_BYTES = 5120
+let pcmAudioContext = null
+let pcmSource = null
+let pcmProcessor = null
+let pcmPending = new Int16Array(0)
+let pcmFrameHandler = null
 
 export function ensureRecordPermission() {
   if (!window.isSecureContext) {
@@ -407,6 +420,84 @@ export function abortCapture() {
     try { mediaRecorder.stop() } catch (_) {}
   }
   releaseStream()
+}
+
+function downsampleTo16k(floatSamples, inputRate) {
+  if (inputRate === PCM_SAMPLE_RATE) return floatSamples
+  const ratio = inputRate / PCM_SAMPLE_RATE
+  const outputLength = Math.max(1, Math.round(floatSamples.length / ratio))
+  const output = new Float32Array(outputLength)
+  for (let index = 0; index < outputLength; index += 1) {
+    const start = Math.floor(index * ratio)
+    const end = Math.min(floatSamples.length, Math.floor((index + 1) * ratio))
+    let sum = 0
+    for (let cursor = start; cursor < end; cursor += 1) sum += floatSamples[cursor]
+    output[index] = sum / Math.max(1, end - start)
+  }
+  return output
+}
+
+function floatToInt16(samples) {
+  const output = new Int16Array(samples.length)
+  for (let index = 0; index < samples.length; index += 1) {
+    const value = Math.max(-1, Math.min(1, samples[index]))
+    output[index] = value < 0 ? value * 0x8000 : value * 0x7fff
+  }
+  return output
+}
+
+function appendPcm(samples) {
+  const combined = new Int16Array(pcmPending.length + samples.length)
+  combined.set(pcmPending)
+  combined.set(samples, pcmPending.length)
+  pcmPending = combined
+  const samplesPerFrame = PCM_FRAME_BYTES / 2
+  while (pcmPending.length >= samplesPerFrame) {
+    const frame = pcmPending.slice(0, samplesPerFrame)
+    pcmPending = pcmPending.slice(samplesPerFrame)
+    pcmFrameHandler?.(frame.buffer)
+  }
+}
+
+export async function startPcmCapture(onFrame) {
+  if (pcmProcessor) return true
+  const stream = await ensureStream()
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext
+  if (!AudioContextClass) return false
+  pcmFrameHandler = onFrame
+  pcmPending = new Int16Array(0)
+  pcmAudioContext = new AudioContextClass()
+  if (pcmAudioContext.state === 'suspended') await pcmAudioContext.resume()
+  pcmSource = pcmAudioContext.createMediaStreamSource(stream)
+  // ScriptProcessor 在微信 WebView 和旧版移动浏览器中的覆盖率高于 AudioWorklet。
+  // 只用于本地采样转换，网络发送仍按百度建议的 160ms/5120 字节帧进行。
+  pcmProcessor = pcmAudioContext.createScriptProcessor(4096, 1, 1)
+  pcmProcessor.onaudioprocess = (event) => {
+    if (!pcmFrameHandler) return
+    const input = event.inputBuffer.getChannelData(0)
+    appendPcm(floatToInt16(downsampleTo16k(input, pcmAudioContext.sampleRate)))
+  }
+  pcmSource.connect(pcmProcessor)
+  pcmProcessor.connect(pcmAudioContext.destination)
+  return true
+}
+
+export function stopPcmCapture() {
+  pcmFrameHandler = null
+  pcmPending = new Int16Array(0)
+  if (pcmProcessor) {
+    pcmProcessor.onaudioprocess = null
+    try { pcmProcessor.disconnect() } catch (_) {}
+  }
+  if (pcmSource) {
+    try { pcmSource.disconnect() } catch (_) {}
+  }
+  if (pcmAudioContext) {
+    try { pcmAudioContext.close() } catch (_) {}
+  }
+  pcmProcessor = null
+  pcmSource = null
+  pcmAudioContext = null
 }
 
 // #endif

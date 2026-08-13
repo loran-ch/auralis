@@ -88,6 +88,8 @@ VITE_ENABLE_DEMO_MODE=false
 
 ## 真实语音识别
 
+手机 H5 优先通过 `WebSocket` 把 16 kHz PCM 音频流发送到后端，页面按服务端返回的中间结果动态修正当前原文，并对稳定草稿做节流翻译。断句后再结合最近句子生成最终译文并持久化；静音和过短分片不弹错误。实时通道未配置或暂时断开时，客户端自动回退到原有短音频分片识别，录音文件仍正常保存。
+
 浏览器端可使用 Web Speech API，但 App 和微信小程序没有统一的免配置识别接口。多端客户端使用后端 `POST /api/lectures/{id}/transcribe/audio`，把每个短音频分片交给企业选定的 ASR 服务，然后自动翻译并保存转录。
 
 在服务端配置：
@@ -95,6 +97,11 @@ VITE_ENABLE_DEMO_MODE=false
 ```dotenv
 ASR_API_URL=https://speech.example.com/v1/audio/transcriptions
 ASR_API_KEY=由密钥管理服务注入
+ASR_APP_ID=百度语音应用的-App-ID
+ASR_API_SECRET=百度语音应用的-Secret-Key
+ASR_REALTIME_URL=wss://vop.baidu.com/realtime_asr
+ASR_REALTIME_PREVIEW_INTERVAL_MS=800
+ASR_CONTEXT_SENTENCES=3
 ASR_MODEL=your-model
 ASR_TIMEOUT_SECONDS=20
 ASR_MAX_SEGMENT_MB=10
