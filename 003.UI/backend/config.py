@@ -22,6 +22,10 @@ _DEV_DATABASE_URL = (
 _DEV_JWT_SECRET = "livetrans-voice-dev-secret-change-me"
 
 DATABASE_URL = os.getenv("DATABASE_URL", _DEV_DATABASE_URL)
+# 强制 utf8mb4 连接，避免中文 / emoji（4 字节）在缺失 charset 参数时乱码
+if "charset=" not in DATABASE_URL:
+    sep = "&" if "?" in DATABASE_URL else "?"
+    DATABASE_URL = f"{DATABASE_URL}{sep}charset=utf8mb4"
 JWT_SECRET = os.getenv("JWT_SECRET", _DEV_JWT_SECRET)
 DB_POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 DB_MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
@@ -128,7 +132,15 @@ if TRANSLATION_TIMEOUT_SECONDS <= 0 or TRANSLATION_CACHE_TTL_SECONDS < 0:
 ASR_API_URL = os.getenv("ASR_API_URL", "").strip()     # ← 填服务商地址
 ASR_API_KEY = os.getenv("ASR_API_KEY", "").strip()     # ← 填 API Key（百度需配合 SECRET）
 ASR_API_SECRET = os.getenv("ASR_API_SECRET", "").strip()  # ← 百度 Secret Key
+ASR_APP_ID = os.getenv("ASR_APP_ID", "").strip()       # ← 百度实时识别需要 App ID
 ASR_MODEL = os.getenv("ASR_MODEL", "").strip()         # ← 填模型名称
+ASR_REALTIME_URL = os.getenv(
+    "ASR_REALTIME_URL", "wss://vop.baidu.com/realtime_asr"
+).strip()
+ASR_REALTIME_PREVIEW_INTERVAL_MS = int(
+    os.getenv("ASR_REALTIME_PREVIEW_INTERVAL_MS", "800")
+)
+ASR_CONTEXT_SENTENCES = int(os.getenv("ASR_CONTEXT_SENTENCES", "3"))
 
 # ─── 企业翻译 API（可选）──────────────────────────────
 # 如果要用付费翻译服务，在这里填写
@@ -138,6 +150,8 @@ ASR_TIMEOUT_SECONDS = float(os.getenv("ASR_TIMEOUT_SECONDS", "20"))
 ASR_MAX_SEGMENT_MB = int(os.getenv("ASR_MAX_SEGMENT_MB", "10"))
 if ASR_TIMEOUT_SECONDS <= 0 or ASR_MAX_SEGMENT_MB <= 0:
     raise RuntimeError("ASR 超时和分片大小必须为正数")
+if ASR_REALTIME_PREVIEW_INTERVAL_MS < 300 or not 0 <= ASR_CONTEXT_SENTENCES <= 5:
+    raise RuntimeError("实时翻译间隔至少 300ms，上下文句数必须在 0 到 5 之间")
 if IS_PRODUCTION and not ASR_API_URL:
     raise RuntimeError("生产环境必须配置 ASR_API_URL")
 

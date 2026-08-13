@@ -25,6 +25,19 @@ export const ENABLE_DEMO_MODE = String(
   import.meta.env.VITE_ENABLE_DEMO_MODE ?? (import.meta.env.DEV ? 'true' : 'false'),
 ).toLowerCase() === 'true'
 
+export function websocketApiUrl(path) {
+  // #ifdef H5
+  const base = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+  if (!base) return ''
+  const url = new URL(path, `${base.replace(/\/$/, '')}/`)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.toString()
+  // #endif
+  // #ifndef H5
+  return ''
+  // #endif
+}
+
 export function absoluteAssetUrl(path) {
   if (!path) return ''
   if (/^https?:\/\//i.test(path)) return path
