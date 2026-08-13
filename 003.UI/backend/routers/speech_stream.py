@@ -106,18 +106,32 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
             client_connected = False
             return False
 
+    async def close(code: int) -> None:
+        nonlocal client_connected
+        if not client_connected:
+            return
+        try:
+            await websocket.close(code=code)
+        except RuntimeError:
+            pass
+        finally:
+            client_connected = False
+
     try:
         auth_message = await asyncio.wait_for(websocket.receive_json(), timeout=8)
-    except (asyncio.TimeoutError, WebSocketDisconnect, ValueError):
+    except WebSocketDisconnect:
+        client_connected = False
+        return
+    except (asyncio.TimeoutError, ValueError):
         await send({"type": "error", "code": "authentication_required",
                     "message": "实时识别认证超时", "fallback": True})
-        await websocket.close(code=4401)
+        await close(4401)
         return
 
     if auth_message.get("type") != "auth" or not auth_message.get("token"):
         await send({"type": "error", "code": "authentication_required",
                     "message": "实时识别需要登录", "fallback": True})
-        await websocket.close(code=4401)
+        await close(4401)
         return
 
     authenticated = await asyncio.to_thread(
@@ -126,7 +140,7 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
     if not authenticated:
         await send({"type": "error", "code": "authentication_failed",
                     "message": "登录已失效或课堂不存在", "fallback": True})
-        await websocket.close(code=4401)
+        await close(4401)
         return
 
     user_id, source_lang, target_lang = authenticated
@@ -140,7 +154,7 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
             "message": "实时识别未配置或暂不支持该语言，已切换分片识别",
             "fallback": True,
         })
-        await websocket.close(code=4403)
+        await close(4403)
         return
 
     recent_context = await asyncio.to_thread(
@@ -359,8 +373,4 @@ async def stream_lecture_audio(websocket: WebSocket, lecture_id: int):
         await final_queue.put(None)
         await final_worker_task
         await send({"type": "closed"})
-        if client_connected:
-            try:
-                await websocket.close(code=1000)
-            except RuntimeError:
-                pass
+        await close(1000)

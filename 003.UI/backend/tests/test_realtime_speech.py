@@ -1,6 +1,8 @@
 import asyncio
 from unittest.mock import patch
 
+from fastapi import WebSocketDisconnect
+
 from routers import speech_stream
 from services import realtime_speech, translator
 
@@ -114,6 +116,31 @@ def test_stream_endpoint_falls_back_cleanly_when_realtime_is_not_configured():
     assert message["type"] == "unsupported"
     assert message["fallback"] is True
     assert websocket.close_code == 4403
+
+
+def test_stream_endpoint_ignores_disconnect_before_authentication():
+    class DisconnectedWebSocket:
+        def __init__(self):
+            self.messages = []
+            self.close_code = None
+
+        async def accept(self):
+            return None
+
+        async def receive_json(self):
+            raise WebSocketDisconnect()
+
+        async def send_json(self, payload):
+            self.messages.append(payload)
+
+        async def close(self, code):
+            self.close_code = code
+
+    websocket = DisconnectedWebSocket()
+    asyncio.run(speech_stream.stream_lecture_audio(websocket, 12))
+
+    assert websocket.messages == []
+    assert websocket.close_code is None
 
 
 def test_stream_endpoint_forwards_dynamic_and_final_results():
