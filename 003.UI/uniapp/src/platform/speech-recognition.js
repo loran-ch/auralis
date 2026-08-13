@@ -30,10 +30,20 @@ function recognitionLocale(code) {
   return LOCALES[code] || code || 'en-US'
 }
 
+function isMobileBrowser() {
+  if (typeof navigator === 'undefined') return false
+  const userAgent = navigator.userAgent || ''
+  return /Android|iPhone|iPad|iPod|Mobile|MicroMessenger/i.test(userAgent)
+}
+
 export function isSpeechRecognitionSupported() {
   // #ifdef H5
   return typeof window !== 'undefined'
     && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition)
+    // Android WebView、微信内置浏览器等环境可能暴露 Web Speech 接口，
+    // 但启动后既不返回结果也不触发错误。移动端统一交给已录音分片的
+    // 服务端 ASR，避免页面永久停留在“正在聆听”。
+    && !isMobileBrowser()
   // #endif
   // #ifndef H5
   return false
