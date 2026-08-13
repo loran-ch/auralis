@@ -19,28 +19,48 @@
       </picker>
     </view>
 
-    <scroll-view class="transcript-scroll" scroll-y :scroll-into-view="scrollTarget" :show-scrollbar="false">
-      <view v-if="!transcripts.length" class="welcome-state">
-        <view class="welcome-icon">◉</view>
-        <text class="welcome-title">让课堂内容实时变成双语笔记</text>
-        <text class="welcome-copy">点击下方录音按钮开始。系统会自动断句、翻译并保存到课堂记录。</text>
-      </view>
-      <view v-for="(item, index) in transcripts" :id="`transcript-${item.id || item.client_id || index}`" :key="item.id || item.client_id || index" class="transcript-card" :class="{ current: index === transcripts.length - 1 }">
-        <view class="transcript-main">
-          <text class="source-text">{{ item.source_text }}</text>
-          <text class="translated-text" :class="{ 'translation-error': item.translation_error }">{{ item.translation_error || item.translated_text || (item.pending ? '正在翻译…' : '暂无翻译') }}</text>
+    <view class="transcript-region">
+      <scroll-view
+        class="transcript-scroll"
+        scroll-y
+        :scroll-into-view="scrollTarget"
+        :show-scrollbar="false"
+        :lower-threshold="40"
+        @scroll="handleTranscriptScroll"
+        @scrolltolower="resumeTranscriptFollow"
+        @touchstart="beginTranscriptTouch"
+        @touchend="endTranscriptTouch"
+        @touchcancel="endTranscriptTouch"
+      >
+        <view v-if="!transcripts.length && !liveTranscript" class="welcome-state">
+          <view class="welcome-icon">◉</view>
+          <text class="welcome-title">让课堂内容实时变成双语笔记</text>
+          <text class="welcome-copy">点击下方录音按钮开始。系统会自动断句、翻译并保存到课堂记录。</text>
         </view>
-        <button class="star-button" :class="{ bookmarked: item.is_bookmarked }" :disabled="!item.id" @tap="openTag(item)">★</button>
-      </view>
-      <view v-if="liveTranscript" id="live-transcript" class="transcript-card live-preview current">
-        <view class="transcript-main">
-          <text class="source-text">{{ liveTranscript }}</text>
-          <text v-if="liveTranslation" class="translated-text live-translation">{{ liveTranslation }}</text>
-          <text v-else class="recognizing-text">正在识别与理解上下文…</text>
+        <view v-if="transcripts.length" class="transcript-history-heading">
+          <view><text class="history-title">已确认内容</text><text class="history-count">{{ transcripts.length }} 句</text></view>
+          <text class="history-hint">前文会持续保留</text>
         </view>
-      </view>
-      <view class="scroll-spacer" />
-    </scroll-view>
+        <view v-for="(item, index) in transcripts" :id="`transcript-${item.id || item.client_id || index}`" :key="item.id || item.client_id || index" class="transcript-card confirmed" :class="{ 'latest-final': index === transcripts.length - 1 }">
+          <view class="transcript-main">
+            <view class="transcript-meta"><text>第 {{ index + 1 }} 句</text><text v-if="item.start_offset_ms != null">{{ formatTranscriptTime(item.start_offset_ms) }}</text><text v-if="item.pending" class="pending-label">处理中</text></view>
+            <text class="source-text">{{ item.source_text }}</text>
+            <text class="translated-text" :class="{ 'translation-error': item.translation_error }">{{ item.translation_error || item.translated_text || (item.pending ? '正在翻译…' : '暂无翻译') }}</text>
+          </view>
+          <button class="star-button" :class="{ bookmarked: item.is_bookmarked }" :disabled="!item.id" @tap="openTag(item)">★</button>
+        </view>
+        <view v-if="liveTranscript" id="live-transcript" class="transcript-card live-preview current">
+          <view class="transcript-main">
+            <view class="live-label"><view class="live-dot" /><text>正在更新</text></view>
+            <text class="source-text">{{ liveTranscript }}</text>
+            <text v-if="liveTranslation" class="translated-text live-translation">{{ liveTranslation }}</text>
+            <text v-else class="recognizing-text">正在识别与理解上下文…</text>
+          </view>
+        </view>
+        <view id="transcript-end" class="scroll-spacer" />
+      </scroll-view>
+      <button v-if="!followLatest && (transcripts.length || liveTranscript)" class="follow-latest-button" @tap="resumeTranscriptFollow">↓ {{ unseenTranscriptCount ? `${unseenTranscriptCount} 条新内容` : '回到最新' }}</button>
+    </view>
 
     <view class="recorder-controls">
       <Waveform :active="recording && !paused" />
@@ -76,7 +96,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import AppHeader from '../../components/AppHeader.vue'
 import Waveform from '../../components/Waveform.vue'
@@ -109,6 +129,8 @@ const menuOpen = ref(false)
 const tagOpen = ref(false)
 const selectedTranscript = ref(null)
 const scrollTarget = ref('')
+const followLatest = ref(true)
+const unseenTranscriptCount = ref(0)
 const nameModal = ref(false)
 const renameValue = ref('课堂录音')
 const completedLecture = ref(null)
@@ -124,6 +146,10 @@ let speechErrorShown = false
 let realtimeErrorShown = false
 let liveRevision = 0
 let liveUtteranceId = ''
+const realtimePending = new Map()
+let transcriptTouching = false
+let lastTranscriptScrollTop = 0
+let transcriptTouchTimer = null
 
 const menuItems = [
   { label: '实时录音', icon: '●', url: '/pages/recorder/index' },
@@ -150,6 +176,7 @@ onLoad(async () => {
 
 onUnload(() => {
   clearTimers()
+  clearTimeout(transcriptTouchTimer)
   abortSpeechRecognition()
   abortRealtimeSpeech()
   if (recording.value) abortCapture()
@@ -177,19 +204,68 @@ function stopDemoMode() { clearTimeout(demoTimer); clearInterval(demoTimer); dem
 function startDemoMode() { if (!demoTimer) demoTimer = setInterval(fetchDemoSentence, 4000) }
 
 async function appendTranscript(sentence) {
-  if (!sentence?.id || transcripts.value.some((item) => item.id === sentence.id)) return
+  if (!sentence?.id || transcripts.value.some((item) => item.id === sentence.id)) return false
   transcripts.value.push(sentence)
-  await nextTick()
-  scrollTarget.value = `transcript-${sentence.id}`
+  if (followLatest.value) await scrollToLatest()
+  else unseenTranscriptCount.value += 1
+  return true
 }
 
-function scrollToTranscript(id) {
-  nextTick(() => { scrollTarget.value = id })
+function recentSourceContext(limit = 3) {
+  return transcripts.value
+    // 前一句即使仍在翻译，也已经是稳定原文，可以供下一句消歧。
+    .filter((item) => item.source_text)
+    .slice(-limit)
+    .map((item) => item.source_text)
+}
+
+async function setScrollTarget(id) {
+  scrollTarget.value = ''
+  await nextTick()
+  scrollTarget.value = id
+}
+
+async function scrollToLatest(force = false) {
+  if (!force && !followLatest.value) return
+  await nextTick()
+  await setScrollTarget(liveTranscript.value ? 'live-transcript' : 'transcript-end')
+}
+
+function pauseTranscriptFollow() {
+  if (!followLatest.value) return
+  followLatest.value = false
+  unseenTranscriptCount.value = 0
+}
+
+function resumeTranscriptFollow() {
+  followLatest.value = true
+  unseenTranscriptCount.value = 0
+  scrollToLatest(true)
+}
+
+function beginTranscriptTouch() {
+  clearTimeout(transcriptTouchTimer)
+  transcriptTouching = true
+}
+
+function endTranscriptTouch() {
+  clearTimeout(transcriptTouchTimer)
+  transcriptTouchTimer = setTimeout(() => { transcriptTouching = false }, 180)
+}
+
+function handleTranscriptScroll(event) {
+  const currentTop = Number(event?.detail?.scrollTop || 0)
+  if (transcriptTouching && currentTop < lastTranscriptScrollTop - 4) pauseTranscriptFollow()
+  lastTranscriptScrollTop = currentTop
+}
+
+function formatTranscriptTime(offsetMs) {
+  return formatClock(Math.max(0, Math.floor(Number(offsetMs || 0) / 1000)))
 }
 
 function showLiveTranscript(text) {
   liveTranscript.value = text
-  if (text) scrollToTranscript('live-transcript')
+  if (text) scrollToLatest()
 }
 
 function applyRealtimeInterim(message) {
@@ -199,7 +275,7 @@ function applyRealtimeInterim(message) {
   liveUtteranceId = message.utterance_id || liveUtteranceId
   liveTranscript.value = message.source_text || ''
   if (message.type !== 'preview') liveTranslation.value = ''
-  if (liveTranscript.value) scrollToTranscript('live-transcript')
+  if (liveTranscript.value) scrollToLatest()
   statusText.value = '正在实时识别…'
 }
 
@@ -210,21 +286,69 @@ function applyRealtimePreview(message) {
   liveUtteranceId = message.utterance_id || liveUtteranceId
   liveTranscript.value = message.source_text || liveTranscript.value
   liveTranslation.value = message.translated_text || ''
-  if (liveTranscript.value) scrollToTranscript('live-transcript')
+  if (liveTranscript.value) scrollToLatest()
+}
+
+function realtimeDraftKey(message) {
+  return String(message?.utterance_id || `revision-${Number(message?.revision || 0)}`)
+}
+
+async function applyRealtimeFinalizing(message) {
+  const text = String(message?.source_text || '').trim()
+  if (!text) return
+  const key = realtimeDraftKey(message)
+  let item = realtimePending.get(key)
+  if (!item) {
+    item = reactive({
+      client_id: `realtime-${key}`,
+      realtime_utterance_id: key,
+      source_text: text,
+      translated_text: liveUtteranceId === key ? liveTranslation.value : '',
+      start_offset_ms: message.start_offset_ms,
+      end_offset_ms: message.end_offset_ms,
+      pending: true,
+      is_bookmarked: false,
+    })
+    realtimePending.set(key, item)
+    transcripts.value.push(item)
+    if (!followLatest.value) unseenTranscriptCount.value += 1
+  } else {
+    item.source_text = text
+    item.start_offset_ms = message.start_offset_ms ?? item.start_offset_ms
+    item.end_offset_ms = message.end_offset_ms ?? item.end_offset_ms
+  }
+  const revision = Number(message?.revision || 0)
+  if (revision >= liveRevision || liveUtteranceId === key) {
+    liveTranscript.value = ''
+    liveTranslation.value = ''
+    liveUtteranceId = ''
+  }
+  liveRevision = Math.max(liveRevision, revision)
+  statusText.value = '正在整理上一句…'
+  if (followLatest.value) await scrollToLatest()
 }
 
 async function applyRealtimeFinal(message) {
   const sentence = message?.transcription
   if (!sentence) return
-  await appendTranscript(sentence)
+  const key = realtimeDraftKey(message)
+  const pendingItem = realtimePending.get(key)
+  if (pendingItem) {
+    Object.assign(pendingItem, sentence, { pending: false, translation_error: '' })
+    realtimePending.delete(key)
+  } else {
+    await appendTranscript(sentence)
+  }
   const revision = Number(message?.revision || 0)
   const finalizedCurrentDraft = revision >= liveRevision
+    && (!liveUtteranceId || liveUtteranceId === key)
   if (finalizedCurrentDraft) {
     liveTranscript.value = ''
     liveTranslation.value = ''
     liveRevision = 0
     liveUtteranceId = ''
   }
+  if (followLatest.value) scrollToLatest()
   asrAvailable = true
   if (sentence.translation_success === false) {
     uni.showToast({ title: sentence.translation_warning || '翻译服务暂时不可用，已保留原文', icon: 'none' })
@@ -242,13 +366,23 @@ function realtimeCallbacks() {
     },
     onInterim: applyRealtimeInterim,
     onPreview: applyRealtimePreview,
-    onFinalizing: applyRealtimeInterim,
+    onFinalizing: applyRealtimeFinalizing,
     onFinal: applyRealtimeFinal,
     onNoSpeech: () => {
       // 静音分片不应清掉可能已开始的下一句动态草稿。
       if (recording.value && !paused.value) statusText.value = '正在聆听…'
     },
     onError: (message) => {
+      if (message?.code === 'finalization_failed') {
+        const item = realtimePending.get(realtimeDraftKey(message))
+        if (item) {
+          item.pending = false
+          item.translation_error = message.message || '当前句保存或翻译失败'
+          realtimePending.delete(realtimeDraftKey(message))
+        }
+        uni.showToast({ title: message.message || '当前句保存或翻译失败', icon: 'none' })
+        return
+      }
       if (!message?.fallback || realtimeErrorShown) return
       realtimeErrorShown = true
       uni.showToast({ title: message.message || '实时识别已切换分片模式', icon: 'none' })
@@ -271,6 +405,7 @@ function translateAndSave(text) {
   const normalized = text.trim()
   if (!normalized || !lectureId.value) return Promise.resolve()
   const targetLectureId = lectureId.value
+  const context = recentSourceContext()
   const clientId = `pending-${++pendingTextId}`
   const item = {
     client_id: clientId,
@@ -281,7 +416,8 @@ function translateAndSave(text) {
   }
   liveTranscript.value = ''
   transcripts.value.push(item)
-  scrollToTranscript(`transcript-${clientId}`)
+  if (followLatest.value) scrollToLatest()
+  else unseenTranscriptCount.value += 1
   statusText.value = `正在翻译：${normalized.slice(0, 20)}`
 
   const job = (async () => {
@@ -291,6 +427,7 @@ function translateAndSave(text) {
         text: normalized,
         source: sourceLang.value,
         target: targetLang.value,
+        context,
       })
     } catch (error) {
       translation = {
@@ -439,6 +576,9 @@ async function startRecording() {
     transcripts.value = []
     liveTranscript.value = ''
     liveTranslation.value = ''
+    followLatest.value = true
+    unseenTranscriptCount.value = 0
+    lastTranscriptScrollTop = 0
     elapsed.value = 0
     segmentCount = 0
     asrAvailable = null
@@ -446,6 +586,7 @@ async function startRecording() {
     realtimeErrorShown = false
     liveRevision = 0
     liveUtteranceId = ''
+    realtimePending.clear()
     uploadChain = Promise.resolve()
     await startCapture(queueSegment)
     recording.value = true
@@ -594,25 +735,37 @@ async function logout() {
 .language-row { padding: 12rpx 40rpx 20rpx; display: flex; align-items: center; justify-content: center; gap: 18rpx; }
 .language-picker { min-height: 56rpx; padding: 0 20rpx; border-radius: 999rpx; background: var(--surface-low); color: var(--muted); font-size: 22rpx; line-height: 56rpx; }
 .arrow { color: var(--primary); font-weight: 800; }
-.transcript-scroll { flex: 1; min-height: 0; padding: 0 40rpx; }
+.transcript-region { position: relative; flex: 1; min-height: 0; }
+.transcript-scroll { height: 100%; min-height: 0; box-sizing: border-box; padding: 0 40rpx; }
 .welcome-state { min-height: 650rpx; padding: 120rpx 46rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .welcome-icon { width: 132rpx; height: 132rpx; border-radius: 42rpx; display: flex; align-items: center; justify-content: center; background: rgba(0,94,161,.1); color: var(--primary); font-size: 62rpx; }
 .welcome-title { margin-top: 34rpx; font-size: 34rpx; line-height: 1.35; font-weight: 800; color: var(--text); }
 .welcome-copy { margin-top: 18rpx; max-width: 560rpx; font-size: 24rpx; line-height: 1.65; color: var(--muted); }
-.transcript-card { margin-bottom: 34rpx; padding: 28rpx 0 28rpx 28rpx; display: flex; align-items: flex-start; border-left: 5rpx solid rgba(0,94,161,.15); opacity: .62; }
+.transcript-history-heading { position: sticky; z-index: 3; top: 0; margin: 0 -4rpx 20rpx; padding: 16rpx 4rpx 14rpx; display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+.history-title { color: var(--text); font-size: 24rpx; font-weight: 800; }
+.history-count { margin-left: 12rpx; padding: 4rpx 12rpx; border-radius: 999rpx; background: var(--surface-low); color: var(--muted); font-size: 19rpx; }
+.history-hint { color: var(--muted); font-size: 19rpx; }
+.transcript-card { margin-bottom: 20rpx; padding: 24rpx 20rpx 24rpx 24rpx; display: flex; align-items: flex-start; border: 1rpx solid rgba(0,94,161,.08); border-left: 5rpx solid rgba(0,94,161,.28); border-radius: 0 24rpx 24rpx 0; background: var(--card); box-shadow: 0 4rpx 16rpx rgba(26,28,29,.035); }
+.transcript-card.confirmed { opacity: 1; }
+.transcript-card.latest-final { border-left-color: rgba(0,110,28,.5); }
 .transcript-card.current { border-left-color: var(--primary); opacity: 1; }
 .transcript-main { flex: 1; min-width: 0; }
+.transcript-meta { margin-bottom: 10rpx; display: flex; align-items: center; gap: 14rpx; color: var(--muted); font-size: 19rpx; }
+.pending-label { color: var(--primary); }
 .source-text,.translated-text { display: block; line-height: 1.55; }
 .source-text { font-size: 30rpx; font-weight: 650; color: var(--text); }
 .translated-text { margin-top: 10rpx; font-size: 29rpx; font-weight: 700; color: var(--secondary); }
 .translation-error { color: var(--error); font-size: 23rpx; }
 .recognizing-text { display: block; margin-top: 10rpx; color: var(--muted); font-size: 23rpx; }
-.live-preview { opacity: .72; border-left-style: dashed; }
-.live-translation { opacity: .78; }
+.live-preview { border-color: rgba(0,94,161,.16); border-left-color: var(--primary); border-left-style: dashed; background: rgba(0,94,161,.045); }
+.live-label { margin-bottom: 12rpx; display: flex; align-items: center; gap: 10rpx; color: var(--primary); font-size: 20rpx; font-weight: 800; }
+.live-dot { width: 12rpx; height: 12rpx; border-radius: 50%; background: var(--primary); animation: pulse 1.2s infinite; }
+.live-translation { opacity: .86; }
 .star-button { width: 72rpx; height: 72rpx; margin-left: 16rpx; padding: 0; border-radius: 50%; background: #ffdcbe; color: var(--tertiary); font-size: 34rpx; line-height: 72rpx; }
 .star-button[disabled] { opacity: .35; }
 .star-button.bookmarked { background: #aa6400; color: #fff; }
-.scroll-spacer { height: 30rpx; }
+.scroll-spacer { height: 36rpx; }
+.follow-latest-button { position: absolute; z-index: 5; right: 30rpx; bottom: 22rpx; min-width: 174rpx; height: 64rpx; padding: 0 24rpx; border: 1rpx solid rgba(0,94,161,.15); border-radius: 999rpx; background: var(--primary); color: #fff; font-size: 21rpx; font-weight: 750; line-height: 64rpx; box-shadow: 0 8rpx 24rpx rgba(0,94,161,.24); }
 .recorder-controls { flex-shrink: 0; padding: 8rpx 20rpx calc(18rpx + env(safe-area-inset-bottom)); background: var(--card); border-radius: 38rpx 38rpx 0 0; box-shadow: 0 -8rpx 30rpx rgba(26,28,29,.07); }
 .control-row { height: 112rpx; display: flex; align-items: center; justify-content: space-around; }
 .side-action { width: 100rpx; display: flex; flex-direction: column; align-items: center; gap: 7rpx; color: var(--muted); font-size: 19rpx; }

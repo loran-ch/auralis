@@ -30,6 +30,17 @@ class DashboardStatsResp(BaseModel):
     system_info: dict
 
 
+class RegistrationSettingReq(BaseModel):
+    enabled: bool
+
+
+class RegistrationSettingResp(BaseModel):
+    enabled: bool
+    message: str
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+
+
 # ─── 用户管理 ─────────────────────────────────────────────
 
 class AdminUserResp(BaseModel):

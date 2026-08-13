@@ -11,6 +11,7 @@ from utils.security import (hash_password, verify_password, create_token_pair,
                             hash_token)
 from config import (CODE_LENGTH, CODE_EXPIRE_SEC, CODE_RESEND_SEC,
                     CODE_DAILY_LIMIT, DEBUG)
+from services.captcha import verify_registration_captcha
 
 
 def _gen_code() -> str:
@@ -70,20 +71,21 @@ def verify_code(db: Session, target: str, code: str, scene: str) -> bool:
 
 # ─── 注册 ───────────────────────────────────────────────
 
-def register(db: Session, username: str, phone: str, code: str,
-             password: str, nickname: Optional[str], ip: Optional[str]) -> dict:
-    if not verify_code(db, phone, code, "register"):
+def register(db: Session, username: str, password: str, nickname: Optional[str],
+             captcha_token: str, captcha_code: str, ip: Optional[str],
+             phone: Optional[str] = None) -> dict:
+    if not verify_registration_captcha(db, captcha_token, captcha_code):
         return {"success": False, "message": "验证码错误或已过期"}
 
     if db.query(User).filter(User.username == username).first():
         return {"success": False, "message": "该用户名已被使用"}
-    if db.query(User).filter(User.phone == phone).first():
+    if phone and db.query(User).filter(User.phone == phone).first():
         return {"success": False, "message": "该手机号已注册"}
 
     user = User(
         nickname=nickname or username,
         username=username,
-        phone=phone, phone_verified=True,
+        phone=phone, phone_verified=False,
         password_hash=hash_password(password),
         last_login_at=datetime.now(timezone.utc),
         last_login_ip=ip,

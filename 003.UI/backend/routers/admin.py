@@ -15,9 +15,13 @@ from schemas.admin import (
     AuditLogResp,
     DashboardStatsResp,
     PageResp,
+    RegistrationSettingReq,
+    RegistrationSettingResp,
 )
 from schemas.auth import MsgResp
 from services import admin as admin_service
+from services.registration import (get_registration_setting,
+                                   update_registration_setting)
 
 router = APIRouter(prefix="/api/admin", tags=["管理员"])
 
@@ -36,6 +40,29 @@ def api_dashboard(
     """系统概览统计"""
     stats = admin_service.get_dashboard_stats(db)
     return DashboardStatsResp(**stats)
+
+
+@router.get("/settings/registration", response_model=RegistrationSettingResp)
+def api_registration_setting(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """查看新用户注册状态。"""
+    return RegistrationSettingResp(**get_registration_setting(db))
+
+
+@router.patch("/settings/registration", response_model=RegistrationSettingResp)
+def api_update_registration_setting(
+    req: RegistrationSettingReq,
+    request: Request,
+    admin: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    """暂停或恢复新用户注册（仅超级管理员）。"""
+    result = update_registration_setting(
+        db, req.enabled, admin, _client_ip(request)
+    )
+    return RegistrationSettingResp(**result)
 
 
 # ─── 用户管理 ─────────────────────────────────────────────

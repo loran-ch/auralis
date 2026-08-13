@@ -7,6 +7,8 @@ const query = (params = {}) => {
 
 export const authApi = {
   login: (account, password) => request('/api/auth/login', { method: 'POST', auth: false, data: { account, password } }),
+  registrationStatus: () => request('/api/auth/registration-status', { auth: false }),
+  captcha: () => request('/api/auth/captcha', { auth: false }),
   sendCode: (target) => request('/api/auth/send-code', { method: 'POST', auth: false, data: { target, scene: 'register' } }),
   register: (data) => request('/api/auth/register', { method: 'POST', auth: false, data }),
   me: () => request('/api/auth/me'),
@@ -62,6 +64,8 @@ export const bookmarkApi = {
 
 export const adminApi = {
   dashboard: () => request('/api/admin/dashboard'),
+  registrationSetting: () => request('/api/admin/settings/registration'),
+  updateRegistrationSetting: (enabled) => request('/api/admin/settings/registration', { method: 'PATCH', data: { enabled } }),
   users: (params) => request(`/api/admin/users${query(params)}`),
   updateUserStatus: (id, status) => request(`/api/admin/users/${id}/status`, { method: 'PATCH', data: { status } }),
   updateUserRole: (id, role) => request(`/api/admin/users/${id}/role`, { method: 'PATCH', data: { role } }),

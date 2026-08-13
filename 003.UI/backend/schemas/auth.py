@@ -30,15 +30,17 @@ class SendCodeReq(BaseModel):
 
 class RegisterReq(BaseModel):
     username: str = Field(..., min_length=3, max_length=32, pattern=r"^[a-zA-Z0-9_]+$")
-    phone: str = Field(..., pattern=r"^\+?\d{11,15}$")
-    code: str = Field(..., min_length=4, max_length=6)
     password: str = Field(..., min_length=6, max_length=72)
+    confirm_password: str = Field(..., min_length=6, max_length=72)
+    captcha_token: str = Field(..., min_length=20, max_length=2048)
+    captcha_code: str = Field(..., min_length=4, max_length=4, pattern=r"^[a-zA-Z0-9]+$")
+    phone: Optional[str] = Field(default=None, pattern=r"^\+?\d{11,15}$")
     nickname: Optional[str] = Field(default=None, max_length=64)
 
     @field_validator("phone", mode="before")
     @classmethod
-    def normalize_phone(cls, value: str) -> str:
-        return _normalize_phone(value)
+    def normalize_phone(cls, value: Optional[str]) -> Optional[str]:
+        return _normalize_phone(value) if value else None
 
     @field_validator("nickname")
     @classmethod
@@ -47,10 +49,27 @@ class RegisterReq(BaseModel):
             return None
         return value.strip() or None
 
-    @field_validator("password")
+    @field_validator("password", "confirm_password")
     @classmethod
     def validate_password_bytes(cls, value: str) -> str:
         return _validate_bcrypt_password(value)
+
+    @model_validator(mode="after")
+    def passwords_must_match(self):
+        if self.password != self.confirm_password:
+            raise ValueError("两次输入的密码不一致")
+        return self
+
+
+class RegistrationStatusResp(BaseModel):
+    enabled: bool
+    message: str
+
+
+class CaptchaResp(BaseModel):
+    captcha_token: str
+    image: str
+    expires_in: int
 
 
 class LoginReq(BaseModel):

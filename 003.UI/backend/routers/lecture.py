@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
-from config import ASR_MAX_SEGMENT_MB, IS_PRODUCTION, MAX_AUDIO_SIZE_MB
+from config import (ASR_CONTEXT_SENTENCES, ASR_MAX_SEGMENT_MB, IS_PRODUCTION,
+                    MAX_AUDIO_SIZE_MB)
 from database import get_db
 from models.lecture import Bookmark, Lecture, Transcription
 from models.user import User
@@ -20,7 +21,7 @@ from services.preferences import language_exists
 from services.speech_recognizer import (SpeechRecognitionNoSpeech,
                                         SpeechRecognitionUnavailable,
                                         recognize_speech)
-from services.translator import translate_with_status
+from services.translator import translate_with_context
 from schemas.lecture import (StartLectureReq, LectureResp, LectureUpdateReq,
                              TranscriptionResp)
 
@@ -449,9 +450,17 @@ async def api_transcribe_audio_segment(
         return Response(status_code=204)
     except SpeechRecognitionUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
+    context_rows = db.query(Transcription.source_text).filter(
+        Transcription.lecture_id == lecture_id,
+        Transcription.user_id == user.id,
+    ).order_by(Transcription.sentence_order.desc()).limit(
+        ASR_CONTEXT_SENTENCES
+    ).all() if ASR_CONTEXT_SENTENCES else []
+    context = [row[0] for row in reversed(context_rows) if row[0]]
     translation = await run_in_threadpool(
-        translate_with_status,
+        translate_with_context,
         source_text,
+        context,
         source_lang,
         target_lang,
     )
