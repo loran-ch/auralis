@@ -40,6 +40,10 @@ class SpeechRecognitionUnavailable(RuntimeError):
     """ASR 未配置或上游暂时不可用。"""
 
 
+class SpeechRecognitionNoSpeech(RuntimeError):
+    """音频分片中没有可转录的有效语音，不代表 ASR 服务不可用。"""
+
+
 def _is_baidu(url: str) -> bool:
     return "baidu.com" in url or "vop.baidu" in url
 
@@ -195,13 +199,17 @@ def _recognize_baidu(contents: bytes, extension: str, language: str) -> str:
     if err_no != 0:
         err_msg = data.get("err_msg", "未知错误")
         logger.warning("百度 ASR 识别失败: err_no=%s err_msg=%s", err_no, err_msg)
+        # 百度会把静音、音质过差或过短的录音分片报告为这些错误。
+        # 它们只表示当前分片没有可用文本，不应让客户端误判整个服务不可用。
+        if err_no in {3301, 3307, 3314}:
+            raise SpeechRecognitionNoSpeech("音频分片中未检测到有效语音")
         raise SpeechRecognitionUnavailable(f"百度语音识别失败: {err_msg}")
 
     result = data.get("result", [])
     text = "".join(result) if isinstance(result, list) else str(result)
     text = text.strip()
     if not text:
-        raise SpeechRecognitionUnavailable("百度语音识别未返回文本")
+        raise SpeechRecognitionNoSpeech("音频分片中未检测到有效语音")
     return text[:4000]
 
 
@@ -247,7 +255,7 @@ def _recognize_generic(contents: bytes, extension: str, language: str) -> str:
         text = text.get("text")
     text = text.strip() if isinstance(text, str) else ""
     if not text:
-        raise SpeechRecognitionUnavailable("语音识别未返回文本")
+        raise SpeechRecognitionNoSpeech("音频分片中未检测到有效语音")
     return text[:4000]
 
 

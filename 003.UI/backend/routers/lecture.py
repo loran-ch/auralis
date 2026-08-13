@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Query
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
@@ -17,7 +17,8 @@ from services.lecture import (start_lecture, stop_lecture,
                                get_active_lecture, transcribe_audio, get_transcriptions,
                                get_lecture, pause_lecture, resume_lecture)
 from services.preferences import language_exists
-from services.speech_recognizer import (SpeechRecognitionUnavailable,
+from services.speech_recognizer import (SpeechRecognitionNoSpeech,
+                                        SpeechRecognitionUnavailable,
                                         recognize_speech)
 from services.translator import translate_with_status
 from schemas.lecture import (StartLectureReq, LectureResp, LectureUpdateReq,
@@ -442,6 +443,10 @@ async def api_transcribe_audio_segment(
         source_text = await run_in_threadpool(
             recognize_speech, contents, extension, source_lang
         )
+    except SpeechRecognitionNoSpeech:
+        # 静音、环境噪音或停止录音时产生的过短尾段属于正常情况。
+        # 音频已经保存；返回 204 让客户端静默跳过本次转录。
+        return Response(status_code=204)
     except SpeechRecognitionUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     translation = await run_in_threadpool(
