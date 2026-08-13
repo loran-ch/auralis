@@ -14,12 +14,31 @@ from services.auth import (send_code, register, login, revoke_all_tokens,
                            authenticate_access_token, refresh_tokens,
                            revoke_token, change_password)
 from services.preferences import refresh_user_stats
+from services.registration import registration_is_enabled
+from services.captcha import create_registration_captcha
 from schemas.auth import (ChangePasswordReq, SendCodeReq, RegisterReq, LoginReq, RefreshReq,
-                          AuthResp, TokenResp, UserResp, MsgResp)
+                          AuthResp, TokenResp, UserResp, MsgResp,
+                          RegistrationStatusResp, CaptchaResp)
 from schemas.preferences import UserStatsResp
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 security = HTTPBearer(auto_error=False)
+
+
+@router.get("/registration-status", response_model=RegistrationStatusResp)
+def api_registration_status(db: Session = Depends(get_db)):
+    enabled = registration_is_enabled(db)
+    return RegistrationStatusResp(
+        enabled=enabled,
+        message="当前允许新用户注册" if enabled else "管理员已暂停新用户注册",
+    )
+
+
+@router.get("/captcha", response_model=CaptchaResp)
+def api_registration_captcha(db: Session = Depends(get_db)):
+    if not registration_is_enabled(db):
+        raise HTTPException(status_code=403, detail="管理员已暂停新用户注册")
+    return CaptchaResp(**create_registration_captcha(db))
 
 
 def get_current_user(
@@ -33,6 +52,8 @@ def get_current_user(
 
 @router.post("/send-code", response_model=MsgResp)
 def api_send_code(req: SendCodeReq, request: Request, db: Session = Depends(get_db)):
+    if req.scene == "register" and not registration_is_enabled(db):
+        raise HTTPException(status_code=403, detail="管理员已暂停新用户注册")
     ip = request.client.host if request.client else None
     result = send_code(db, req.target, req.scene, ip)
     if not result["success"]:
@@ -42,8 +63,19 @@ def api_send_code(req: SendCodeReq, request: Request, db: Session = Depends(get_
 
 @router.post("/register", response_model=AuthResp)
 def api_register(req: RegisterReq, request: Request, db: Session = Depends(get_db)):
+    if not registration_is_enabled(db):
+        raise HTTPException(status_code=403, detail="管理员已暂停新用户注册")
     ip = request.client.host if request.client else None
-    result = register(db, req.username, req.phone, req.code, req.password, req.nickname, ip)
+    result = register(
+        db,
+        req.username,
+        req.password,
+        req.nickname,
+        req.captcha_token,
+        req.captcha_code,
+        ip,
+        req.phone,
+    )
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     u = result["user"]

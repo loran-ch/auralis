@@ -8,6 +8,11 @@
         <template v-else-if="tab === 'dashboard'">
           <view class="dashboard-hero"><text class="dashboard-title">系统运行概览</text><text class="dashboard-copy">实时查看用户、课堂和内容增长情况</text></view>
           <view class="metric-grid"><view v-for="item in metrics" :key="item.label" class="metric-card card"><view class="metric-icon" :style="{ background: item.bg, color: item.color }">{{ item.icon }}</view><text class="metric-value">{{ item.value }}</text><text class="metric-label">{{ item.label }}</text></view></view>
+          <view class="registration-card card">
+            <view class="registration-info"><text class="section-title">新用户注册</text><text class="registration-description">{{ registrationSetting.enabled ? '当前允许新用户创建账号和获取验证码' : '当前已阻止验证码发送和注册提交' }}</text><text v-if="registrationSetting.updated_at" class="registration-meta">最近操作：{{ registrationSetting.updated_by || '管理员' }} · {{ formatDate(registrationSetting.updated_at, true) }}</text></view>
+            <view class="registration-control"><view class="status-badge" :class="registrationSetting.enabled ? 'active' : 'disabled'">{{ registrationSetting.enabled ? '开放中' : '已暂停' }}</view><switch :checked="registrationSetting.enabled" :disabled="!isSuper || registrationUpdating" color="#006e1c" @change="changeRegistrationSetting" /></view>
+            <text v-if="!isSuper" class="registration-permission">仅超级管理员可以修改注册状态</text>
+          </view>
           <view class="system-card card"><text class="section-title">系统信息</text><view v-for="(value, key) in dashboard.system_info" :key="key" class="system-row"><text>{{ systemLabels[key] || key }}</text><text>{{ value }}</text></view></view>
         </template>
 
@@ -50,6 +55,8 @@ import { useTheme } from '../../platform/theme'
 const user = ref({})
 const tab = ref('dashboard')
 const dashboard = ref({ system_info: {} })
+const registrationSetting = ref({ enabled: true, message: '' })
+const registrationUpdating = ref(false)
 const rows = ref([])
 const search = ref('')
 const page = ref(1)
@@ -84,7 +91,11 @@ onLoad(async () => {
 async function loadTab() {
   loading.value = true
   try {
-    if (tab.value === 'dashboard') dashboard.value = await adminApi.dashboard()
+    if (tab.value === 'dashboard') {
+      const [dashboardData, registrationData] = await Promise.all([adminApi.dashboard(), adminApi.registrationSetting()])
+      dashboard.value = dashboardData
+      registrationSetting.value = registrationData
+    }
     else {
       const result = tab.value === 'users' ? await adminApi.users({ page: page.value, page_size: 20, search: search.value }) : tab.value === 'lectures' ? await adminApi.lectures({ page: page.value, page_size: 20, search: search.value }) : await adminApi.auditLogs({ page: page.value, page_size: 20 })
       rows.value = result.items || []; total.value = result.total || 0; totalPages.value = result.total_pages || 1
@@ -95,6 +106,24 @@ async function loadTab() {
 function switchTab(value) { tab.value = value; page.value = 1; search.value = ''; rows.value = []; loadTab() }
 function roleLabel(value) { return { user: '用户', admin: '管理员', super_admin: '超级管理员' }[value] || value }
 function statusLabel(value) { return { recording: '录音中', paused: '已暂停', completed: '已完成', failed: '失败' }[value] || value }
+function changeRegistrationSetting(event) {
+  const enabled = Boolean(event.detail.value)
+  registrationSetting.value = { ...registrationSetting.value, enabled: !enabled }
+  uni.showModal({
+    title: enabled ? '恢复用户注册' : '暂停用户注册',
+    content: enabled ? '恢复后，新用户可以获取验证码并注册账号。' : '暂停后，新用户将无法获取验证码或提交注册，已有用户仍可正常登录。',
+    confirmColor: enabled ? '#006e1c' : '#ba1a1a',
+    success: async (result) => {
+      if (!result.confirm) return
+      registrationUpdating.value = true
+      try {
+        registrationSetting.value = await adminApi.updateRegistrationSetting(enabled)
+        uni.showToast({ title: enabled ? '已恢复注册' : '已暂停注册', icon: 'success' })
+      } catch (error) { showError(error, '注册状态修改失败') }
+      finally { registrationUpdating.value = false }
+    },
+  })
+}
 function confirmAction(title, content, action) { uni.showModal({ title, content, confirmColor: '#ba1a1a', success: async (result) => { if (!result.confirm) return; try { await action(); uni.showToast({ title: '操作成功', icon: 'success' }); loadTab() } catch (error) { showError(error, '操作失败') } } }) }
 function toggleUser(item) { const next = item.status === 'active' ? 'disabled' : 'active'; confirmAction(next === 'active' ? '启用用户' : '禁用用户', `确定${next === 'active' ? '启用' : '禁用'}“${item.nickname || item.id}”吗？`, () => adminApi.updateUserStatus(item.id, next)) }
 function changeRole(item) { uni.showActionSheet({ itemList: ['普通用户', '管理员', '超级管理员'], success: (result) => { const role = ['user', 'admin', 'super_admin'][result.tapIndex]; confirmAction('修改角色', `确定将该账号改为${roleLabel(role)}吗？`, () => adminApi.updateUserRole(item.id, role)) } }) }
@@ -105,6 +134,7 @@ function removeLecture(item) { confirmAction('删除课堂', `将删除“${item
 <style scoped>
 .admin-page { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }.admin-scroll { flex: 1; min-height: 0; }.admin-tabs { flex-shrink: 0; height: 104rpx; padding: 0 22rpx; display: flex; align-items: center; justify-content: space-around; background: var(--card); border-bottom: 1rpx solid rgba(193,199,210,.35); }.admin-tab { min-width: 120rpx; height: 70rpx; padding: 0 16rpx; display: flex; align-items: center; justify-content: center; gap: 9rpx; border-radius: 20rpx; color: var(--muted); font-size: 25rpx; }.admin-tab text { font-size: 20rpx; }.admin-tab.active { background: rgba(0,94,161,.1); color: var(--primary); font-weight: 800; }
 .dashboard-hero { padding: 38rpx; border-radius: 32rpx; background: linear-gradient(135deg,#1a1c1d,#414751); color: #fff; }.dashboard-title,.dashboard-copy { display: block; }.dashboard-title { font-size: 36rpx; font-weight: 850; }.dashboard-copy { margin-top: 10rpx; font-size: 22rpx; opacity: .75; }.metric-grid { margin-top: 24rpx; display: grid; grid-template-columns: repeat(2,1fr); gap: 18rpx; }.metric-card { padding: 26rpx; }.metric-icon { width: 62rpx; height: 62rpx; border-radius: 20rpx; text-align: center; font-size: 29rpx; line-height: 62rpx; }.metric-value,.metric-label { display: block; }.metric-value { margin-top: 18rpx; color: var(--text); font-size: 36rpx; font-weight: 900; }.metric-label { margin-top: 5rpx; color: var(--muted); font-size: 20rpx; }.system-card { margin-top: 24rpx; padding: 30rpx; }.system-row { min-height: 78rpx; display: flex; align-items: center; justify-content: space-between; color: var(--muted); border-bottom: 1rpx solid rgba(193,199,210,.25); }.system-row text:last-child { color: var(--text); }
+.registration-card { margin-top: 24rpx; padding: 30rpx; display: flex; align-items: center; gap: 24rpx; flex-wrap: wrap; }.registration-info { flex: 1; min-width: 380rpx; }.registration-description,.registration-meta,.registration-permission { display: block; }.registration-description { margin-top: 8rpx; color: var(--muted); font-size: 21rpx; line-height: 1.5; }.registration-meta { margin-top: 10rpx; color: var(--muted); font-size: 18rpx; }.registration-control { display: flex; align-items: center; gap: 18rpx; }.registration-permission { width: 100%; color: var(--muted); font-size: 18rpx; }
 .admin-search { height: 86rpx; padding: 0 22rpx; display: flex; align-items: center; gap: 16rpx; }.admin-search text { color: var(--muted); font-size: 34rpx; }.admin-search input { flex: 1; height: 86rpx; }.admin-search button { width: 66rpx; height: 66rpx; padding: 0; background: transparent; color: var(--muted); font-size: 34rpx; line-height: 66rpx; }.result-summary { height: 90rpx; padding: 0 4rpx; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 21rpx; }.result-summary button { height: 60rpx; padding: 0 20rpx; background: rgba(0,94,161,.08); color: var(--primary); font-size: 20rpx; line-height: 60rpx; }
 .admin-list { display: flex; flex-direction: column; gap: 20rpx; padding-bottom: 32rpx; }.admin-card,.log-card { padding: 28rpx; }.admin-card-top { display: flex; align-items: center; gap: 18rpx; }.user-avatar,.lecture-icon { flex: 0 0 auto; width: 72rpx; height: 72rpx; border-radius: 24rpx; background: rgba(0,94,161,.1); color: var(--primary); text-align: center; font-size: 28rpx; font-weight: 850; line-height: 72rpx; }.card-main { flex: 1; min-width: 0; }.item-title,.item-meta { display: block; }.item-title { overflow: hidden; color: var(--text); font-size: 26rpx; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }.item-meta { margin-top: 7rpx; color: var(--muted); font-size: 19rpx; }.status-badge,.action-badge { padding: 6rpx 13rpx; border-radius: 999rpx; background: var(--surface-container); color: var(--muted); font-size: 17rpx; font-weight: 800; }.status-badge.active,.status-badge.completed { background: rgba(0,110,28,.1); color: var(--secondary); }.status-badge.disabled,.status-badge.failed { background: #ffdad6; color: var(--error); }.status-badge.recording { background: rgba(0,94,161,.1); color: var(--primary); }.detail-grid { margin-top: 22rpx; padding: 18rpx; display: grid; grid-template-columns: 1fr 1fr; gap: 14rpx; border-radius: 18rpx; background: var(--surface-low); color: var(--muted); font-size: 19rpx; }.admin-actions { margin-top: 22rpx; display: flex; gap: 12rpx; justify-content: flex-end; }.admin-actions button { height: 62rpx; padding: 0 18rpx; border-radius: 16rpx; background: var(--surface-container); color: var(--primary); font-size: 19rpx; line-height: 62rpx; }.admin-actions .danger { background: #ffdad6; color: var(--error); }.log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; color: var(--muted); font-size: 18rpx; }.action-badge { border-radius: 9rpx; background: rgba(0,94,161,.1); color: var(--primary); }.detail-json { display: block; margin-top: 16rpx; padding: 16rpx; border-radius: 14rpx; background: var(--surface-low); color: var(--muted); font-size: 18rpx; word-break: break-all; }.pager { height: 110rpx; display: flex; align-items: center; justify-content: center; gap: 24rpx; }.pager button { height: 64rpx; padding: 0 24rpx; background: var(--surface-container); color: var(--primary); font-size: 20rpx; line-height: 64rpx; }
 @media (min-width:768px) { .metric-grid { grid-template-columns: repeat(3,1fr); } }
