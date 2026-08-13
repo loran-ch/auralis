@@ -312,6 +312,11 @@ function queueSegment(segment) {
         const sentence = await lectureApi.transcribeAudio(id, filePath, append)
         asrAvailable = true
         stopDemoMode()
+        if (!sentence) {
+          // 静音或过短分片由服务端以 204 跳过，继续聆听且不弹错误。
+          if (recording.value && !paused.value) statusText.value = '正在聆听…'
+          return
+        }
         await appendTranscript(sentence)
         if (sentence.translation_success === false) {
           uni.showToast({ title: sentence.translation_warning || '翻译服务暂时不可用，已保留原文', icon: 'none' })

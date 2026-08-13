@@ -18,6 +18,14 @@ class _BaiduResponse(_Response):
         return {"err_no": 0, "err_msg": "success.", "result": ["Hello world"]}
 
 
+class _BaiduNoSpeechResponse(_Response):
+    def __init__(self, err_no):
+        self.err_no = err_no
+
+    def json(self):
+        return {"err_no": self.err_no, "err_msg": "recognition error."}
+
+
 def test_unconfigured_recognizer_fails_explicitly():
     with patch.object(speech_recognizer, "ASR_API_URL", ""):
         with pytest.raises(speech_recognizer.SpeechRecognitionUnavailable):
@@ -85,3 +93,20 @@ def test_baidu_rejects_unsupported_source_language():
             match="暂不支持源语言 de",
         ):
             speech_recognizer.recognize_speech(b"RIFFxxxxWAVEaudio", ".wav", "de")
+
+
+@pytest.mark.parametrize("err_no", [3301, 3307, 3314])
+def test_baidu_silent_or_too_short_segment_is_not_service_unavailable(err_no):
+    with (
+        patch.object(speech_recognizer, "ASR_API_URL", "https://vop.baidu.com/server_api"),
+        patch.object(speech_recognizer, "_get_baidu_token", return_value="token"),
+        patch.object(
+            speech_recognizer.requests,
+            "post",
+            return_value=_BaiduNoSpeechResponse(err_no),
+        ),
+    ):
+        with pytest.raises(speech_recognizer.SpeechRecognitionNoSpeech):
+            speech_recognizer.recognize_speech(
+                b"RIFFxxxxWAVEsilent", ".wav", "en"
+            )
