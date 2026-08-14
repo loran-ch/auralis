@@ -21,7 +21,10 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
 }
 .waveform-bar{animation:wave 1.2s ease-in-out infinite}
 .subtitle-enter{animation:subtitle-enter .2s ease-out}
-.fade-recede{mask-image:linear-gradient(to bottom,transparent,black 40%)}
+.fade-recede{
+  mask-image:none;
+  -webkit-mask-image:none;
+}
 .elastic-star:active{transform:scale(1.5);transition:transform .2s cubic-bezier(.175,.885,.32,1.275)}
 .feature-card{transition:transform .15s ease,box-shadow .15s ease}
 .guide-popover-card{position:relative}

@@ -16,6 +16,13 @@
   var mediaStream = null;
   var mediaRecorder = null;
   var audioChunks = [];
+  var pendingPhrases = [];
+  var lastInterimText = '';
+  var liveAsrActive = false;
+  var speechDesired = false;
+  var currentSourceEl = document.getElementById('current-source');
+  var currentTargetEl = document.getElementById('current-target');
+  var currentSectionEl = document.getElementById('current-section');
 
   var starBtn = document.getElementById('star-btn');
   var pauseBtn = document.getElementById('pause-btn');
@@ -150,6 +157,52 @@
 
   function isLoggedIn() {
     return !!localStorage.getItem('livetrans_token');
+  }
+
+  function isIOSClient() {
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function hasSpeechRecognition() {
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
+  function shouldHoldMicForFile() {
+    // iOS/微信里 getUserMedia + MediaRecorder 会独占麦克风，Web Speech 听不到声音。
+    if (isIOSClient()) return false;
+    if (/MicroMessenger/i.test(navigator.userAgent)) return false;
+    return true;
+  }
+
+  function setCurrentSubtitle(source, translation) {
+    if (!currentSectionEl) return;
+    currentSectionEl.style.display = '';
+    if (currentSourceEl) currentSourceEl.textContent = source || '';
+    if (currentTargetEl) currentTargetEl.textContent = translation || '';
+  }
+
+  function hideCurrentSubtitle() {
+    if (currentSectionEl) currentSectionEl.style.display = 'none';
+    if (currentSourceEl) currentSourceEl.textContent = '';
+    if (currentTargetEl) currentTargetEl.textContent = '';
+  }
+
+  function enqueueRecognizedText(text) {
+    text = String(text || '').trim();
+    if (!text) return;
+    if (!lectureId) {
+      pendingPhrases.push(text);
+      setCurrentSubtitle(text, '正在启动课堂…');
+      showLivePreview(text);
+      return;
+    }
+    translateAndSave(text);
+  }
+
+  function flushPendingPhrases() {
+    var items = pendingPhrases.splice(0, pendingPhrases.length);
+    items.forEach(function (text) { translateAndSave(text); });
   }
 
   function safeNextPage(page) {
@@ -417,6 +470,7 @@
     });
     block.classList.add('subtitle-current');
     historySec.scrollTop = historySec.scrollHeight;
+    setCurrentSubtitle(source, translation || '正在翻译…');
     return block;
   }
 
@@ -427,6 +481,10 @@
     target.textContent = text;
     target.classList.toggle('text-error', !!isError);
     target.classList.toggle('text-secondary', !isError);
+    if (block.classList.contains('subtitle-current')) {
+      var sourceEl = block.querySelector('.font-body-history-source');
+      setCurrentSubtitle(sourceEl ? sourceEl.textContent : '', text);
+    }
   }
 
   function showLivePreview(text) {
@@ -447,6 +505,7 @@
     }
     livePreviewBlock.querySelector('.js-live-source').textContent = text;
     historySec.scrollTop = historySec.scrollHeight;
+    setCurrentSubtitle(text, '正在识别…');
   }
 
   function clearLivePreview() {
@@ -456,6 +515,7 @@
 
   // ─── 浏览器语音识别 (Web Speech API) ──────────────
   function releaseSpeechRecognition() {
+    speechDesired = false;
     clearTimeout(recognitionRestartTimer);
     recognitionRestartTimer = null;
     var rec = recognition;
@@ -471,35 +531,40 @@
     opts = opts || {};
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      if (!opts.silent) toast('浏览器不支持语音识别，使用演示模式');
-      startDemoMode();
-      return;
+      if (!opts.silent) toast('当前浏览器不支持网页语音识别');
+      return false;
     }
+    if (recognition && opts.reuseIfRunning) return true;
 
     releaseSpeechRecognition();
+    speechDesired = true;
+    lastInterimText = '';
     recognition = new SpeechRecognition();
     recognition.lang = recognitionLocale(selectedSourceLang());
-    recognition.interimResults = true;  // 立即展示中间结果，停顿后再翻译最终句子
-    recognition.continuous = true;     // 持续监听
+    recognition.interimResults = true;
+    recognition.continuous = !isIOSClient();
     recognition.maxAlternatives = 1;
 
     recognition.onresult = function (event) {
-      if ((!recording && !stopping) || paused) return;
+      if (paused) return;
       var interimText = '';
       for (var i = event.resultIndex; i < event.results.length; i++) {
+        var piece = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          var text = event.results[i][0].transcript.trim();
+          var text = String(piece || '').trim();
+          lastInterimText = '';
           if (text) {
             clearLivePreview();
             statusText.textContent = '正在翻译: ' + text.substring(0, 24);
-            translateAndSave(text);
+            enqueueRecognizedText(text);
           }
         } else {
-          interimText += event.results[i][0].transcript;
+          interimText += piece;
         }
       }
       interimText = interimText.trim();
       if (interimText) {
+        lastInterimText = interimText;
         statusText.textContent = '正在识别: ' + interimText.substring(0, 24);
         showLivePreview(interimText);
       }
@@ -510,24 +575,34 @@
       if (event.error === 'not-allowed') {
         toast('麦克风权限被拒绝');
       } else if (event.error === 'network') {
-        toast('语音识别网络不可用，请检查 Chrome 网络连接');
+        toast('语音识别网络不可用，请检查网络后重试');
+      } else if (event.error === 'no-speech') {
+        statusText.textContent = '没听清，请再说一次';
       }
     };
 
     recognition.onend = function () {
-      if (recording && !paused && recognition) {
+      var leftover = String(lastInterimText || '').trim();
+      lastInterimText = '';
+      if (leftover && !paused) {
+        clearLivePreview();
+        enqueueRecognizedText(leftover);
+      }
+      if (speechDesired && !paused && recognition) {
         clearTimeout(recognitionRestartTimer);
         recognitionRestartTimer = setTimeout(function () {
           try { recognition.start(); } catch (e) {}
-        }, 250);
+        }, isIOSClient() ? 80 : 250);
       }
     };
 
     try {
       recognition.start();
-      if (!opts.silent) toast('语音识别已启动');
+      if (!opts.silent) toast('语音识别已启动，请对着手机说话');
+      return true;
     } catch (e) {
-      startDemoMode();
+      if (!opts.silent) toast('语音识别启动失败，请再点一次麦克风');
+      return false;
     }
   }
 
@@ -597,6 +672,44 @@
     }, 4000);
   }
 
+  function pickRecorderMime() {
+    if (!window.MediaRecorder) return '';
+    var types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/mpeg'];
+    for (var i = 0; i < types.length; i++) {
+      if (MediaRecorder.isTypeSupported(types[i])) return types[i];
+    }
+    return '';
+  }
+
+  function recorderFileName(mimeType) {
+    if ((mimeType || '').indexOf('mp4') !== -1 || (mimeType || '').indexOf('aac') !== -1) return 'lecture.m4a';
+    if ((mimeType || '').indexOf('mpeg') !== -1) return 'lecture.mp3';
+    return 'lecture.webm';
+  }
+
+  function uploadAsrSegment(blob) {
+    if (!lectureId || !blob || !blob.size) return Promise.resolve();
+    var formData = new FormData();
+    formData.append('file', blob, recorderFileName(blob.type));
+    formData.append('append', 'true');
+    return fetch('/api/lectures/' + lectureId + '/transcribe/audio', {
+      method: 'POST',
+      body: formData
+    }).then(function (r) {
+      if (r.status === 204) return null;
+      return r.json().then(function (d) {
+        if (!r.ok) throw new Error(d.detail || '识别失败');
+        return d;
+      });
+    }).then(function (t) {
+      if (!t || !t.source_text) return;
+      addSubtitle(t.source_text, t.translated_text, t.is_bookmarked, t.id);
+      currentSectionTransId = t.id;
+    }).catch(function (error) {
+      toast(error.message || '语音识别失败');
+    });
+  }
+
   function startAudioCapture(stream, append) {
     mediaStream = stream;
     if (!append) audioChunks = [];
@@ -609,16 +722,19 @@
       mediaStream = null;
       return;
     }
-    var options = {};
-    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      options.mimeType = 'audio/webm;codecs=opus';
-    }
+    var mime = pickRecorderMime();
+    var options = mime ? { mimeType: mime } : {};
     try {
       mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorder.addEventListener('dataavailable', function (event) {
-        if (event.data && event.data.size) audioChunks.push(event.data);
+        if (!event.data || !event.data.size) return;
+        if (liveAsrActive) {
+          if (event.data.size > 2500) uploadAsrSegment(event.data);
+          return;
+        }
+        audioChunks.push(event.data);
       });
-      mediaRecorder.start(1000);
+      mediaRecorder.start(liveAsrActive ? 4000 : 1000);
     } catch (error) {
       stream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
@@ -628,6 +744,15 @@
   }
 
   function finishAudioCapture(lid) {
+    if (liveAsrActive) {
+      liveAsrActive = false;
+      try { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch (e) {}
+      if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
+      mediaStream = null;
+      mediaRecorder = null;
+      audioChunks = [];
+      return Promise.resolve();
+    }
     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
       if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
@@ -672,16 +797,19 @@
       return;
     }
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
-    var options = {};
-    if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-      options.mimeType = 'audio/webm;codecs=opus';
-    }
+    var mime = pickRecorderMime();
+    var options = mime ? { mimeType: mime } : {};
     try {
       mediaRecorder = new MediaRecorder(mediaStream, options);
       mediaRecorder.addEventListener('dataavailable', function (event) {
-        if (event.data && event.data.size) audioChunks.push(event.data);
+        if (!event.data || !event.data.size) return;
+        if (liveAsrActive) {
+          if (event.data.size > 2500) uploadAsrSegment(event.data);
+          return;
+        }
+        audioChunks.push(event.data);
       });
-      mediaRecorder.start(1000);
+      mediaRecorder.start(liveAsrActive ? 4000 : 1000);
     } catch (error) {
       mediaRecorder = null;
     }
@@ -720,6 +848,7 @@
 
   function clearTranscriptUi() {
     clearLivePreview();
+    hideCurrentSubtitle();
     if (historySec) {
       historySec.innerHTML = '';
       historySec.style.display = 'none';
@@ -755,13 +884,18 @@
       return;
     }
 
-    try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-      });
-    } catch (e) {
-      toast('麦克风权限被拒绝');
-      return;
+    var holdMic = shouldHoldMicForFile();
+    liveAsrActive = !hasSpeechRecognition();
+    if (holdMic || liveAsrActive) {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+      } catch (e) {
+        toast('麦克风权限被拒绝');
+        releaseSpeechRecognition();
+        return;
+      }
     }
 
     api('/lectures/start', {
@@ -782,11 +916,19 @@
       hideFeatureIntro();
       courseName.textContent = l.course_name;
       setSessionChrome('recording');
+      if (!pendingPhrases.length) {
+        setCurrentSubtitle('正在聆听…', '说完一句后会显示原文和翻译');
+      }
       if (sourceLangSelect) sourceLangSelect.disabled = true;
       if (targetLangSelect) targetLangSelect.disabled = true;
       startWave();
-      startAudioCapture(mediaStream, continuing);
-      startSpeechRecognition({ silent: continuing });
+      if (mediaStream) startAudioCapture(mediaStream, continuing);
+      if (hasSpeechRecognition()) {
+        if (!recognition) startSpeechRecognition({ silent: continuing });
+      } else {
+        toast('当前浏览器将使用服务器识别，请对着手机说话');
+      }
+      flushPendingPhrases();
       if (continuing) {
         restoreTranscriptions(l.id).then(function () {
           toast('已继续上一堂未结束的课，前文仍在');
@@ -795,6 +937,8 @@
     }).catch(function (error) {
       if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
+      liveAsrActive = false;
+      releaseSpeechRecognition();
       toast(error.message || '课堂启动失败，请重新登录');
     });
   }
@@ -874,9 +1018,18 @@
 
   recordBtn.addEventListener('click', function () {
     if (stopping) { toast('正在保存最后一句，请稍候…'); return; }
-    if (paused) { resumeRecording(); return; }
+    if (paused) {
+      if (hasSpeechRecognition()) startSpeechRecognition({ silent: true, reuseIfRunning: true });
+      resumeRecording();
+      return;
+    }
     if (!recording && requireAuth('recorder.html', '登录或注册后即可开始实时翻译')) return;
-    recording ? stopRecording() : startRecording();
+    if (recording) {
+      stopRecording();
+      return;
+    }
+    if (hasSpeechRecognition()) startSpeechRecognition({ silent: false, reuseIfRunning: true });
+    startRecording();
   });
 
   // ─── 暂停/恢复 ───────────────────────────────────
@@ -896,6 +1049,7 @@
       .then(function () { toast('已暂停，点绿色麦克风继续，前文会保留'); })
       .catch(function (error) { toast(error.message || '暂停状态同步失败'); });
     if (historySec && historySec.children.length) historySec.style.display = '';
+    hideCurrentSubtitle();
   }
 
   function resumeRecording() {
@@ -908,7 +1062,9 @@
       setSessionChrome('recording');
       startWave();
       continueAudioCapture();
-      startSpeechRecognition({ silent: true });
+      if (hasSpeechRecognition()) {
+        if (!recognition) startSpeechRecognition({ silent: true });
+      }
       restoreTranscriptions(lectureId);
       toast('已继续，前文仍在本堂课中');
     }

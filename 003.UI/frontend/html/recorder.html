@@ -6,12 +6,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="../css/recorder.css?v=2">
+  <link rel="stylesheet" href="../css/recorder.css?v=3">
   <script src="../shared/tailwind-config.js"></script>
   <script src="../shared/auth-client.js?v=2"></script>
   <script>
 </script>
-<script defer src="../js/recorder.js?v=15"></script>
+<script defer src="../js/recorder.js?v=16"></script>
 </head>
 <body class="bg-surface text-on-surface font-display-current-source min-h-screen flex flex-col">
 <!-- Top AppBar -->
@@ -51,7 +51,7 @@
 </div>
 </header>
 <!-- Main Content Canvas -->
-<main class="flex-1 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col">
+<main class="flex-1 min-h-0 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col">
 <section id="feature-intro" class="flex-1 overflow-y-auto pt-stack-lg pb-4">
   <div class="max-w-lg mx-auto">
     <p class="text-[11px] font-semibold tracking-widest uppercase text-primary mb-1">LiveTrans Voice</p>
@@ -108,15 +108,15 @@
   </div>
 </section>
 <!-- Transcript History (Faded) -->
-<section class="flex-1 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg" id="history-section" style="display:none">
+<section class="flex-1 min-h-0 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg" id="history-section" style="display:none">
 <!-- 动态插入字幕 -->
 </section>
 <!-- Current Active Transcription Area -->
-<section class="py-stack-lg border-t border-surface-variant" id="current-section" style="display:none">
+<section class="py-stack-lg border-t border-surface-variant bg-surface" id="current-section" style="display:none">
 <div class="flex justify-between items-start gap-gutter">
 <div class="space-y-stack-sm flex-1">
-<h2 class="font-display-current-source text-display-current-source text-ink-deep leading-tight" id="current-source"></h2>
-<p class="font-display-current-trans text-display-current-trans text-secondary" id="current-target"></p>
+<h2 class="font-display-current-source text-xl sm:text-2xl font-bold text-ink-deep leading-tight break-words" id="current-source"></h2>
+<p class="font-display-current-trans text-base sm:text-lg text-secondary break-words" id="current-target"></p>
 </div>
 <button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group" id="star-btn">
 <span class="material-symbols-outlined text-tertiary text-2xl">star</span>
