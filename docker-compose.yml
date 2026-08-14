@@ -19,6 +19,8 @@ services:
       - mysql_data:/var/lib/mysql
       - ./004.数据库脚本/01_livetrans_voice_建表.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./004.数据库脚本/02_livetrans_voice_生产基础数据.sql:/docker-entrypoint-initdb.d/02_production_seed.sql:ro
+      - ./004.数据库脚本/07_lecture_briefings.sql:/docker-entrypoint-initdb.d/03_briefings.sql:ro
+      - ./004.数据库脚本/08_app_guides.sql:/docker-entrypoint-initdb.d/04_guides.sql:ro
     ports:
       - "127.0.0.1:3306:3306"
     healthcheck:

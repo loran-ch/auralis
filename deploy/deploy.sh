@@ -53,9 +53,22 @@ mkdir -p deploy/certbot
 docker compose --env-file .env.production config >/dev/null
 docker compose --env-file .env.production up -d --build
 
+apply_sql() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        echo "Applying $file"
+        docker compose --env-file .env.production exec -T db sh -c \
+          'exec mysql --default-character-set=utf8mb4 -uroot -p"$MYSQL_ROOT_PASSWORD" livetrans_voice' \
+          < "$file"
+    fi
+}
+
+apply_sql "004.数据库脚本/07_lecture_briefings.sql"
+apply_sql "004.数据库脚本/08_app_guides.sql"
+
 echo ""
 echo "Deployment started:"
-echo "  H5:     https://$PUBLIC_DOMAIN/"
+echo "  App:    https://$PUBLIC_DOMAIN/"
 echo "  Health: https://$PUBLIC_DOMAIN/health/ready"
 echo "  Admin:  https://$PUBLIC_DOMAIN/html/admin.html"
 echo ""

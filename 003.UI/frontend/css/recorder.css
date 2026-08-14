@@ -23,3 +23,8 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
 .subtitle-enter{animation:subtitle-enter .2s ease-out}
 .fade-recede{mask-image:linear-gradient(to bottom,transparent,black 40%)}
 .elastic-star:active{transform:scale(1.5);transition:transform .2s cubic-bezier(.175,.885,.32,1.275)}
+.feature-card{transition:transform .15s ease,box-shadow .15s ease}
+.guide-popover-card{position:relative}
+.guide-popover-card::after{content:"";position:absolute;left:1.35rem;bottom:-8px;width:16px;height:16px;background:#fff;border-right:1px solid rgba(120,120,128,.18);border-bottom:1px solid rgba(120,120,128,.18);transform:rotate(45deg)}
+#guide-btn.guide-open{color:#6750A4}
+#guide-btn.guide-open .w-10{background:rgba(103,80,164,.18)}

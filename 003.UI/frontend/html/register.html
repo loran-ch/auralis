@@ -13,7 +13,7 @@
 <body class="font-body selection:bg-primary/30 min-h-screen flex flex-col">
 <!-- TopAppBar -->
 <header class="flex items-center px-4 h-16 w-full z-50 sticky top-0 bg-surface/80 backdrop-blur-lg border-b border-surface-container-high">
-<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface" onclick="window.location.href='login.html'">
+<button id="registerBack" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-200 text-on-surface" type="button">
 <span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
 </button>
 <h1 class="ml-4 font-headline text-lg tracking-tight font-semibold text-on-surface">Lecture Notes</h1>
@@ -86,7 +86,7 @@
 </div>
 <!-- Footer Meta -->
 <div class="text-center text-on-surface-variant text-sm">
-            已有账户？ <a class="text-primary font-semibold hover:underline transition-colors" href="login.html">立即登录</a>
+            已有账户？ <a id="registerToLogin" class="text-primary font-semibold hover:underline transition-colors" href="login.html">立即登录</a>
 </div>
 </div>
 </main>
@@ -103,6 +103,21 @@
   var registerButton = document.getElementById('registerBtn');
   var message = document.getElementById('registerMsg');
   var countdownTimer = null;
+  var nextPage = new URLSearchParams(location.search).get('next') || '';
+  if (/^[a-zA-Z0-9._-]+\.html$/.test(nextPage)) {
+    var toLogin = document.getElementById('registerToLogin');
+    if (toLogin) toLogin.href = 'login.html?next=' + encodeURIComponent(nextPage);
+  }
+  var registerBack = document.getElementById('registerBack');
+  if (registerBack) {
+    registerBack.addEventListener('click', function () {
+      var loginHref = 'login.html';
+      if (/^[a-zA-Z0-9._-]+\.html$/.test(nextPage)) {
+        loginHref += '?next=' + encodeURIComponent(nextPage);
+      }
+      window.location.href = loginHref;
+    });
+  }
 
   function normalizePhone(value) {
     var compact = value.trim().replace(/[\s-]/g, '');
@@ -173,7 +188,9 @@
         localStorage.setItem('livetrans_refresh_token', data.tokens.refresh_token || '');
         localStorage.setItem('livetrans_user', JSON.stringify(data.user));
         showMessage('注册成功，正在进入翻译页面', true);
-        setTimeout(function () { window.location.href = 'recorder.html'; }, 500);
+        var next = (new URLSearchParams(location.search).get('next') || 'recorder.html');
+        if (!/^[a-zA-Z0-9._-]+\.html$/.test(next)) next = 'recorder.html';
+        setTimeout(function () { window.location.href = next; }, 500);
       })
       .catch(function (error) {
         showMessage(error.message, false);

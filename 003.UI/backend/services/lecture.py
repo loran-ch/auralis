@@ -6,6 +6,7 @@ from typing import Optional
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
+from config import ASR_CONTEXT_SENTENCES
 from models.lecture import Lecture, Transcription
 
 def _now():
@@ -73,6 +74,25 @@ def stop_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture
     return lecture
 
 
+def begin_lecture_session(db: Session, user_id: int, course_name: str,
+                          source_lang: str, target_lang: str) -> tuple[Lecture, bool, Optional[Lecture]]:
+    """开始或恢复课堂。
+
+    若当前有已暂停的课堂，恢复同一堂课（保留已有字幕）。
+    若有仍在录制中的课堂，先结束再开新课。
+    返回 (当前课堂, 是否恢复暂停课, 被结束的旧课堂)。
+    """
+    active = get_active_lecture(db, user_id)
+    if active and active.status == "paused":
+        lecture = resume_lecture(db, active.id, user_id) or active
+        return lecture, True, None
+    stopped = None
+    if active:
+        stopped = stop_lecture(db, active.id, user_id)
+    lecture = start_lecture(db, user_id, course_name, source_lang, target_lang)
+    return lecture, False, stopped
+
+
 def get_active_lecture(db: Session, user_id: int) -> Optional[Lecture]:
     return db.query(Lecture).filter(
         Lecture.user_id == user_id,
@@ -130,7 +150,7 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
     lecture = db.query(Lecture).filter(
         Lecture.id == lecture_id, Lecture.user_id == user_id
     ).with_for_update().first()
-    if not lecture or lecture.status != "recording":
+    if not lecture or lecture.status not in ("recording", "paused"):
         return None
 
     count = int(lecture.sentence_count or 0)
@@ -189,3 +209,17 @@ def get_transcriptions(db: Session, lecture_id: int, user_id: int,
         Transcription.lecture_id == lecture_id,
         Transcription.user_id == user_id,
     ).order_by(Transcription.sentence_order).limit(limit).all()
+
+
+def get_recent_source_sentences(db: Session, lecture_id: int, user_id: int,
+                                limit: int | None = None) -> list[str]:
+    """取最近 N 句原文作为翻译上下文（按句序从旧到新，不含当前句）。"""
+    if limit is None:
+        limit = ASR_CONTEXT_SENTENCES
+    if limit <= 0:
+        return []
+    rows = db.query(Transcription.source_text).filter(
+        Transcription.lecture_id == lecture_id,
+        Transcription.user_id == user_id,
+    ).order_by(Transcription.sentence_order.desc()).limit(limit).all()
+    return [row[0] for row in reversed(rows) if row[0]]

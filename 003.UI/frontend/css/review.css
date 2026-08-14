@@ -31,3 +31,10 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
         .knowledge-tag:hover {
             transform: scale(1.05);
         }
+        .sentence-jump-active {
+            outline: 2px solid #005ea1;
+            background: #e8f1fa;
+        }
+        #assistant-log {
+            max-height: 280px;
+        }

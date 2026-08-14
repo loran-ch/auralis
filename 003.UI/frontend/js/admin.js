@@ -172,6 +172,17 @@
     // Audit filters
     var auditAction = document.getElementById('audit-action-filter');
     if (auditAction) auditAction.addEventListener('change', function () { auditPage = 1; loadAuditLogs(); });
+
+    var guideSave = document.getElementById('guide-save-btn');
+    var guideAdd = document.getElementById('guide-add-item');
+    if (guideSave) guideSave.addEventListener('click', saveGuide);
+    if (guideAdd) guideAdd.addEventListener('click', function () {
+      if (document.querySelectorAll('#guide-items .guide-item-row').length >= 8) {
+        toast('最多 8 条说明');
+        return;
+      }
+      addGuideItemRow({ icon: 'info', title: '', body: '' });
+    });
   }
 
   // ─── Tab 切换 ───────────────────────────────────────────
@@ -205,6 +216,7 @@
     if (tab === 'dashboard') loadDashboard();
     else if (tab === 'users') loadUsers();
     else if (tab === 'lectures') loadLectures();
+    else if (tab === 'guide') loadGuide();
     else if (tab === 'audit-log') loadAuditLogs();
 
     // Close mobile sidebar
@@ -466,7 +478,8 @@
       'user.role_super_admin': '提升超管',
       'user.role_user': '降级用户',
       'user.delete': '删除用户',
-      'lecture.delete': '删除课堂'
+      'lecture.delete': '删除课堂',
+      'guide.update': '更新功能说明'
     };
 
     var html = '';
@@ -491,6 +504,99 @@
         toast(btn.dataset.detail);
       });
     });
+  }
+
+  // ─── 功能说明 ──────────────────────────────────────────
+  function addGuideItemRow(item) {
+    var container = document.getElementById('guide-items');
+    if (!container) return;
+    item = item || {};
+    var row = document.createElement('div');
+    row.className = 'guide-item-row rounded-xl border border-outline-variant/20 p-3 space-y-2';
+    row.innerHTML =
+      '<div class="flex gap-2">' +
+        '<input class="guide-item-icon w-32 px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm outline-none focus:border-primary" placeholder="图标" maxlength="48" value="' + escapeHtml(item.icon || 'info') + '">' +
+        '<input class="guide-item-title flex-1 px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm outline-none focus:border-primary" placeholder="条目标题" maxlength="64" value="' + escapeHtml(item.title || '') + '">' +
+        '<button type="button" class="guide-item-remove text-xs px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 flex-shrink-0">删除</button>' +
+      '</div>' +
+      '<textarea class="guide-item-body w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-sm outline-none focus:border-primary resize-y" placeholder="说明内容" maxlength="300" rows="2">' + escapeHtml(item.body || '') + '</textarea>';
+    row.querySelector('.guide-item-remove').addEventListener('click', function () {
+      if (container.querySelectorAll('.guide-item-row').length <= 1) {
+        toast('至少保留一条说明');
+        return;
+      }
+      row.remove();
+    });
+    container.appendChild(row);
+  }
+
+  function collectGuideItems() {
+    var rows = document.querySelectorAll('#guide-items .guide-item-row');
+    var items = [];
+    rows.forEach(function (row) {
+      var title = (row.querySelector('.guide-item-title').value || '').trim();
+      var body = (row.querySelector('.guide-item-body').value || '').trim();
+      var icon = (row.querySelector('.guide-item-icon').value || 'info').trim();
+      if (!title && !body) return;
+      items.push({ icon: icon || 'info', title: title, body: body });
+    });
+    return items;
+  }
+
+  function loadGuide() {
+    api('/guides/recorder_features')
+      .then(function (data) {
+        document.getElementById('guide-title').value = data.title || '';
+        document.getElementById('guide-subtitle').value = data.subtitle || '';
+        document.getElementById('guide-footer').value = data.footer_hint || '';
+        var updated = document.getElementById('guide-updated');
+        if (data.updated_at) {
+          updated.textContent = '最近更新：' + formatDate(data.updated_at) + (data.updated_by ? ' · ' + data.updated_by : '');
+        } else {
+          updated.textContent = '当前为系统默认文案，保存后会覆盖默认内容';
+        }
+        var container = document.getElementById('guide-items');
+        container.innerHTML = '';
+        (data.items || []).forEach(function (item) { addGuideItemRow(item); });
+        if (!container.children.length) addGuideItemRow({ icon: 'info', title: '', body: '' });
+      })
+      .catch(function () { toast('加载功能说明失败'); });
+  }
+
+  function saveGuide() {
+    var items = collectGuideItems();
+    if (!items.length) {
+      toast('至少填写一条说明');
+      return;
+    }
+    var missing = items.some(function (item) { return !item.title || !item.body; });
+    if (missing) {
+      toast('每条说明都需要标题和内容');
+      return;
+    }
+    if (items.length > 8) {
+      toast('最多 8 条说明');
+      return;
+    }
+    api('/guides/recorder_features', {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: (document.getElementById('guide-title').value || '').trim(),
+        subtitle: (document.getElementById('guide-subtitle').value || '').trim(),
+        footer_hint: (document.getElementById('guide-footer').value || '').trim(),
+        items: items
+      })
+    })
+      .then(function () {
+        toast('功能说明已保存');
+        loadGuide();
+      })
+      .catch(function (e) {
+        var msg = '保存失败';
+        if (e && typeof e.detail === 'string') msg = e.detail;
+        else if (e && e.detail && e.detail[0] && e.detail[0].msg) msg = e.detail[0].msg;
+        toast(msg);
+      });
   }
 
   // ─── 通用分页渲染 ───────────────────────────────────────

@@ -13,7 +13,7 @@ from config import (ASR_CONTEXT_SENTENCES, ASR_REALTIME_PREVIEW_INTERVAL_MS,
 from database import SessionLocal
 from models.lecture import Lecture, Transcription
 from services.auth import authenticate_access_token
-from services.lecture import transcribe_audio
+from services.lecture import get_recent_source_sentences, transcribe_audio
 from services.realtime_speech import (baidu_start_frame, baidu_stream_url,
                                       is_no_speech_error,
                                       realtime_is_configured)
@@ -47,13 +47,7 @@ def _recent_source_sentences(lecture_id: int, user_id: int) -> list[str]:
         return []
     db = SessionLocal()
     try:
-        rows = db.query(Transcription.source_text).filter(
-            Transcription.lecture_id == lecture_id,
-            Transcription.user_id == user_id,
-        ).order_by(Transcription.sentence_order.desc()).limit(
-            ASR_CONTEXT_SENTENCES
-        ).all()
-        return [row[0] for row in reversed(rows) if row[0]]
+        return get_recent_source_sentences(db, lecture_id, user_id, ASR_CONTEXT_SENTENCES)
     finally:
         db.close()
 

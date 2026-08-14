@@ -57,6 +57,7 @@ class TranscriptionResp(BaseModel):
     translation_success: Optional[bool] = None
     translation_provider: Optional[str] = None
     translation_warning: Optional[str] = None
+    context_applied: Optional[bool] = None
     model_config = {"from_attributes": True}
 
 
@@ -118,3 +119,79 @@ class BookmarkListItem(BaseModel):
 class BookmarkUpdateReq(BaseModel):
     tag: Optional[str] = Field(None, pattern="^(important|question|exam|definition)$")
     note: Optional[str] = Field(None, max_length=2000)
+
+
+class GenerateBriefingReq(BaseModel):
+    force: bool = False
+
+
+class BriefingCitation(BaseModel):
+    text: str
+    source_text: str = ""
+    sentence_order: int
+    start_offset_ms: int = 0
+    tag: Optional[str] = None
+
+
+class BriefingOutlineItem(BaseModel):
+    title: str
+    summary: str = ""
+    start_order: int
+    end_order: int
+    start_offset_ms: int = 0
+
+
+class BriefingTerm(BaseModel):
+    term: str
+    explanation: str = ""
+    source_text: str = ""
+    sentence_order: int
+    start_offset_ms: int = 0
+
+
+class BriefingResp(BaseModel):
+    lecture_id: int
+    status: str
+    provider: Optional[str] = None
+    overview: str = ""
+    outline: list[BriefingOutlineItem] = Field(default_factory=list)
+    key_points: list[BriefingCitation] = Field(default_factory=list)
+    exam_hints: list[BriefingCitation] = Field(default_factory=list)
+    questions: list[BriefingCitation] = Field(default_factory=list)
+    terms: list[BriefingTerm] = Field(default_factory=list)
+    source_sentence_count: int = 0
+    error_message: Optional[str] = None
+    generated_at: Optional[datetime] = None
+
+
+class AssistantHistoryItem(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class AssistantAskReq(BaseModel):
+    question: str = Field(..., min_length=1, max_length=500)
+    history: list[AssistantHistoryItem] = Field(default_factory=list, max_length=6)
+
+    @field_validator("question")
+    @classmethod
+    def normalize_question(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("问题不能为空")
+        return value
+
+
+class AssistantCitation(BaseModel):
+    sentence_order: int
+    start_offset_ms: int = 0
+    source_text: str = ""
+    translated_text: str = ""
+    tag: Optional[str] = None
+
+
+class AssistantAskResp(BaseModel):
+    answer: str
+    citations: list[AssistantCitation] = Field(default_factory=list)
+    provider: str = "extractive"
+    used_briefing: bool = False

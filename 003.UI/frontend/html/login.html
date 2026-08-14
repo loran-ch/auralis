@@ -54,7 +54,10 @@
 <!-- Sign Up Link -->
 <div class="text-center pt-2">
 <p class="text-sm text-on-surface-variant">
-                        还没有账号? <a class="text-primary font-bold hover:underline underline-offset-4" href="register.html">立即注册</a>
+                        还没有账号? <a id="loginToRegister" class="text-primary font-bold hover:underline underline-offset-4" href="register.html">立即注册</a>
+                    </p>
+                    <p class="text-sm text-on-surface-variant mt-2">
+                        <a class="hover:text-primary transition-colors" href="recorder.html">先去看看翻译页面</a>
 </p>
 </div>
 </form>
@@ -89,6 +92,13 @@
 </main>
 
 	<script>
+	(function () {
+	  var next = new URLSearchParams(location.search).get('next') || '';
+	  if (/^[a-zA-Z0-9._-]+\.html$/.test(next)) {
+	    var toRegister = document.getElementById('loginToRegister');
+	    if (toRegister) toRegister.href = 'register.html?next=' + encodeURIComponent(next);
+	  }
+	})();
 	document.getElementById('loginBtn').addEventListener('click', function(){
 	  var account = document.getElementById('accountInput').value.trim();
 	  // 手机号格式自动加 +86
@@ -109,7 +119,9 @@
 	    if(d.tokens.refresh_token) localStorage.setItem('livetrans_refresh_token',d.tokens.refresh_token);
 	    localStorage.setItem('livetrans_user',JSON.stringify(d.user));
 	    msg.textContent='登录成功，跳转中...';msg.style.color='#4CAF50';
-	    setTimeout(function(){window.location.href='recorder.html'},500);
+	    var next = (new URLSearchParams(location.search).get('next') || 'recorder.html');
+	    if (!/^[a-zA-Z0-9._-]+\.html$/.test(next)) next = 'recorder.html';
+	    setTimeout(function(){window.location.href=next},500);
 	  })
 	  .catch(function(e){msg.textContent=e.message||'登录失败';msg.style.color='#EF4444'})
 	  .finally(function(){button.disabled=false});

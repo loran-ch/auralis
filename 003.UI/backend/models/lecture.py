@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import (Column, BigInteger, String, Integer, Text, Date, DateTime,
                         Enum, Boolean, Float, JSON, ForeignKey, Index,
                         UniqueConstraint)
+from sqlalchemy.dialects.mysql import BIGINT as MYSQL_BIGINT
 from database import Base
 
 
@@ -54,6 +55,31 @@ class Transcription(Base):
     recorded_at      = Column(DateTime, nullable=False)
     is_bookmarked    = Column(Boolean, default=False)
     created_at       = Column(DateTime, default=datetime.now)
+
+
+class LectureBriefing(Base):
+    __tablename__ = "lecture_briefings"
+    __table_args__ = (
+        UniqueConstraint("lecture_id", name="uk_lecture_briefing"),
+        Index("idx_briefing_user", "user_id"),
+    )
+
+    id                     = Column(MYSQL_BIGINT(unsigned=True), primary_key=True, autoincrement=True)
+    lecture_id             = Column(MYSQL_BIGINT(unsigned=True), ForeignKey("lectures.id", ondelete="CASCADE"), nullable=False)
+    user_id                = Column(MYSQL_BIGINT(unsigned=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status                 = Column(Enum("generating", "ready", "failed", "empty"), default="generating")
+    provider               = Column(String(64))
+    overview               = Column(Text)
+    outline                = Column(JSON)
+    key_points             = Column(JSON)
+    exam_hints             = Column(JSON)
+    questions              = Column(JSON)
+    terms                  = Column(JSON)
+    source_sentence_count  = Column(Integer, default=0)
+    error_message          = Column(String(512))
+    generated_at           = Column(DateTime)
+    created_at             = Column(DateTime, default=datetime.now)
+    updated_at             = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class Bookmark(Base):

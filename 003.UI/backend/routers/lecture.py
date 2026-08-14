@@ -2,43 +2,61 @@
 from typing import Optional
 from datetime import date
 from pathlib import Path
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, UploadFile, File, Form, Query
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 from config import ASR_MAX_SEGMENT_MB, IS_PRODUCTION, MAX_AUDIO_SIZE_MB
-from database import get_db
-from models.lecture import Bookmark, Lecture, Transcription
+from database import SessionLocal, get_db
+from models.lecture import Bookmark, Lecture, LectureBriefing, Transcription
 from models.user import User
 from routers.auth import get_current_user
-from services.lecture import (start_lecture, stop_lecture,
+from services.assistant import answer_lecture_question
+from services.briefing import briefing_to_dict, generate_briefing, get_briefing
+from services.lecture import (stop_lecture,
                                get_active_lecture, transcribe_audio, get_transcriptions,
-                               get_lecture, pause_lecture, resume_lecture)
+                               get_lecture, pause_lecture, resume_lecture,
+                               begin_lecture_session,
+                               get_recent_source_sentences)
 from services.preferences import language_exists
 from services.speech_recognizer import (SpeechRecognitionNoSpeech,
                                         SpeechRecognitionUnavailable,
                                         recognize_speech)
-from services.translator import translate_with_status
+from services.translator import translate_with_context
 from schemas.lecture import (StartLectureReq, LectureResp, LectureUpdateReq,
-                             TranscriptionResp)
+                             TranscriptionResp, GenerateBriefingReq, BriefingResp,
+                             AssistantAskReq, AssistantAskResp)
 
 router = APIRouter(prefix="/api/lectures", tags=["课堂"])
+logger = logging.getLogger(__name__)
+
+
+def _generate_briefing_job(lecture_id: int, user_id: int, force: bool = False) -> None:
+    db = SessionLocal()
+    try:
+        generate_briefing(db, lecture_id, user_id, force=force)
+    except Exception:
+        logger.exception("课堂简报后台生成失败 lecture_id=%s", lecture_id)
+    finally:
+        db.close()
 
 
 @router.post("/start", response_model=LectureResp)
-def api_start(req: StartLectureReq, user: User = Depends(get_current_user),
+def api_start(req: StartLectureReq, background_tasks: BackgroundTasks,
+              user: User = Depends(get_current_user),
               db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(401, "请先登录")
     if not language_exists(db, req.source_lang) or not language_exists(db, req.target_lang):
         raise HTTPException(422, "不支持的翻译语言")
-    # 同一用户只允许一个活动课堂；开始新课堂时结束旧课堂。
-    active = get_active_lecture(db, user.id)
-    if active:
-        stop_lecture(db, active.id, user.id)
-    lecture = start_lecture(db, user.id, req.course_name, req.source_lang, req.target_lang)
+    lecture, resumed, stopped = begin_lecture_session(
+        db, user.id, req.course_name, req.source_lang, req.target_lang
+    )
+    if stopped:
+        background_tasks.add_task(_generate_briefing_job, stopped.id, user.id)
     return LectureResp.model_validate(lecture)
 
 
@@ -65,13 +83,15 @@ def api_resume(lecture_id: int, user: User = Depends(get_current_user),
 
 
 @router.post("/{lecture_id}/stop", response_model=LectureResp)
-def api_stop(lecture_id: int, user: User = Depends(get_current_user),
+def api_stop(lecture_id: int, background_tasks: BackgroundTasks,
+             user: User = Depends(get_current_user),
              db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(401, "请先登录")
     lecture = stop_lecture(db, lecture_id, user.id)
     if not lecture:
         raise HTTPException(404, "课堂不存在")
+    background_tasks.add_task(_generate_briefing_job, lecture.id, user.id)
     return LectureResp.model_validate(lecture)
 
 
@@ -126,6 +146,9 @@ def api_batch_delete(req: BatchDeleteReq, user: User = Depends(get_current_user)
     owned_ids = [row.id for row in owned_rows]
     deleted = len(owned_ids)
     if owned_ids:
+        db.query(LectureBriefing).filter(LectureBriefing.lecture_id.in_(owned_ids)).delete(
+            synchronize_session=False
+        )
         db.query(Bookmark).filter(Bookmark.lecture_id.in_(owned_ids)).delete(
             synchronize_session=False
         )
@@ -344,7 +367,8 @@ def api_delete(lecture_id: int, user: User = Depends(get_current_user),
     lecture = db.query(Lecture).filter(Lecture.id == lecture_id, Lecture.user_id == user.id).first()
     if not lecture:
         raise HTTPException(404, "课堂不存在")
-    # 级联删除: 收藏 → 转录 → 课堂
+    # 级联删除: 简报 → 收藏 → 转录 → 课堂
+    db.query(LectureBriefing).filter(LectureBriefing.lecture_id == lecture_id).delete()
     db.query(Bookmark).filter(Bookmark.lecture_id == lecture_id).delete()
     db.query(Transcription).filter(Transcription.lecture_id == lecture_id).delete()
     audio_url = lecture.audio_url
@@ -395,6 +419,18 @@ def api_transcribe_text(lecture_id: int, req: TranscribeTextReq,
     if not result:
         raise HTTPException(404, "课堂不存在或已结束")
     return TranscriptionResp(**result)
+
+
+def _translate_with_context_threadsafe(lecture_id: int, user_id: int,
+                                       source_text: str, source_lang: str,
+                                       target_lang: str) -> dict:
+    """在线程池里用独立 session 取上下文并翻译，避免跨线程复用请求 session。"""
+    db = SessionLocal()
+    try:
+        context = get_recent_source_sentences(db, lecture_id, user_id)
+    finally:
+        db.close()
+    return translate_with_context(source_text, context, source_lang, target_lang)
 
 
 @router.post("/{lecture_id}/transcribe/audio", response_model=TranscriptionResp)
@@ -450,10 +486,8 @@ async def api_transcribe_audio_segment(
     except SpeechRecognitionUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
     translation = await run_in_threadpool(
-        translate_with_status,
-        source_text,
-        source_lang,
-        target_lang,
+        _translate_with_context_threadsafe,
+        lecture_id, user.id, source_text, source_lang, target_lang,
     )
     result = transcribe_audio(
         db, lecture_id, user.id, source_text, translation["text"]
@@ -465,6 +499,7 @@ async def api_transcribe_audio_segment(
         translation_success=translation["success"],
         translation_provider=translation["provider"],
         translation_warning=translation["warning"],
+        context_applied=translation["context_applied"],
     )
 
 
@@ -489,7 +524,7 @@ def api_transcribe(lecture_id: int, user: User = Depends(get_current_user),
 @router.get("/{lecture_id}/transcriptions", response_model=list[TranscriptionResp])
 def api_transcriptions(lecture_id: int, user: User = Depends(get_current_user),
                        db: Session = Depends(get_db),
-                       limit: int = Query(100, ge=1, le=200)):
+                       limit: int = Query(400, ge=1, le=400)):
     if not user:
         raise HTTPException(401, "请先登录")
     items = get_transcriptions(db, lecture_id, user.id, limit=limit)
@@ -509,3 +544,65 @@ def api_transcriptions(lecture_id: int, user: User = Depends(get_current_user),
         d.bookmark_tag = bookmark_tags.get(t.id)
         result.append(d)
     return result
+
+
+def _missing_briefing(lecture_id: int) -> BriefingResp:
+    return BriefingResp(lecture_id=lecture_id, status="missing")
+
+
+@router.get("/{lecture_id}/briefing", response_model=BriefingResp)
+def api_get_briefing(lecture_id: int, user: User = Depends(get_current_user),
+                     db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(401, "请先登录")
+    lecture = get_lecture(db, lecture_id, user.id)
+    if not lecture:
+        raise HTTPException(404, "课堂不存在")
+    row = get_briefing(db, lecture_id, user.id)
+    if not row:
+        return _missing_briefing(lecture_id)
+    return BriefingResp(**briefing_to_dict(row))
+
+
+@router.post("/{lecture_id}/briefing", response_model=BriefingResp)
+async def api_generate_briefing(lecture_id: int, background_tasks: BackgroundTasks,
+                                req: GenerateBriefingReq | None = None,
+                                user: User = Depends(get_current_user),
+                                db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(401, "请先登录")
+    lecture = get_lecture(db, lecture_id, user.id)
+    if not lecture:
+        raise HTTPException(404, "课堂不存在")
+    force = bool(req.force) if req else False
+    existing = get_briefing(db, lecture_id, user.id)
+    if existing and existing.status == "ready" and not force:
+        return BriefingResp(**briefing_to_dict(existing))
+    if existing and existing.status == "generating" and not force:
+        return BriefingResp(**briefing_to_dict(existing))
+
+    # 生成可能调用外部模型，放到后台，立即返回 generating 供前端轮询。
+    background_tasks.add_task(_generate_briefing_job, lecture_id, user.id, force)
+    return BriefingResp(lecture_id=lecture_id, status="generating")
+
+
+@router.post("/{lecture_id}/assistant/ask", response_model=AssistantAskResp)
+def api_assistant_ask(lecture_id: int, req: AssistantAskReq,
+                      user: User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(401, "请先登录")
+    lecture = get_lecture(db, lecture_id, user.id)
+    if not lecture:
+        raise HTTPException(404, "课堂不存在")
+    result = answer_lecture_question(
+        db,
+        lecture_id,
+        user.id,
+        req.question,
+        [item.model_dump() for item in req.history],
+        lecture.course_name,
+    )
+    if not result:
+        raise HTTPException(404, "课堂不存在")
+    return AssistantAskResp(**result)

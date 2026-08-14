@@ -25,6 +25,7 @@
   var statusText = document.getElementById('status-text');
   var courseName = document.getElementById('course-name');
   var historySec = document.getElementById('history-section');
+  var featureIntro = document.getElementById('feature-intro');
   var toastEl = document.getElementById('toast');
   var tagPicker = document.getElementById('tagPicker');
   var sourceLangSelect = document.getElementById('source-lang');
@@ -114,6 +115,7 @@
   }
 
   function saveLanguagePreferences() {
+    if (!isLoggedIn()) return;
     api('/settings', {
       method: 'PUT',
       body: JSON.stringify({
@@ -146,6 +148,228 @@
     setTimeout(function () { toastEl.classList.add('hidden'); }, 2500);
   }
 
+  function isLoggedIn() {
+    return !!localStorage.getItem('livetrans_token');
+  }
+
+  function safeNextPage(page) {
+    page = String(page || 'recorder.html').split('#')[0];
+    if (!/^[a-zA-Z0-9._-]+\.html$/.test(page)) return 'recorder.html';
+    return page;
+  }
+
+  function showAuthModal(reason, nextPage) {
+    var modal = document.getElementById('authModal');
+    var reasonEl = document.getElementById('authModalReason');
+    var loginLink = document.getElementById('authLogin');
+    var registerLink = document.getElementById('authRegister');
+    var next = encodeURIComponent(safeNextPage(nextPage || 'recorder.html'));
+    if (reasonEl) reasonEl.textContent = reason || '登录或注册后即可开始实时翻译';
+    if (loginLink) loginLink.href = 'login.html?next=' + next;
+    if (registerLink) registerLink.href = 'register.html?next=' + next;
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  function hideAuthModal() {
+    var modal = document.getElementById('authModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  function requireAuth(nextPage, reason) {
+    if (isLoggedIn()) return false;
+    showAuthModal(reason, nextPage);
+    return true;
+  }
+
+  function updateGuestChrome() {
+    var navAuth = document.getElementById('nav-auth-link');
+    if (!navAuth) return;
+    if (isLoggedIn()) {
+      navAuth.href = 'login.html';
+      navAuth.classList.remove('text-primary');
+      navAuth.classList.add('text-error');
+      navAuth.innerHTML = '<span class="material-symbols-outlined text-xl">logout</span>退出登录';
+      navAuth.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (window.LiveTransAuth && LiveTransAuth.clearSession) LiveTransAuth.clearSession();
+        else {
+          localStorage.removeItem('livetrans_token');
+          localStorage.removeItem('livetrans_refresh_token');
+          localStorage.removeItem('livetrans_user');
+        }
+        window.location.href = 'recorder.html';
+      }, { once: true });
+    }
+  }
+
+  var authCancel = document.getElementById('authCancel');
+  if (authCancel) authCancel.addEventListener('click', hideAuthModal);
+  var authModal = document.getElementById('authModal');
+  if (authModal) {
+    authModal.addEventListener('click', function (e) {
+      if (e.target === authModal) hideAuthModal();
+    });
+  }
+  document.querySelectorAll('[data-require-auth]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      if (isLoggedIn()) return;
+      e.preventDefault();
+      requireAuth(el.getAttribute('href'), el.getAttribute('data-auth-reason'));
+    });
+  });
+  updateGuestChrome();
+
+  function hideFeatureIntro() {
+    if (featureIntro) featureIntro.classList.add('hidden');
+  }
+
+  function showFeatureIntroIfIdle() {
+    if (recording || stopping || paused) return;
+    if (historySec && historySec.children.length) return;
+    if (featureIntro) featureIntro.classList.remove('hidden');
+  }
+
+  var featureModal = document.getElementById('featureModal');
+  var featureHelpBtn = document.getElementById('feature-help-btn');
+  var featureModalClose = document.getElementById('featureModalClose');
+  var guideBtn = document.getElementById('guide-btn');
+  var guidePopover = document.getElementById('guide-popover');
+  var GUIDE_COLORS = ['primary', 'secondary', 'tertiary', 'primary', 'accent-purple'];
+  var currentGuide = {
+    title: '课堂实时翻译助手',
+    subtitle: '听外语课、记重点、课后复习。打开就能看它能做什么。',
+    footer_hint: '点下方绿色麦克风开始 · 未登录会提示注册',
+    items: [
+      { icon: 'subtitles', title: '实时双语字幕', body: '授课语音转文字，原文和译文同步出现，像字幕一样往下走。' },
+      { icon: 'translate', title: '多语种听译', body: '选择授课语言和你的母语，适合留学课堂、讲座和讨论课。' },
+      { icon: 'star', title: '一键收藏知识点', body: '把句子标成重要、疑问、考点或定义，课后变成知识卡片。' },
+      { icon: 'history', title: '课堂回看', body: '保存完整记录和录音，双语对照回放，从收藏处跳回原句。' },
+      { icon: 'psychology', title: '课后课堂助教', body: '自动生成简报，还能问「这节课讲了什么」「有哪些考点」。' }
+    ]
+  };
+
+  function isGuideOpen() {
+    return guidePopover && !guidePopover.classList.contains('hidden');
+  }
+
+  function closeGuidePopover() {
+    if (guidePopover) guidePopover.classList.add('hidden');
+    if (guideBtn) {
+      guideBtn.classList.remove('guide-open');
+      guideBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function openGuidePopover() {
+    closeFeatureModal();
+    if (guidePopover) guidePopover.classList.remove('hidden');
+    if (guideBtn) {
+      guideBtn.classList.add('guide-open');
+      guideBtn.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  function toggleGuidePopover(e) {
+    if (e) e.stopPropagation();
+    if (isGuideOpen()) closeGuidePopover();
+    else openGuidePopover();
+  }
+
+  function openFeatureModal() {
+    closeGuidePopover();
+    if (featureModal) featureModal.classList.remove('hidden');
+  }
+  function closeFeatureModal() {
+    if (featureModal) featureModal.classList.add('hidden');
+  }
+
+  function renderGuideCards(items) {
+    return (items || []).map(function (item, index) {
+      var color = GUIDE_COLORS[index % GUIDE_COLORS.length];
+      var fill = item.icon === 'star' ? " style=\"font-variation-settings:'FILL' 1\"" : '';
+      return '<div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">' +
+        '<div class="w-10 h-10 rounded-xl bg-' + color + '/10 text-' + color + ' flex items-center justify-center flex-shrink-0">' +
+          '<span class="material-symbols-outlined"' + fill + '>' + escapeHtml(item.icon || 'info') + '</span>' +
+        '</div>' +
+        '<div>' +
+          '<h3 class="font-bold text-ink-deep text-sm">' + escapeHtml(item.title) + '</h3>' +
+          '<p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">' + escapeHtml(item.body) + '</p>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderGuideCompact(items) {
+    return (items || []).map(function (item) {
+      return '<div class="flex gap-2.5">' +
+        '<span class="material-symbols-outlined text-primary text-[20px] mt-0.5 flex-shrink-0">' + escapeHtml(item.icon || 'info') + '</span>' +
+        '<div>' +
+          '<p class="font-semibold text-ink-deep text-sm leading-snug">' + escapeHtml(item.title) + '</p>' +
+          '<p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">' + escapeHtml(item.body) + '</p>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderGuideModalItems(items) {
+    return (items || []).map(function (item) {
+      return '<li><span class="font-semibold text-primary">' + escapeHtml(item.title) + '</span> — ' + escapeHtml(item.body) + '</li>';
+    }).join('');
+  }
+
+  function applyGuide(data) {
+    if (!data) return;
+    currentGuide = data;
+    var title = data.title || '';
+    var subtitle = data.subtitle || '';
+    var footer = data.footer_hint || '';
+    var items = data.items || [];
+    var setText = function (id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    setText('feature-intro-title', title);
+    setText('feature-intro-subtitle', subtitle);
+    setText('feature-intro-footer', footer);
+    setText('guide-popover-title', title);
+    setText('guide-popover-subtitle', subtitle);
+    setText('guide-popover-footer', footer);
+    setText('feature-modal-title', title);
+    setText('feature-modal-subtitle', subtitle);
+    var introItems = document.getElementById('feature-intro-items');
+    if (introItems) introItems.innerHTML = renderGuideCards(items);
+    var popoverItems = document.getElementById('guide-popover-items');
+    if (popoverItems) popoverItems.innerHTML = renderGuideCompact(items);
+    var modalItems = document.getElementById('feature-modal-items');
+    if (modalItems) modalItems.innerHTML = renderGuideModalItems(items);
+  }
+
+  function loadGuide() {
+    applyGuide(currentGuide);
+    api('/guides/recorder_features').then(applyGuide).catch(function () {});
+  }
+
+  if (featureHelpBtn) featureHelpBtn.addEventListener('click', openFeatureModal);
+  if (featureModalClose) featureModalClose.addEventListener('click', closeFeatureModal);
+  if (featureModal) {
+    featureModal.addEventListener('click', function (e) {
+      if (e.target === featureModal) closeFeatureModal();
+    });
+  }
+  if (guideBtn) guideBtn.addEventListener('click', toggleGuidePopover);
+  document.addEventListener('click', function (e) {
+    if (!isGuideOpen()) return;
+    if (guidePopover && guidePopover.contains(e.target)) return;
+    if (guideBtn && guideBtn.contains(e.target)) return;
+    closeGuidePopover();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      closeGuidePopover();
+      closeFeatureModal();
+    }
+  });
+
   var bars = document.querySelectorAll('.waveform-bar');
   var waveInterval;
   function startWave() { waveInterval = setInterval(function () { bars.forEach(function (b) { b.style.height = (Math.floor(Math.random() * 28) + 6) + 'px'; }); }, 80); }
@@ -158,6 +382,7 @@
   }
 
   function addSubtitle(source, translation, isBookmarked, transId) {
+    hideFeatureIntro();
     if (historySec) historySec.style.display = '';
     var old = document.querySelector('.subtitle-current');
     if (old) { old.classList.remove('subtitle-current'); old.classList.add('opacity-60'); }
@@ -206,6 +431,7 @@
 
   function showLivePreview(text) {
     if (!historySec || !text) return;
+    hideFeatureIntro();
     historySec.style.display = '';
     if (!livePreviewBlock) {
       livePreviewBlock = document.createElement('div');
@@ -229,14 +455,28 @@
   }
 
   // ─── 浏览器语音识别 (Web Speech API) ──────────────
-  function startSpeechRecognition() {
+  function releaseSpeechRecognition() {
+    clearTimeout(recognitionRestartTimer);
+    recognitionRestartTimer = null;
+    var rec = recognition;
+    recognition = null;
+    if (!rec) return;
+    rec.onresult = null;
+    rec.onerror = null;
+    rec.onend = null;
+    try { rec.stop(); } catch (e) {}
+  }
+
+  function startSpeechRecognition(opts) {
+    opts = opts || {};
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast('浏览器不支持语音识别，使用演示模式');
+      if (!opts.silent) toast('浏览器不支持语音识别，使用演示模式');
       startDemoMode();
       return;
     }
 
+    releaseSpeechRecognition();
     recognition = new SpeechRecognition();
     recognition.lang = recognitionLocale(selectedSourceLang());
     recognition.interimResults = true;  // 立即展示中间结果，停顿后再翻译最终句子
@@ -283,8 +523,12 @@
       }
     };
 
-    recognition.start();
-    toast('语音识别已启动');
+    try {
+      recognition.start();
+      if (!opts.silent) toast('语音识别已启动');
+    } catch (e) {
+      startDemoMode();
+    }
   }
 
   function translateAndSave(text) {
@@ -353,9 +597,13 @@
     }, 4000);
   }
 
-  function startAudioCapture(stream) {
+  function startAudioCapture(stream, append) {
     mediaStream = stream;
-    audioChunks = [];
+    if (!append) audioChunks = [];
+    if (append && mediaRecorder && mediaRecorder.state === 'paused') {
+      try { mediaRecorder.resume(); return; } catch (e) {}
+    }
+    if (append && mediaRecorder && mediaRecorder.state === 'recording') return;
     if (!window.MediaRecorder) {
       stream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
@@ -417,9 +665,96 @@
     });
   }
 
+  function continueAudioCapture() {
+    if (!mediaStream) return;
+    if (mediaRecorder && mediaRecorder.state === 'paused') {
+      try { mediaRecorder.resume(); } catch (e) {}
+      return;
+    }
+    if (mediaRecorder && mediaRecorder.state === 'recording') return;
+    var options = {};
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      options.mimeType = 'audio/webm;codecs=opus';
+    }
+    try {
+      mediaRecorder = new MediaRecorder(mediaStream, options);
+      mediaRecorder.addEventListener('dataavailable', function (event) {
+        if (event.data && event.data.size) audioChunks.push(event.data);
+      });
+      mediaRecorder.start(1000);
+    } catch (error) {
+      mediaRecorder = null;
+    }
+  }
+
+  function setSessionChrome(mode) {
+    if (mode === 'recording') {
+      recordIcon.textContent = 'mic_off';
+      recordBtn.style.background = '#EF4444';
+      recordBtn.style.animation = 'pulse-red 2s infinite';
+      recordBtn.title = '结束录音';
+      pauseBtn.querySelector('span').textContent = 'pause';
+      pauseBtn.title = '暂停';
+      statusDot.classList.add('animate-pulse');
+      statusText.textContent = '正在聆听…';
+    } else if (mode === 'paused') {
+      recordIcon.textContent = 'mic';
+      recordBtn.style.background = '#4CAF50';
+      recordBtn.style.animation = '';
+      recordBtn.title = '继续录制';
+      pauseBtn.querySelector('span').textContent = 'play_arrow';
+      pauseBtn.title = '继续';
+      statusDot.classList.remove('animate-pulse');
+      statusText.textContent = '已暂停';
+    } else {
+      recordIcon.textContent = 'mic';
+      recordBtn.style.background = '#4CAF50';
+      recordBtn.style.animation = '';
+      recordBtn.title = '开始录音';
+      pauseBtn.querySelector('span').textContent = 'pause';
+      pauseBtn.title = '暂停';
+      statusDot.classList.remove('animate-pulse');
+      statusText.textContent = '待机中';
+    }
+  }
+
+  function clearTranscriptUi() {
+    clearLivePreview();
+    if (historySec) {
+      historySec.innerHTML = '';
+      historySec.style.display = 'none';
+    }
+    currentSectionTransId = null;
+  }
+
+  function restoreTranscriptions(lid) {
+    if (!lid) return Promise.resolve();
+    return api('/lectures/' + lid + '/transcriptions').then(function (items) {
+      if (!items || !items.length) {
+        if (historySec && historySec.children.length) historySec.style.display = '';
+        return;
+      }
+      hideFeatureIntro();
+      items.forEach(function (t) {
+        if (historySec && historySec.querySelector('[data-trans-id="' + t.id + '"]')) return;
+        addSubtitle(t.source_text, t.translated_text, t.is_bookmarked, t.id);
+      });
+    }).catch(function () {});
+  }
+
+  function keepExistingTranscript(lecture) {
+    if (!lecture) return false;
+    if (lectureId && lecture.id === lectureId) return true;
+    return (lecture.sentence_count || 0) > 0;
+  }
+
   // ─── 开始/停止 ───────────────────────────────────
   async function startRecording() {
-    // 先请求麦克风权限触发浏览器提示
+    if (lectureId && (paused || recording)) {
+      if (paused) resumeRecording();
+      return;
+    }
+
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -437,16 +772,26 @@
         target_lang: selectedTargetLang()
       })
     }).then(function (l) {
-      lectureId = l.id; recording = true; stopping = false; currentSectionTransId = null;
+      var continuing = keepExistingTranscript(l);
+      lectureId = l.id;
+      recording = true;
+      stopping = false;
+      paused = false;
+      currentSectionTransId = null;
+      if (!continuing) clearTranscriptUi();
+      hideFeatureIntro();
       courseName.textContent = l.course_name;
-      recordIcon.textContent = 'mic_off'; recordBtn.style.background = '#EF4444';
-      recordBtn.style.animation = 'pulse-red 2s infinite';
-      statusDot.classList.add('animate-pulse');
+      setSessionChrome('recording');
       if (sourceLangSelect) sourceLangSelect.disabled = true;
       if (targetLangSelect) targetLangSelect.disabled = true;
       startWave();
-      startAudioCapture(mediaStream);
-      startSpeechRecognition(); // ← 真实语音识别
+      startAudioCapture(mediaStream, continuing);
+      startSpeechRecognition({ silent: continuing });
+      if (continuing) {
+        restoreTranscriptions(l.id).then(function () {
+          toast('已继续上一堂未结束的课，前文仍在');
+        });
+      }
     }).catch(function (error) {
       if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
@@ -458,17 +803,12 @@
     recording = false;
     stopping = true;
     paused = false;
-    pauseBtn.querySelector('span').textContent = 'pause';
-    pauseBtn.title = '暂停';
-    recordIcon.textContent = 'mic'; recordBtn.style.background = '#4CAF50';
-    recordBtn.style.animation = ''; statusDot.classList.remove('animate-pulse');
-    statusText.textContent = '待机中'; stopWave();
+    setSessionChrome('idle');
+    stopWave();
     clearInterval(demoTimer);
     demoTimer = null;
-    clearTimeout(recognitionRestartTimer);
     clearLivePreview();
-
-    if (recognition) { try { recognition.stop(); } catch (e) {} recognition = null; }
+    releaseSpeechRecognition();
     if (!lectureId) { stopping = false; return; }
     var lid = lectureId;
     var audioJob = finishAudioCapture(lid);
@@ -486,11 +826,13 @@
         statusText.textContent = '待机中';
         if (sourceLangSelect) sourceLangSelect.disabled = false;
         if (targetLangSelect) targetLangSelect.disabled = false;
+        showFeatureIntroIfIdle();
         showNameModal(lid, l.sentence_count);
       }).catch(function () {
         stopping = false;
         if (sourceLangSelect) sourceLangSelect.disabled = false;
         if (targetLangSelect) targetLangSelect.disabled = false;
+        showFeatureIntroIfIdle();
         toast('停止失败');
       });
     }, 400);
@@ -532,49 +874,47 @@
 
   recordBtn.addEventListener('click', function () {
     if (stopping) { toast('正在保存最后一句，请稍候…'); return; }
+    if (paused) { resumeRecording(); return; }
+    if (!recording && requireAuth('recorder.html', '登录或注册后即可开始实时翻译')) return;
     recording ? stopRecording() : startRecording();
   });
 
   // ─── 暂停/恢复 ───────────────────────────────────
   function pauseRecording() {
-    if (!recording || paused) return;
+    if (!recording || paused || !lectureId) return;
     paused = true;
-    pauseBtn.querySelector('span').textContent = 'play_arrow';
-    pauseBtn.title = '继续';
-    statusText.textContent = '已暂停';
+    setSessionChrome('paused');
     stopWave();
-    // 暂停演示模式
     clearInterval(demoTimer);
     demoTimer = null;
-    // 暂停语音识别
-    if (recognition) {
-      try { recognition.stop(); } catch (e) {}
-    }
+    clearLivePreview();
+    releaseSpeechRecognition();
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       try { mediaRecorder.pause(); } catch (e) {}
     }
     api('/lectures/' + lectureId + '/pause', { method: 'POST' })
+      .then(function () { toast('已暂停，点绿色麦克风继续，前文会保留'); })
       .catch(function (error) { toast(error.message || '暂停状态同步失败'); });
+    if (historySec && historySec.children.length) historySec.style.display = '';
   }
 
   function resumeRecording() {
-    if (!recording || !paused) return;
+    if (!lectureId || !paused) return;
+    function applyResume() {
+      paused = false;
+      recording = true;
+      hideFeatureIntro();
+      if (historySec && historySec.children.length) historySec.style.display = '';
+      setSessionChrome('recording');
+      startWave();
+      continueAudioCapture();
+      startSpeechRecognition({ silent: true });
+      restoreTranscriptions(lectureId);
+      toast('已继续，前文仍在本堂课中');
+    }
     api('/lectures/' + lectureId + '/resume', { method: 'POST' })
-      .then(function () {
-        paused = false;
-        pauseBtn.querySelector('span').textContent = 'pause';
-        pauseBtn.title = '暂停';
-        statusText.textContent = '录音中';
-        startWave();
-        if (!recognition && !demoTimer) startDemoMode();
-        if (recognition) {
-          try { recognition.start(); } catch (e) {}
-        }
-        if (mediaRecorder && mediaRecorder.state === 'paused') {
-          try { mediaRecorder.resume(); } catch (e) {}
-        }
-      })
-      .catch(function (error) { toast(error.message || '恢复状态同步失败'); });
+      .then(applyResume)
+      .catch(function () { applyResume(); });
   }
 
   pauseBtn.addEventListener('click', function () {
@@ -598,6 +938,7 @@
     }
   });
 
+  loadGuide();
   loadLanguagePreferences();
   startWave();
 })();

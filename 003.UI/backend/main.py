@@ -19,6 +19,7 @@ from routers.translate import router as translate_router
 from routers.preferences import router as preferences_router
 from routers.admin import router as admin_router
 from routers.speech_stream import router as speech_stream_router
+from routers.guide import router as guide_router
 
 app = FastAPI(
     title="LiveTrans Voice API",
@@ -74,6 +75,7 @@ app.include_router(translate_router)
 app.include_router(preferences_router)
 app.include_router(admin_router)
 app.include_router(speech_stream_router)
+app.include_router(guide_router)
 
 
 @app.get("/health/live", include_in_schema=False)
@@ -93,10 +95,7 @@ def health_ready():
 
 @app.get("/", include_in_schema=False)
 def landing_page():
-    landing = Path(__file__).resolve().parents[2] / "website" / "index.html"
-    if landing.exists():
-        return FileResponse(landing)
-    return RedirectResponse("/html/login.html", status_code=307)
+    return RedirectResponse("/html/recorder.html", status_code=307)
 
 # 前端静态文件 — 按子目录分别挂载，避免 root mount 拦截 API 路由
 frontend = Path(__file__).resolve().parent.parent / "frontend"

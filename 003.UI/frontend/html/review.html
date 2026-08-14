@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="../css/review.css">
   <script src="../shared/tailwind-config.js"></script>
   <script src="../shared/auth-client.js?v=2"></script>
-  <script defer src="../js/review.js?v=2"></script>
+  <script defer src="../js/review.js?v=3"></script>
 </head>
 <body class="bg-surface text-on-surface font-body-history-source min-h-screen flex flex-col">
 <!-- TopAppBar -->
@@ -41,6 +41,37 @@
 <p id="review-meta" class="font-caption-timestamp text-caption-timestamp text-ink-subdued mt-1 uppercase">正在加载…</p>
 </div>
 </div>
+</section>
+<!-- 课堂简报 -->
+<section id="briefing-panel" class="mt-stack-lg rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+  <div class="flex items-start justify-between gap-3 mb-3">
+    <div>
+      <h3 class="text-base font-bold text-ink-deep flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[20px]">summarize</span>课堂简报
+      </h3>
+      <p id="briefing-status" class="text-xs text-ink-subdued mt-1">正在检查简报…</p>
+    </div>
+    <button id="briefing-refresh" type="button" class="hidden text-xs font-semibold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">重新生成</button>
+  </div>
+  <div id="briefing-body" class="text-sm text-on-surface-variant">加载中...</div>
+</section>
+<!-- 问这堂课 -->
+<section id="assistant-panel" class="mt-stack-md rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+  <h3 class="text-base font-bold text-ink-deep flex items-center gap-2 mb-1">
+    <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>问这堂课
+  </h3>
+  <p id="assistant-hint" class="text-xs text-ink-subdued mb-3">根据本堂转录和收藏回答，点击 #编号 可跳到原句。</p>
+  <div class="flex flex-wrap gap-2 mb-3">
+    <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="这节课讲了什么">这节课讲了什么</button>
+    <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="教授强调了哪些考点">有哪些考点</button>
+    <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="这个概念他原话怎么说">原话怎么说</button>
+    <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="我标了疑问的几句帮我解释">解释我的疑问</button>
+  </div>
+  <div id="assistant-log" class="space-y-3 overflow-y-auto mb-3 text-sm"></div>
+  <form id="assistant-form" class="flex gap-2">
+    <input id="assistant-input" class="flex-1 px-3 py-2.5 rounded-xl border border-outline-variant/40 text-sm focus:ring-2 focus:ring-primary/20" placeholder="问这一堂课…" maxlength="500" autocomplete="off">
+    <button id="assistant-send" type="submit" class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90">发送</button>
+  </form>
 </section>
 <!-- Transcript Section -->
 <section id="transcript-container" class="transcript-container mt-stack-lg space-y-stack-lg overflow-y-auto">
@@ -168,6 +199,12 @@
   var toastEl = document.getElementById('toast');
   var tagPickerCallback = null;
   var transcriptionsData = [];  // 存储转录数据用于导出
+  var currentBriefing = null;
+  var lectureStatus = '';
+  var briefingTimer = null;
+  var briefingPolls = 0;
+  var chatHistory = [];
+  var asking = false;
 
   var tagNames = { important: '⭐重要', question: '❓疑问', exam: '🎯考点', definition: '📖定义' };
   var tagColors = {
@@ -211,8 +248,246 @@
     return minutes + '分钟';
   }
 
+  function offsetForOrder(order) {
+    var item = transcriptionsData.find(function (t) { return Number(t.sentence_order) === Number(order); });
+    return item && item.start_offset_ms != null ? item.start_offset_ms : 0;
+  }
+
+  function jumpToSentence(order, startMs) {
+    var el = document.getElementById('sentence-' + order);
+    if (el) {
+      document.querySelectorAll('.sentence-jump-active').forEach(function (node) {
+        node.classList.remove('sentence-jump-active');
+      });
+      el.classList.add('sentence-jump-active');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    var audio = document.getElementById('lecture-audio');
+    var ms = startMs == null || startMs === '' ? offsetForOrder(order) : Number(startMs);
+    if (audio && audio.src && !isNaN(ms) && ms >= 0) {
+      audio.currentTime = ms / 1000;
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-jump]');
+    if (!btn) return;
+    var order = parseInt(btn.getAttribute('data-jump'), 10);
+    if (!order) return;
+    jumpToSentence(order, btn.getAttribute('data-start-ms'));
+  });
+
+  function jumpButton(order, startMs, label) {
+    return '<button type="button" class="text-primary font-semibold hover:underline" data-jump="' +
+      order + '" data-start-ms="' + (startMs || 0) + '">' + escapeHtml(label || ('#' + order)) + '</button>';
+  }
+
+  function linkifyHashes(text) {
+    return escapeHtml(text || '').replace(/#(\d+)/g, function (_, order) {
+      return jumpButton(order, offsetForOrder(order), '#' + order);
+    }).replace(/\n/g, '<br>');
+  }
+
+  function citationList(items) {
+    if (!items || !items.length) return '';
+    return '<div class="mt-2 flex flex-col gap-1">' + items.map(function (item) {
+      var order = item.sentence_order || item.start_order;
+      var text = item.text || item.translated_text || item.summary || item.title || item.term || '';
+      return '<button type="button" class="text-left text-xs text-on-surface-variant hover:text-primary border border-outline-variant/20 rounded-lg px-3 py-2" data-jump="' +
+        order + '" data-start-ms="' + (item.start_offset_ms || 0) + '">#' + order + ' ' + escapeHtml(text) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function setBriefingStatus(text) {
+    var el = document.getElementById('briefing-status');
+    if (el) el.textContent = text;
+  }
+
+  function stopBriefingPoll() {
+    if (briefingTimer) {
+      clearInterval(briefingTimer);
+      briefingTimer = null;
+    }
+    briefingPolls = 0;
+  }
+
+  function renderBriefing(data) {
+    currentBriefing = data;
+    var body = document.getElementById('briefing-body');
+    var refreshBtn = document.getElementById('briefing-refresh');
+    if (!body) return data;
+    var status = data && data.status;
+    if (refreshBtn) {
+      refreshBtn.classList.toggle('hidden', !(status === 'ready' || status === 'failed' || status === 'empty'));
+    }
+    if (status === 'generating' || status === 'missing') {
+      setBriefingStatus(status === 'generating' ? '正在生成课堂简报…' : '尚未生成，正在启动…');
+      body.innerHTML = '<div class="animate-pulse h-16 bg-surface-container-low rounded-xl"></div>';
+      return data;
+    }
+    if (status === 'empty') {
+      setBriefingStatus('没有转录内容');
+      body.innerHTML = '<p class="text-on-surface-variant">这堂课还没有转录，无法生成简报。</p>';
+      return data;
+    }
+    if (status === 'failed') {
+      setBriefingStatus('生成失败');
+      body.innerHTML = '<p class="text-error">' + escapeHtml(data.error_message || '简报生成失败') + '</p>';
+      return data;
+    }
+    if (status !== 'ready') {
+      setBriefingStatus('暂无简报');
+      body.innerHTML = '<p class="text-on-surface-variant">打开已完成的课堂后会自动生成简报。</p>';
+      return data;
+    }
+    var providerHint = data.provider && data.provider.indexOf('llm:') === 0 ? '大模型润色' : '根据字幕抽取';
+    setBriefingStatus(providerHint + (data.error_message ? ' · ' + data.error_message : ''));
+    var html = '';
+    if (data.overview) {
+      html += '<p class="text-ink-deep leading-relaxed mb-3">' + linkifyHashes(data.overview) + '</p>';
+    }
+    if (data.outline && data.outline.length) {
+      html += '<p class="text-xs font-bold text-on-surface-variant mb-1">大纲</p><ul class="space-y-1 mb-3">';
+      data.outline.forEach(function (item) {
+        html += '<li>' + jumpButton(item.start_order, item.start_offset_ms, '#' + item.start_order + ' ' + (item.title || '')) +
+          (item.summary && item.summary !== item.title ? '<span class="text-ink-subdued"> · ' + escapeHtml(item.summary) + '</span>' : '') + '</li>';
+      });
+      html += '</ul>';
+    }
+    function block(title, items, mapItem) {
+      if (!items || !items.length) return;
+      html += '<p class="text-xs font-bold text-on-surface-variant mb-1">' + title + '</p>';
+      html += citationList(mapItem ? items.map(mapItem) : items);
+    }
+    block('要点', data.key_points);
+    block('考点', data.exam_hints);
+    block('疑问', data.questions);
+    block('术语', data.terms, function (item) {
+      return {
+        sentence_order: item.sentence_order,
+        start_offset_ms: item.start_offset_ms,
+        text: (item.term || '') + (item.explanation ? '：' + item.explanation : '')
+      };
+    });
+    body.innerHTML = html || '<p class="text-on-surface-variant">简报已生成，但没有可展示的要点。</p>';
+    return data;
+  }
+
+  function pollBriefing() {
+    stopBriefingPoll();
+    briefingTimer = setInterval(function () {
+      briefingPolls += 1;
+      if (briefingPolls > 30) {
+        stopBriefingPoll();
+        setBriefingStatus('生成超时，可点击重新生成');
+        var refreshBtn = document.getElementById('briefing-refresh');
+        if (refreshBtn) refreshBtn.classList.remove('hidden');
+        return;
+      }
+      api('/lectures/' + LID + '/briefing').then(function (data) {
+        renderBriefing(data);
+        if (data.status !== 'generating' && data.status !== 'missing') stopBriefingPoll();
+      }).catch(function () {});
+    }, 2000);
+  }
+
+  function requestBriefing(force) {
+    setBriefingStatus(force ? '正在重新生成…' : '正在生成课堂简报…');
+    return api('/lectures/' + LID + '/briefing', {
+      method: 'POST',
+      body: JSON.stringify({ force: !!force })
+    }).then(function (data) {
+      renderBriefing(data);
+      if (data.status === 'generating' || data.status === 'missing') pollBriefing();
+      return data;
+    }).catch(function (err) {
+      setBriefingStatus('简报加载失败');
+      var body = document.getElementById('briefing-body');
+      if (body) body.innerHTML = '<p class="text-error">' + escapeHtml(err.message || '失败') + '</p>';
+    });
+  }
+
+  function loadBriefing() {
+    return api('/lectures/' + LID + '/briefing').then(function (data) {
+      renderBriefing(data);
+      if (data.status === 'missing' && lectureStatus === 'completed') {
+        return requestBriefing(false);
+      }
+      if (data.status === 'generating') pollBriefing();
+      return data;
+    }).catch(function (err) {
+      setBriefingStatus('简报加载失败');
+      var body = document.getElementById('briefing-body');
+      if (body) body.innerHTML = '<p class="text-error">' + escapeHtml(err.message || '失败') + '</p>';
+    });
+  }
+
+  function appendChat(role, text, citations) {
+    var log = document.getElementById('assistant-log');
+    if (!log) return;
+    var wrap = document.createElement('div');
+    wrap.className = role === 'user' ? 'text-right' : 'text-left';
+    var bubble = document.createElement('div');
+    bubble.className = (role === 'user'
+      ? 'inline-block max-w-[90%] rounded-2xl px-3 py-2 bg-primary text-white'
+      : 'inline-block max-w-[90%] rounded-2xl px-3 py-2 bg-surface-container-low text-ink-deep') + ' leading-relaxed';
+    if (role === 'user') bubble.textContent = text;
+    else bubble.innerHTML = linkifyHashes(text) + citationList(citations || []);
+    wrap.appendChild(bubble);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setAsking(on) {
+    asking = on;
+    var send = document.getElementById('assistant-send');
+    var input = document.getElementById('assistant-input');
+    if (send) send.disabled = on;
+    if (input) input.disabled = on;
+  }
+
+  function askAssistant(question) {
+    question = (question || '').trim();
+    if (!question || asking) return;
+    appendChat('user', question);
+    chatHistory.push({ role: 'user', content: question });
+    setAsking(true);
+    api('/lectures/' + LID + '/assistant/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question: question, history: chatHistory.slice(-6, -1) })
+    }).then(function (data) {
+      appendChat('assistant', data.answer || '', data.citations || []);
+      chatHistory.push({ role: 'assistant', content: data.answer || '' });
+      var hint = document.getElementById('assistant-hint');
+      if (hint && data.provider === 'extractive') {
+        hint.textContent = '当前为检索回答。点击 #编号 可跳到原句并定位录音。';
+      }
+    }).catch(function (err) {
+      appendChat('assistant', err.message || '提问失败');
+    }).then(function () { setAsking(false); });
+  }
+
+  var briefingRefresh = document.getElementById('briefing-refresh');
+  if (briefingRefresh) {
+    briefingRefresh.addEventListener('click', function () { requestBriefing(true); });
+  }
+  document.querySelectorAll('.js-preset-q').forEach(function (btn) {
+    btn.addEventListener('click', function () { askAssistant(btn.getAttribute('data-q')); });
+  });
+  var assistantForm = document.getElementById('assistant-form');
+  if (assistantForm) {
+    assistantForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = document.getElementById('assistant-input');
+      var text = input ? input.value : '';
+      if (input) input.value = '';
+      askAssistant(text);
+    });
+  }
+
   function loadLectureInfo() {
     return api('/lectures/' + LID).then(function (lecture) {
+      lectureStatus = lecture.status || '';
       var title = lecture.course_name || '课堂回顾';
       var dateText = lecture.lecture_date
         ? new Date(lecture.lecture_date + 'T00:00:00').toLocaleDateString('zh-CN') : '';
@@ -271,7 +546,7 @@
 
   // ─── 渲染 ─────────────────────────────────────
   function render() {
-    api('/lectures/' + LID + '/transcriptions')
+    api('/lectures/' + LID + '/transcriptions?limit=400')
     .then(function(transcriptions) {
       var container = document.getElementById('transcript-container');
       if (!container) return;
@@ -293,11 +568,17 @@
 
         var div = document.createElement('div');
         div.className = 'group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
+        div.id = 'sentence-' + t.sentence_order;
         div.setAttribute('data-trans-id', t.id);
+        div.setAttribute('data-sentence-order', t.sentence_order);
+        div.setAttribute('data-start-ms', t.start_offset_ms || 0);
         div.innerHTML =
           '<div class="flex justify-between items-start gap-3">' +
             '<div class="flex-1 flex flex-col gap-2">' +
-              (tagLabel ? '<span class="bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[t.bookmark_tag] || 'bg-primary') + '"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagLabel) + '</span>' : '') +
+              '<div class="flex items-center gap-2">' +
+                '<span class="text-[10px] font-mono text-outline">#' + t.sentence_order + '</span>' +
+                (tagLabel ? '<span class="bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[t.bookmark_tag] || 'bg-primary') + '"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagLabel) + '</span>' : '') +
+              '</div>' +
               '<p class="text-body-history-source text-ink-deep">' + escapeHtml(t.source_text || '') + '</p>' +
               '<p class="text-body-history-trans text-secondary">' + escapeHtml(t.translated_text || '') + '</p>' +
             '</div>' +
@@ -354,9 +635,6 @@
           }
         });
       });
-
-      var titleEl = document.querySelector('h2');
-      if (titleEl) titleEl.textContent = '课堂回顾';
     })
     .catch(function (err) {
       var container = document.getElementById('transcript-container');
@@ -444,6 +722,11 @@
     lines.push(title);
     lines.push('导出日期: ' + date);
     lines.push('');
+    if (currentBriefing && currentBriefing.status === 'ready' && currentBriefing.overview) {
+      lines.push('【课堂简报】');
+      lines.push(currentBriefing.overview);
+      lines.push('');
+    }
     transcriptionsData.forEach(function (t, i) {
       lines.push('【' + (i + 1) + '】' + (t.is_bookmarked ? ' [已收藏]' : ''));
       lines.push(t.source_text || '');
@@ -458,6 +741,9 @@
     html += '<style>body{font-family:"Microsoft YaHei",SimSun,sans-serif;font-size:' + fontSize + 'px;line-height:2;padding:40px;max-width:800px;margin:0 auto;color:#333}h1{font-size:' + (fontSize + 8) + 'px;text-align:center;margin-bottom:8px}.date{text-align:center;color:#999;font-size:' + (fontSize - 2) + 'px;margin-bottom:30px}.item{margin-bottom:24px;padding:12px 16px;border-left:3px solid #1a73e8;background:#f8f9fa}.item.bookmarked{border-left-color:#f97316;background:#fff7ed}.source{color:#1a1c1d;margin-bottom:4px}.trans{color:#5f6368;font-style:italic}.badge{display:inline-block;background:#f97316;color:#fff;padding:2px 8px;border-radius:4px;font-size:' + (fontSize - 4) + 'px;margin-bottom:6px}</style></head><body>';
     html += '<h1>' + escapeHtml(title) + '</h1>';
     html += '<p class="date">导出日期: ' + date + '</p>';
+    if (currentBriefing && currentBriefing.status === 'ready' && currentBriefing.overview) {
+      html += '<div class="item"><p class="badge">课堂简报</p><p class="source">' + escapeHtml(currentBriefing.overview) + '</p></div>';
+    }
     transcriptionsData.forEach(function (t, i) {
       var cls = t.is_bookmarked ? 'item bookmarked' : 'item';
       html += '<div class="' + cls + '">';
@@ -502,7 +788,12 @@
     setTimeout(function () { w.print(); }, 500);
   }
 
-  if (TOKEN) { loadLectureInfo().then(render).catch(function () {}); }
+  if (TOKEN) {
+    loadLectureInfo().then(function () {
+      render();
+      loadBriefing();
+    }).catch(function () {});
+  }
   else {
     document.getElementById('transcript-container').innerHTML = '<div class="text-center py-12 text-error">请先<a href="login.html" class="text-primary font-bold">登录</a></div>';
   }

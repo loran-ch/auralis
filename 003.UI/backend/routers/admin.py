@@ -19,7 +19,9 @@ from schemas.admin import (
     RegistrationSettingResp,
 )
 from schemas.auth import MsgResp
+from schemas.guide import GuideResp, GuideUpdateReq
 from services import admin as admin_service
+from services.guide import get_guide, update_guide
 from services.registration import (get_registration_setting,
                                    update_registration_setting)
 
@@ -186,6 +188,40 @@ def api_delete_lecture(
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result["message"])
     return MsgResp(message=result["message"])
+
+
+# ─── 功能说明 ─────────────────────────────────────────────
+
+@router.get("/guides/{slug}", response_model=GuideResp)
+def api_admin_get_guide(
+    slug: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """查看前台功能说明文案。"""
+    return GuideResp(**get_guide(db, slug))
+
+
+@router.put("/guides/{slug}", response_model=GuideResp)
+def api_admin_update_guide(
+    slug: str,
+    req: GuideUpdateReq,
+    request: Request,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """编辑前台「说明」按钮展示的内容。"""
+    try:
+        result = update_guide(
+            db,
+            slug,
+            req.model_dump(),
+            admin,
+            _client_ip(request),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return GuideResp(**result)
 
 
 # ─── 审计日志 ─────────────────────────────────────────────

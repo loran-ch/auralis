@@ -157,3 +157,16 @@ if IS_PRODUCTION and not ASR_API_URL:
 
 MAX_AVATAR_SIZE_MB = int(os.getenv("MAX_AVATAR_SIZE_MB", "2"))
 MAX_AUDIO_SIZE_MB = int(os.getenv("MAX_AUDIO_SIZE_MB", "100"))
+
+# ─── 课堂简报（可选 LLM；未配置时使用抽取式简报）────────
+BRIEFING_LLM_API_URL = os.getenv("BRIEFING_LLM_API_URL", "").strip()
+BRIEFING_LLM_API_KEY = os.getenv("BRIEFING_LLM_API_KEY", "").strip()
+BRIEFING_LLM_MODEL = os.getenv("BRIEFING_LLM_MODEL", "deepseek-chat").strip() or "deepseek-chat"
+BRIEFING_LLM_TIMEOUT_SECONDS = float(os.getenv("BRIEFING_LLM_TIMEOUT_SECONDS", "45"))
+BRIEFING_MAX_SENTENCES = int(os.getenv("BRIEFING_MAX_SENTENCES", "400"))
+BRIEFING_STALE_SECONDS = int(os.getenv("BRIEFING_STALE_SECONDS", "120"))
+if BRIEFING_LLM_TIMEOUT_SECONDS <= 0 or BRIEFING_MAX_SENTENCES <= 0 or BRIEFING_STALE_SECONDS <= 0:
+    raise RuntimeError("课堂简报超时、句数上限和过期时间必须为正数")
+if BRIEFING_LLM_API_URL and not BRIEFING_LLM_API_KEY:
+    import warnings
+    warnings.warn("已配置 BRIEFING_LLM_API_URL 但未配置 BRIEFING_LLM_API_KEY，简报将使用抽取模式")
