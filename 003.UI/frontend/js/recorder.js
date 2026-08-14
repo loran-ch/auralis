@@ -23,6 +23,12 @@
   var segmentLoopActive = false;
   var segmentTimer = null;
   var segmentRecorder = null;
+  var audioContext = null;
+  var audioSource = null;
+  var audioProcessor = null;
+  var audioMute = null;
+  var realtimeSocket = null;
+  var realtimeActive = false;
   var currentSourceEl = document.getElementById('current-source');
   var currentTargetEl = document.getElementById('current-target');
   var currentSectionEl = document.getElementById('current-section');
@@ -745,6 +751,154 @@
     });
   }
 
+  function ensureAudioContext() {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    if (!audioContext) audioContext = new Ctx();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(function () {});
+    }
+    return audioContext;
+  }
+
+  function downsampleBuffer(buffer, fromRate, toRate) {
+    if (fromRate === toRate) return buffer;
+    var ratio = fromRate / toRate;
+    var newLen = Math.floor(buffer.length / ratio);
+    var result = new Float32Array(newLen);
+    for (var i = 0; i < newLen; i++) result[i] = buffer[Math.floor(i * ratio)];
+    return result;
+  }
+
+  function floatTo16BitPCM(buffer) {
+    var out = new Int16Array(buffer.length);
+    for (var i = 0; i < buffer.length; i++) {
+      var s = Math.max(-1, Math.min(1, buffer[i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return out;
+  }
+
+  function stopRealtimeStream(sendFinish) {
+    realtimeActive = false;
+    if (audioProcessor) {
+      audioProcessor.onaudioprocess = null;
+      try { audioProcessor.disconnect(); } catch (e) {}
+      audioProcessor = null;
+    }
+    if (audioSource) {
+      try { audioSource.disconnect(); } catch (e) {}
+      audioSource = null;
+    }
+    if (audioMute) {
+      try { audioMute.disconnect(); } catch (e) {}
+      audioMute = null;
+    }
+    if (realtimeSocket) {
+      try {
+        if (sendFinish && realtimeSocket.readyState === 1) {
+          realtimeSocket.send(JSON.stringify({ type: 'finish' }));
+        }
+        realtimeSocket.close();
+      } catch (e) {}
+      realtimeSocket = null;
+    }
+  }
+
+  function connectPcmPump(ctx, stream, ws, targetRate, frameMs) {
+    audioSource = ctx.createMediaStreamSource(stream);
+    audioProcessor = ctx.createScriptProcessor(4096, 1, 1);
+    audioMute = ctx.createGain();
+    audioMute.gain.value = 0;
+    var pending = new Float32Array(0);
+    var frameSamples = Math.max(160, Math.round(targetRate * frameMs / 1000));
+    audioProcessor.onaudioprocess = function (event) {
+      if (!realtimeActive || !ws || ws.readyState !== 1) return;
+      var input = event.inputBuffer.getChannelData(0);
+      var resampled = downsampleBuffer(input, ctx.sampleRate, targetRate);
+      var merged = new Float32Array(pending.length + resampled.length);
+      merged.set(pending);
+      merged.set(resampled, pending.length);
+      var offset = 0;
+      while (merged.length - offset >= frameSamples) {
+        var frame = merged.subarray(offset, offset + frameSamples);
+        ws.send(floatTo16BitPCM(frame).buffer);
+        offset += frameSamples;
+      }
+      pending = merged.slice(offset);
+    };
+    audioSource.connect(audioProcessor);
+    audioProcessor.connect(audioMute);
+    audioMute.connect(ctx.destination);
+  }
+
+  function startRealtimeStream(stream, lid) {
+    var ctx = ensureAudioContext();
+    var token = localStorage.getItem('livetrans_token');
+    if (!ctx || !token || !lid || !stream) {
+      startSegmentLoop(stream);
+      return;
+    }
+    stopRealtimeStream(false);
+    realtimeActive = true;
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var ws = new WebSocket(proto + '//' + location.host + '/api/lectures/' + lid + '/stream');
+    realtimeSocket = ws;
+    ws.binaryType = 'arraybuffer';
+    var fallbackStarted = false;
+
+    function fallback(reason) {
+      if (fallbackStarted || !recording || paused) return;
+      fallbackStarted = true;
+      stopRealtimeStream(false);
+      startSegmentLoop(stream);
+      if (reason) toast(reason);
+    }
+
+    ws.onopen = function () {
+      ws.send(JSON.stringify({ type: 'auth', token: token, offset_ms: 0 }));
+    };
+    ws.onmessage = function (event) {
+      var msg;
+      try { msg = JSON.parse(event.data); } catch (e) { return; }
+      if (!msg || !msg.type) return;
+      if (msg.type === 'ready') {
+        try {
+          connectPcmPump(ctx, stream, ws, msg.sample_rate || 16000, msg.frame_duration_ms || 160);
+          setCurrentSubtitle('正在聆听…', '边说边出字');
+        } catch (err) {
+          fallback('当前浏览器不支持实时音频，已切换分片识别');
+        }
+        return;
+      }
+      if (msg.fallback) {
+        fallback(msg.message || '已切换较快的分片识别');
+        return;
+      }
+      if (msg.type === 'interim' || msg.type === 'finalizing') {
+        showLivePreview(msg.source_text);
+        setCurrentSubtitle(msg.source_text, '正在翻译…');
+        statusText.textContent = '正在识别: ' + String(msg.source_text || '').substring(0, 24);
+      }
+      if (msg.type === 'preview') {
+        setCurrentSubtitle(msg.source_text, msg.translated_text || '正在翻译…');
+      }
+      if (msg.type === 'final' && msg.transcription) {
+        var t = msg.transcription;
+        clearLivePreview();
+        addSubtitle(t.source_text, t.translated_text, t.is_bookmarked, t.id);
+        currentSectionTransId = t.id;
+        if (recording && !paused) statusText.textContent = '正在聆听…';
+      }
+    };
+    ws.onerror = function () {
+      fallback('实时识别中断，已切换分片识别');
+    };
+    ws.onclose = function () {
+      if (realtimeActive) fallback();
+    };
+  }
+
   function startSegmentLoop(stream) {
     if (!stream) return;
     mediaStream = stream;
@@ -786,7 +940,7 @@
         if (rec.state === 'recording') {
           try { rec.stop(); } catch (e) {}
         }
-      }, 4000);
+      }, 2000);
     }
     run();
   }
@@ -974,15 +1128,14 @@
       courseName.textContent = l.course_name;
       setSessionChrome('recording');
       if (!pendingPhrases.length) {
-        setCurrentSubtitle('正在聆听…', useServerAsr ? '请对着手机说话，大约每 4 秒出现一句' : '说完一句后会显示原文和翻译');
+        setCurrentSubtitle('正在聆听…', useServerAsr ? '请对着手机说话，字幕会尽快出现' : '说完一句后会显示原文和翻译');
       }
       if (sourceLangSelect) sourceLangSelect.disabled = true;
       if (targetLangSelect) targetLangSelect.disabled = true;
       startWave();
       if (useServerAsr) {
         releaseSpeechRecognition();
-        startSegmentLoop(mediaStream);
-        toast('已开始识别，请对着手机说话');
+        startRealtimeStream(mediaStream, lectureId);
       } else {
         startAudioCapture(mediaStream, continuing);
         if (hasSpeechRecognition()) {
@@ -998,6 +1151,7 @@
         });
       }
     }).catch(function (error) {
+      stopRealtimeStream(false);
       stopSegmentLoop();
       if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
       mediaStream = null;
@@ -1017,6 +1171,7 @@
     demoTimer = null;
     clearLivePreview();
     releaseSpeechRecognition();
+    stopRealtimeStream(true);
     if (!lectureId) { stopping = false; return; }
     var lid = lectureId;
     var wrap = stopSegmentLoop().then(function () {
@@ -1096,6 +1251,7 @@
     if (!preferServerAsr() && hasSpeechRecognition()) {
       startSpeechRecognition({ silent: false, reuseIfRunning: true });
     }
+    if (preferServerAsr()) ensureAudioContext();
     startRecording();
   });
 
@@ -1109,6 +1265,7 @@
     demoTimer = null;
     clearLivePreview();
     releaseSpeechRecognition();
+    stopRealtimeStream(true);
     stopSegmentLoop();
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       try { mediaRecorder.pause(); } catch (e) {}
@@ -1131,7 +1288,7 @@
       startWave();
       continueAudioCapture();
       if (preferServerAsr() || liveAsrActive) {
-        startSegmentLoop(mediaStream);
+        startRealtimeStream(mediaStream, lectureId);
       } else if (hasSpeechRecognition()) {
         if (!recognition) startSpeechRecognition({ silent: true });
       }
