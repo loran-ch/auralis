@@ -822,10 +822,6 @@
       mediaStream = null;
       return Promise.resolve();
     }
-      if (mediaStream) mediaStream.getTracks().forEach(function (track) { track.stop(); });
-      mediaStream = null;
-      return Promise.resolve();
-    }
     return new Promise(function (resolve) {
       mediaRecorder.addEventListener('stop', function () {
         var mimeType = mediaRecorder.mimeType || 'audio/webm';
