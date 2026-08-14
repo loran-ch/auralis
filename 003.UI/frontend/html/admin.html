@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../css/admin.css">
 <script src="../shared/tailwind-config.js"></script>
 <script src="../shared/auth-client.js?v=2"></script>
-<script defer src="../js/admin.js?v=2"></script>
+<script defer src="../js/admin.js?v=4"></script>
 </head>
 <body class="flex h-screen bg-surface overflow-hidden">
 
@@ -300,6 +300,24 @@
       <button id="confirm-cancel" class="px-5 py-2.5 rounded-xl text-sm font-medium text-on-surface-variant bg-surface-container hover:bg-surface-container-high transition-colors">取消</button>
       <button id="confirm-ok" class="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-error hover:opacity-90 transition-opacity">确认</button>
     </div>
+  </div>
+</div>
+
+<!-- Relogin Modal -->
+<div id="relogin-modal" class="hidden fixed inset-0 z-[95] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+  <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+    <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
+      <span class="material-symbols-outlined text-2xl">lock</span>
+    </div>
+    <h3 class="text-lg font-semibold text-on-surface text-center mb-1">需要重新登录</h3>
+    <p id="relogin-reason" class="text-sm text-on-surface-variant text-center mb-5">请使用管理员账号登录后继续</p>
+    <label class="block text-xs font-medium text-on-surface-variant mb-1.5" for="relogin-account">账号</label>
+    <input id="relogin-account" class="w-full px-4 py-2.5 mb-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none" placeholder="用户名或手机号" autocomplete="username">
+    <label class="block text-xs font-medium text-on-surface-variant mb-1.5" for="relogin-password">密码</label>
+    <input id="relogin-password" type="password" class="w-full px-4 py-2.5 mb-3 bg-surface-container-low border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none" placeholder="请输入密码" autocomplete="current-password">
+    <p id="relogin-msg" class="hidden text-sm text-center mb-3"></p>
+    <button id="relogin-submit" type="button" class="w-full py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">登录</button>
+    <a href="recorder.html" class="block mt-3 text-center text-sm text-on-surface-variant hover:text-primary">返回前台</a>
   </div>
 </div>
 

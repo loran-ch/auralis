@@ -9,6 +9,7 @@
   var USER = null;            // 从 /api/auth/me 获取的完整信息
   var IS_SUPER_ADMIN = false;
   var currentTab = 'dashboard';
+  var eventsBound = false;
 
   var usersPage = 1;
   var lecturesPage = 1;
@@ -25,37 +26,146 @@
   var confirmCallback = null;
   var adminNameEl = document.getElementById('admin-name');
   var adminRoleEl = document.getElementById('admin-role');
+  var reloginModal = document.getElementById('relogin-modal');
+  var reloginReason = document.getElementById('relogin-reason');
+  var reloginAccount = document.getElementById('relogin-account');
+  var reloginPassword = document.getElementById('relogin-password');
+  var reloginMsg = document.getElementById('relogin-msg');
+  var reloginSubmit = document.getElementById('relogin-submit');
 
-  // ─── 初始化 ─────────────────────────────────────────────
-  if (!TOKEN) { window.location.href = 'login.html'; return; }
+  function isAdminRole(role) {
+    return role === 'admin' || role === 'super_admin';
+  }
 
-  // 获取当前用户信息，验证管理员身份
-  fetch('/api/auth/me')
-    .then(function (r) { return r.json(); })
-    .then(function (user) {
-      if (!user || !user.role || (user.role !== 'admin' && user.role !== 'super_admin')) {
-        toast('无管理权限，即将跳转...');
-        setTimeout(function () { window.location.href = 'recorder.html'; }, 1500);
-        return;
-      }
-      USER = user;
-      IS_SUPER_ADMIN = user.role === 'super_admin';
-      adminNameEl.textContent = user.nickname || '管理员';
-      adminRoleEl.textContent = IS_SUPER_ADMIN ? '超级管理员' : '管理员';
+  function showReloginModal(reason) {
+    if (reloginReason) reloginReason.textContent = reason || '请使用管理员账号登录后继续';
+    if (reloginMsg) {
+      reloginMsg.classList.add('hidden');
+      reloginMsg.textContent = '';
+    }
+    if (reloginModal) reloginModal.classList.remove('hidden');
+    if (reloginAccount) setTimeout(function () { reloginAccount.focus(); }, 50);
+  }
 
-      // 超管显示审计日志 Tab
-      if (IS_SUPER_ADMIN) {
-        document.getElementById('nav-audit-log').style.display = '';
-      }
+  function hideReloginModal() {
+    if (reloginModal) reloginModal.classList.add('hidden');
+    if (reloginPassword) reloginPassword.value = '';
+    if (reloginMsg) reloginMsg.classList.add('hidden');
+  }
 
-      // 加载默认 Tab
-      loadDashboard();
+  function bootstrapAdmin(user) {
+    USER = user;
+    TOKEN = localStorage.getItem('livetrans_token');
+    IS_SUPER_ADMIN = user.role === 'super_admin';
+    if (adminNameEl) adminNameEl.textContent = user.nickname || '管理员';
+    if (adminRoleEl) adminRoleEl.textContent = IS_SUPER_ADMIN ? '超级管理员' : '管理员';
+    var auditNav = document.getElementById('nav-audit-log');
+    if (auditNav) auditNav.style.display = IS_SUPER_ADMIN ? '' : 'none';
+    hideReloginModal();
+    if (!eventsBound) {
       initEvents();
+      eventsBound = true;
+    }
+    var tab = currentTab || 'dashboard';
+    currentTab = '';
+    switchTab(tab);
+  }
+
+  function checkAdminAccess() {
+    TOKEN = localStorage.getItem('livetrans_token');
+    if (!TOKEN) {
+      showReloginModal('请先登录管理员账号');
+      return;
+    }
+    fetch('/api/auth/me')
+      .then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+      })
+      .then(function (res) {
+        var user = res.data || {};
+        if (!res.ok || !isAdminRole(user.role)) {
+          if (res.status === 401 && window.LiveTransAuth && LiveTransAuth.clearSession) {
+            LiveTransAuth.clearSession();
+          }
+          showReloginModal(
+            isAdminRole(user.role) ? '登录已失效，请重新登录' :
+              (res.ok ? '当前账号没有管理权限，请使用管理员账号重新登录' : '登录已失效，请重新登录')
+          );
+          return;
+        }
+        bootstrapAdmin(user);
+      })
+      .catch(function () {
+        showReloginModal('登录已失效，请重新登录');
+      });
+  }
+
+  function submitRelogin() {
+    var account = reloginAccount ? reloginAccount.value.trim() : '';
+    if (/^1[3-9]\d{9}$/.test(account.replace(/[\s-]/g, ''))) {
+      account = '+86' + account.replace(/[\s-]/g, '');
+    }
+    var pwd = reloginPassword ? reloginPassword.value : '';
+    if (!account || !pwd) {
+      if (reloginMsg) {
+        reloginMsg.textContent = '请输入账号和密码';
+        reloginMsg.style.color = '#EF4444';
+        reloginMsg.classList.remove('hidden');
+      }
+      return;
+    }
+    if (reloginSubmit) reloginSubmit.disabled = true;
+    if (reloginMsg) {
+      reloginMsg.textContent = '登录中...';
+      reloginMsg.style.color = '#717782';
+      reloginMsg.classList.remove('hidden');
+    }
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: account, password: pwd })
     })
-    .catch(function () {
-      toast('认证失败，请重新登录');
-      setTimeout(function () { window.location.href = 'login.html'; }, 1500);
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (!r.ok) throw new Error(d.detail || '登录失败');
+          return d;
+        });
+      })
+      .then(function (d) {
+        if (!d.tokens || !d.tokens.access_token || !d.user) throw new Error('登录响应格式异常');
+        if (!isAdminRole(d.user.role)) {
+          throw new Error('当前账号没有管理权限，请使用管理员账号登录');
+        }
+        localStorage.setItem('livetrans_token', d.tokens.access_token);
+        if (d.tokens.refresh_token) localStorage.setItem('livetrans_refresh_token', d.tokens.refresh_token);
+        localStorage.setItem('livetrans_user', JSON.stringify(d.user));
+        bootstrapAdmin(d.user);
+      })
+      .catch(function (e) {
+        if (reloginMsg) {
+          reloginMsg.textContent = e.message || '登录失败';
+          reloginMsg.style.color = '#EF4444';
+          reloginMsg.classList.remove('hidden');
+        }
+      })
+      .finally(function () {
+        if (reloginSubmit) reloginSubmit.disabled = false;
+      });
+  }
+
+  if (reloginSubmit) reloginSubmit.addEventListener('click', submitRelogin);
+  if (reloginPassword) {
+    reloginPassword.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitRelogin();
     });
+  }
+  if (reloginAccount) {
+    reloginAccount.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') submitRelogin();
+    });
+  }
+
+  checkAdminAccess();
 
   // ─── 工具函数 ───────────────────────────────────────────
   function escapeHtml(str) {
@@ -86,7 +196,17 @@
       headers: { 'Content-Type': 'application/json' }
     }, options || {}))
     .then(function (r) {
-      return r.json().then(function (d) { return r.ok ? d : Promise.reject(d); });
+      return r.json().then(function (d) {
+        if (r.status === 401) {
+          showReloginModal('登录已失效，请重新登录');
+          return Promise.reject(d);
+        }
+        if (r.status === 403) {
+          showReloginModal('当前账号没有管理权限，请使用管理员账号重新登录');
+          return Promise.reject(d);
+        }
+        return r.ok ? d : Promise.reject(d);
+      });
     });
   }
 
