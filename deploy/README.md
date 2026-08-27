@@ -15,7 +15,14 @@
 ```bash
 sudo mkdir -p /opt/livetrans
 sudo chown "$USER":"$USER" /opt/livetrans
-git clone git@github.com:loran-ch/stock.git /opt/livetrans
+git clone git@github.com:loran-ch/livetrans-voice.git /opt/livetrans
+cd /opt/livetrans
+```
+
+若服务器没有配置 GitHub SSH 密钥，可改用 HTTPS：
+
+```bash
+git clone https://github.com/loran-ch/livetrans-voice.git /opt/livetrans
 cd /opt/livetrans
 ```
 

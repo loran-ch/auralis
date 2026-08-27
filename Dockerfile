@@ -1,13 +1,18 @@
 FROM python:3.12-slim
 
 # 视频抽帧/裁剪、百度 ASR 音频转换及中英文板书 OCR。
-# 默认使用 Debian/PyPI 官方源；企业内网可在构建时传入自己的镜像地址。
+# 默认优先国内镜像（阿里云）；海外构建可传入官方源覆盖。
 # APT 重试用于吸收上游索引的短暂网络错误，镜像源持续故障时仍会明确失败。
-ARG APT_MIRROR=deb.debian.org
-ARG PYPI_INDEX_URL=https://pypi.org/simple
+ARG APT_MIRROR=mirrors.aliyun.com
+ARG PYPI_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 RUN set -eux; \
-    if [ "${APT_MIRROR}" != "deb.debian.org" ]; then \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
         sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+        sed -i "s|security.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    if [ -f /etc/apt/sources.list ]; then \
+        sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list; \
+        sed -i "s|security.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list; \
     fi; \
     for attempt in 1 2 3; do \
         if apt-get -o Acquire::Retries=3 update; then break; fi; \
