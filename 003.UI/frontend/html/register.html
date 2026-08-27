@@ -2,13 +2,14 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 <title>LiveTrans Voice - 注册</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
   <link rel="stylesheet" href="../css/register.css">
   <script src="../shared/tailwind-config.js"></script>
-  <script defer src="../js/register.js"></script>
+  <script defer src="../js/register.js?v=2"></script>
 </head>
 <body class="font-body selection:bg-primary/30 min-h-screen flex flex-col">
 <!-- TopAppBar -->
@@ -35,37 +36,41 @@
 	<input id="registerUsername" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="3-32位字母数字下划线" type="text" autocomplete="username">
 	</div>
 	</div>
-<!-- Phone Number -->
-<div class="space-y-2">
-<label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest ml-1">手机号</label>
-<div class="custom-input flex items-center px-4 py-3.5 rounded-lg group">
-<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors mr-3" data-icon="phone_iphone">phone_iphone</span>
-<input id="registerPhone" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="请输入您的手机号码" type="tel" autocomplete="tel">
-</div>
-</div>
-<!-- Verification Code -->
-<div class="space-y-2">
-<label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest ml-1">验证码</label>
-<div class="flex gap-3">
-<div class="custom-input flex items-center px-4 py-3.5 rounded-lg group flex-grow">
-<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors mr-3" data-icon="shield_lock">shield_lock</span>
-<input id="registerCode" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="验证码" type="text" inputmode="numeric" autocomplete="one-time-code">
-</div>
-<button id="sendCodeBtn" type="button" class="px-6 py-3.5 rounded-lg bg-primary-container text-on-primary-container font-semibold hover:bg-primary/10 transition-all active:scale-95 duration-200 text-sm whitespace-nowrap">
-                        发送
-                    </button>
-</div>
-</div>
 <!-- Set Password -->
 <div class="space-y-2">
 <label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest ml-1">设置密码</label>
 <div class="custom-input flex items-center px-4 py-3.5 rounded-lg group">
 <span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors mr-3" data-icon="lock">lock</span>
 <input id="registerPassword" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="至少 6 位密码" type="password" autocomplete="new-password">
-<button class="text-on-surface-variant hover:text-primary transition-colors">
+<button id="toggleRegisterPassword" class="text-on-surface-variant hover:text-primary transition-colors" type="button" aria-label="显示密码" title="显示密码">
 <span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
 </button>
 </div>
+</div>
+<!-- Confirm Password -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest ml-1">确认密码</label>
+<div class="custom-input flex items-center px-4 py-3.5 rounded-lg group">
+<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors mr-3" data-icon="lock">lock</span>
+<input id="registerConfirmPassword" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="请再次输入密码" type="password" autocomplete="new-password">
+<button id="toggleConfirmPassword" class="text-on-surface-variant hover:text-primary transition-colors" type="button" aria-label="显示密码" title="显示密码">
+<span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Captcha -->
+<div class="space-y-2">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-widest ml-1">验证码</label>
+<div class="flex gap-3 items-stretch">
+<div class="custom-input flex items-center px-4 py-3.5 rounded-lg group flex-grow">
+<span class="material-symbols-outlined text-on-surface-variant group-focus-within:text-primary transition-colors mr-3" data-icon="shield_lock">shield_lock</span>
+<input id="registerCaptcha" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant/50" placeholder="输入右侧字符" type="text" maxlength="4" autocomplete="off">
+</div>
+<button id="refreshCaptcha" type="button" class="shrink-0 rounded-lg border border-outline-variant/40 bg-white overflow-hidden hover:border-primary/40 transition-colors" title="点击刷新验证码" aria-label="刷新验证码">
+<img id="captchaImage" alt="验证码" class="h-[52px] w-[120px] object-contain bg-surface-container-low">
+</button>
+</div>
+<input type="hidden" id="captchaToken" value="">
 </div>
 <!-- Checkbox -->
 <div class="flex items-start space-x-3 pt-2">
@@ -92,17 +97,17 @@
 </main>
 <!-- App Bottom Indicator (Visual only) -->
 <div class="h-1.5 w-32 bg-on-surface/10 rounded-full mx-auto mb-2"></div>
-<!-- Script for interaction logic -->
 <script>
 (function () {
-	  var usernameInput = document.getElementById('registerUsername');
-	  var phoneInput = document.getElementById('registerPhone');
-  var codeInput = document.getElementById('registerCode');
+  var usernameInput = document.getElementById('registerUsername');
   var passwordInput = document.getElementById('registerPassword');
-  var sendButton = document.getElementById('sendCodeBtn');
+  var confirmInput = document.getElementById('registerConfirmPassword');
+  var captchaInput = document.getElementById('registerCaptcha');
+  var captchaTokenInput = document.getElementById('captchaToken');
+  var captchaImage = document.getElementById('captchaImage');
+  var refreshCaptchaBtn = document.getElementById('refreshCaptcha');
   var registerButton = document.getElementById('registerBtn');
   var message = document.getElementById('registerMsg');
-  var countdownTimer = null;
   var nextPage = new URLSearchParams(location.search).get('next') || '';
   if (/^[a-zA-Z0-9._-]+\.html$/.test(nextPage)) {
     var toLogin = document.getElementById('registerToLogin');
@@ -119,11 +124,6 @@
     });
   }
 
-  function normalizePhone(value) {
-    var compact = value.trim().replace(/[\s-]/g, '');
-    return /^1[3-9]\d{9}$/.test(compact) ? '+86' + compact : compact;
-  }
-
   function showMessage(text, ok) {
     message.textContent = text;
     message.style.color = ok ? '#4CAF50' : '#EF4444';
@@ -137,51 +137,61 @@
       body: JSON.stringify(body)
     }).then(function (response) {
       return response.json().catch(function () { return {}; }).then(function (data) {
-        if (!response.ok) throw new Error(data.detail || '请求失败');
+        if (!response.ok) {
+          var detail = data.detail;
+          if (Array.isArray(detail)) {
+            detail = detail.map(function (item) { return item.msg || JSON.stringify(item); }).join('；');
+          }
+          throw new Error(detail || '请求失败');
+        }
         return data;
       });
     });
   }
 
-  sendButton.addEventListener('click', function () {
-    var phone = normalizePhone(phoneInput.value);
-    if (!/^\+?\d{11,15}$/.test(phone)) return showMessage('请输入正确的手机号', false);
-    sendButton.disabled = true;
-    postJson('/api/auth/send-code', { target: phone, scene: 'register' })
-      .then(function () {
-        showMessage('验证码已发送，有效期 5 分钟', true);
-        var remaining = 60;
-        sendButton.textContent = remaining + ' 秒';
-        countdownTimer = setInterval(function () {
-          remaining -= 1;
-          sendButton.textContent = remaining + ' 秒';
-          if (remaining <= 0) {
-            clearInterval(countdownTimer);
-            sendButton.disabled = false;
-            sendButton.textContent = '发送';
-          }
-        }, 1000);
+  function loadCaptcha() {
+    return fetch('/api/auth/captcha')
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.detail || '验证码加载失败');
+          return data;
+        });
+      })
+      .then(function (data) {
+        captchaTokenInput.value = data.captcha_token || '';
+        captchaImage.src = data.image || '';
+        captchaInput.value = '';
       })
       .catch(function (error) {
-        sendButton.disabled = false;
-        showMessage(error.message, false);
+        showMessage(error.message || '验证码加载失败', false);
       });
-  });
+  }
+
+  refreshCaptchaBtn.addEventListener('click', function () { loadCaptcha(); });
 
   registerButton.addEventListener('click', function () {
-    var phone = normalizePhone(phoneInput.value);
-    var code = codeInput.value.trim();
-    var password = passwordInput.value;
     var username = usernameInput.value.trim();
-	    if (!/^[a-zA-Z0-9_]{3,32}$/.test(username)) return showMessage('用户名需3-32位字母数字下划线', false);
-	    if (!document.getElementById('terms').checked) return showMessage('请先同意用户协议和隐私政策', false);
-    if (!/^\+?\d{11,15}$/.test(phone)) return showMessage('请输入正确的手机号', false);
-    if (!/^\d{4,6}$/.test(code)) return showMessage('请输入正确的验证码', false);
+    var password = passwordInput.value;
+    var confirmPassword = confirmInput.value;
+    var captchaCode = captchaInput.value.trim();
+    var captchaToken = captchaTokenInput.value.trim();
+
+    if (!/^[a-zA-Z0-9_]{3,32}$/.test(username)) return showMessage('用户名需3-32位字母数字下划线', false);
+    if (!document.getElementById('terms').checked) return showMessage('请先同意用户协议和隐私政策', false);
     if (password.length < 6) return showMessage('密码至少需要 6 位', false);
+    if (password !== confirmPassword) return showMessage('两次输入的密码不一致', false);
+    if (!captchaToken) return showMessage('验证码未就绪，请刷新后重试', false);
+    if (!/^[a-zA-Z0-9]{4}$/.test(captchaCode)) return showMessage('请输入 4 位验证码', false);
 
     registerButton.disabled = true;
     registerButton.querySelector('span').textContent = '注册中...';
-    postJson('/api/auth/register', { username: username, phone: phone, code: code, password: password })
+    postJson('/api/auth/register', {
+      username: username,
+      password: password,
+      confirm_password: confirmPassword,
+      captcha_token: captchaToken,
+      captcha_code: captchaCode
+    })
       .then(function (data) {
         if (!data.tokens || !data.tokens.access_token || !data.user) throw new Error('注册响应格式异常');
         localStorage.setItem('livetrans_token', data.tokens.access_token);
@@ -196,8 +206,11 @@
         showMessage(error.message, false);
         registerButton.disabled = false;
         registerButton.querySelector('span').textContent = '注册并登录';
+        loadCaptcha();
       });
   });
+
+  loadCaptcha();
 })();
 </script>
 

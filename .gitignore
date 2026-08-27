@@ -41,8 +41,13 @@ __pycache__/
 
 # 用户上传内容（运行时数据）
 003.UI/frontend/uploads/
+003.UI/backend/tools/ffmpeg/
 
 # 部署机生成的证书和前端产物
 deploy/ssl/
 deploy/h5_dist/
 deploy/certbot/
+
+# Local MCP tooling paths
+.mcp.json
+

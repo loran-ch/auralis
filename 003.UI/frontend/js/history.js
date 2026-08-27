@@ -37,7 +37,7 @@
     el.onclick = function () { window.location.href = 'review.html?id=' + l.id; };
     el.innerHTML =
       '<div class="flex justify-between items-start mb-2">' +
-        '<div><h3 class="font-display-current-source text-lg text-ink-deep">' + escapeHtml(l.course_name || '未命名') + '</h3>' +
+        '<div><h3 class="font-display-current-source text-lg text-ink-deep">' + escapeHtml(l.title || (l.session_number ? (l.course_name || '未命名') + ' · 第 ' + l.session_number + ' 节课' : (l.course_name || '未命名'))) + '</h3>' +
         '<p class="font-caption-timestamp text-ink-subdued">' + d + ' · ' + t + '</p></div>' +
         '<div class="flex flex-col items-end">' +
           '<span class="font-label-tag text-primary bg-primary-container/20 px-2 py-1 rounded-lg">' + fmSec(l.duration_seconds || 0) + '</span>' +

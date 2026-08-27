@@ -37,6 +37,9 @@
         </view>
       </view>
 
+      <view class="section-heading"><view><text class="section-title">学习空间</text><text class="section-subtitle">查看课程资料并向课堂助手提问</text></view></view>
+      <view class="account-card card"><view class="account-row" @tap="uni.reLaunch({ url: '/pages/courses/index' })"><view><text class="setting-title">课程中心</text><text class="setting-description">浏览我创建的课程和教师共享课程</text></view><text class="chevron">›</text></view><view class="divider" /><view class="account-row" @tap="uni.reLaunch({ url: '/pages/assistant/index' })"><view><text class="setting-title">课堂助手</text><text class="setting-description">根据课堂记录、简报和作业进行复习</text></view><text class="chevron">›</text></view></view>
+
       <view class="section-heading"><view><text class="section-title">账号与安全</text><text class="section-subtitle">管理密码和登录设备</text></view></view>
       <view class="account-card card"><view class="account-row" @tap="passwordOpen = true"><view><text class="setting-title">修改密码</text><text class="setting-description">定期更换密码可提升安全性</text></view><text class="chevron">›</text></view><view class="divider" /><view v-if="isAdmin" class="account-row admin-row" @tap="uni.navigateTo({ url: '/pages/admin/index' })"><view><text class="setting-title">管理后台</text><text class="setting-description">用户、课堂与审计日志</text></view><text class="chevron">›</text></view><view v-if="isAdmin" class="divider" /><view class="account-row" @tap="logoutAll"><view><text class="setting-title error-text">退出所有设备</text><text class="setting-description">撤销当前账号的全部登录会话</text></view><text class="chevron">›</text></view></view>
       <button class="btn logout-button" @tap="logout">退出当前账号</button>

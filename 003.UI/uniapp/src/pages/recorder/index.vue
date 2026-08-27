@@ -153,6 +153,8 @@ let transcriptTouchTimer = null
 const menuItems = [
   { label: '实时录音', icon: '●', url: '/pages/recorder/index' },
   { label: '课堂记录', icon: '◷', url: '/pages/history/index' },
+  { label: '课程中心', icon: '▦', url: '/pages/courses/index' },
+  { label: '课堂助手', icon: '✦', url: '/pages/assistant/index' },
   { label: '知识卡片', icon: '★', url: '/pages/cards/index' },
   { label: '个人中心', icon: '♙', url: '/pages/profile/index' },
 ]

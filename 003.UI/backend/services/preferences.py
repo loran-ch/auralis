@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.lecture import Bookmark, Lecture
+from models.course import Course
 from models.preferences import CourseSchedule, Language, UserSettings, UserStats
 from schemas.preferences import CourseScheduleCreate, CourseScheduleUpdate, UserSettingsUpdate
 
@@ -168,6 +169,10 @@ def _has_schedule_conflict(db: Session, user_id: int, day_of_week: int,
 def create_schedule(db: Session, user_id: int,
                     request: CourseScheduleCreate) -> CourseSchedule:
     _ensure_schedule_languages(db, request.source_lang, request.target_lang)
+    if request.course_id and not db.query(Course.id).filter(
+        Course.id == request.course_id, Course.user_id == user_id
+    ).first():
+        raise ValueError("关联课程不存在")
     if _has_schedule_conflict(
         db, user_id, request.day_of_week, request.start_time, request.end_time
     ):
@@ -188,6 +193,11 @@ def update_schedule(db: Session, user_id: int, schedule_id: int,
     if not schedule:
         return None
     values = request.model_dump(exclude_unset=True)
+    course_id = values.get("course_id")
+    if course_id and not db.query(Course.id).filter(
+        Course.id == course_id, Course.user_id == user_id
+    ).first():
+        raise ValueError("关联课程不存在")
     source = values.get("source_lang", schedule.source_lang)
     target = values.get("target_lang", schedule.target_lang)
     _ensure_schedule_languages(db, source, target)

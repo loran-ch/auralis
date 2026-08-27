@@ -27,11 +27,18 @@ class GuideSanitizeTests(unittest.TestCase):
         self.assertEqual(items[0]["icon"], "star")
         self.assertEqual(items[1]["icon"], "info")
 
-    def test_default_guide_has_five_recorder_items(self):
+    def test_default_guide_covers_learning_journey(self):
         guide = default_guide(RECORDER_FEATURES_SLUG)
         self.assertEqual(guide["slug"], RECORDER_FEATURES_SLUG)
-        self.assertEqual(len(guide["items"]), 5)
-        self.assertIn("实时双语字幕", [item["title"] for item in guide["items"]])
+        titles = [item["title"] for item in guide["items"]]
+        self.assertGreaterEqual(len(titles), 5)
+        self.assertLessEqual(len(titles), 8)
+        self.assertIn("课前：课程中心建课", titles)
+        self.assertIn("课上：实时双语字幕", titles)
+        self.assertIn("课上：一键收藏重点", titles)
+        self.assertIn("课后：自动课堂简报", titles)
+        self.assertIn("资料：上传与一键导出", titles)
+        self.assertIn("随时：学习助手问答", titles)
 
     def test_unknown_slug_uses_recorder_defaults(self):
         guide = default_guide("unknown")

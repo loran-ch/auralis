@@ -3,6 +3,7 @@
 .claude
 .vscode
 .venv
+**/.venv
 **/__pycache__
 **/.pytest_cache
 **/node_modules
@@ -11,5 +12,8 @@
 **/.env
 **/.env.production
 003.UI/frontend/uploads
+# 后端镜像使用系统 ffmpeg；本地调试二进制和 UniApp 工程不会被 Dockerfile 引用。
+003.UI/backend/tools/
+003.UI/uniapp/
 deploy/ssl
 deploy/certbot

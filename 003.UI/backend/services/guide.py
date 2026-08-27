@@ -25,34 +25,39 @@ _TABLE_LOCK = threading.Lock()
 DEFAULT_GUIDES: dict[str, dict[str, Any]] = {
     RECORDER_FEATURES_SLUG: {
         "slug": RECORDER_FEATURES_SLUG,
-        "title": "课堂实时翻译助手",
-        "subtitle": "听外语课、记重点、课后复习。打开就能看它能做什么。",
-        "footer_hint": "点下方绿色麦克风开始 · 未登录会提示注册",
+        "title": "课堂学习助手",
+        "subtitle": "从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。",
+        "footer_hint": "建议先在「课程中心」建课 → 回来点绿色麦克风开始 · 未登录会提示注册",
         "items": [
             {
-                "icon": "subtitles",
-                "title": "实时双语字幕",
-                "body": "授课语音转文字，原文和译文同步出现，像字幕一样往下走。",
+                "icon": "school",
+                "title": "课前：课程中心建课",
+                "body": "创建课程并设置授课/翻译语言；录音前选好课程，课后记录会自动归档，方便按学期管理。",
             },
             {
-                "icon": "translate",
-                "title": "多语种听译",
-                "body": "选择授课语言和你的母语，适合留学课堂、讲座和讨论课。",
+                "icon": "subtitles",
+                "title": "课上：实时双语字幕",
+                "body": "麦克风录音后，原文与译文同步滚动。也可关闭翻译，只保留录音与文字，适合母语课堂。",
             },
             {
                 "icon": "star",
-                "title": "一键收藏知识点",
-                "body": "把句子标成重要、疑问、考点或定义，课后变成知识卡片。",
+                "title": "课上：一键收藏重点",
+                "body": "听到关键句点星标，标成重要 / 疑问 / 考点 / 定义；课后在「知识卡片」里集中复习。",
             },
             {
-                "icon": "history",
-                "title": "课堂回看",
-                "body": "保存完整记录和录音，双语对照回放，从收藏处跳回原句。",
+                "icon": "description",
+                "title": "课后：自动课堂简报",
+                "body": "结束录音后生成概览、重点、术语与待确认作业；每条结论可跳回字幕时间点核对。",
+            },
+            {
+                "icon": "folder_zip",
+                "title": "资料：上传与一键导出",
+                "body": "在课堂记录里上传 PPT / PDF / 图片；可导出简报 Markdown，或打包下载全部学习资料。",
             },
             {
                 "icon": "psychology",
-                "title": "课后课堂助教",
-                "body": "自动生成简报，还能问「这节课讲了什么」「有哪些考点」。",
+                "title": "随时：学习助手问答",
+                "body": "按课程检索笔记、拆解作业，也可粘贴报错/题目截图提问；回答会附上可跳转的课堂证据。",
             },
         ],
     }
@@ -133,11 +138,34 @@ def to_public_dict(row: AppGuide) -> dict[str, Any]:
     }
 
 
+def _looks_like_legacy_recorder_guide(row: AppGuide) -> bool:
+    """识别尚未人工定制过的旧版内置说明，便于一次性迁到最新默认文案。"""
+    if (row.title or "").strip() == "课堂实时翻译助手":
+        return True
+    items = row.items if isinstance(row.items, list) else []
+    titles = {(item.get("title") or "").strip() for item in items if isinstance(item, dict)}
+    legacy_five = {"实时双语字幕", "多语种听译", "一键收藏知识点", "课堂回看", "课后课堂助教"}
+    legacy_three = {"课上：实时双语字幕", "课后：简报与学习资料", "随时：学习助手问答"}
+    if len(items) == 5 and legacy_five.issubset(titles):
+        return True
+    if len(items) == 3 and legacy_three.issubset(titles):
+        return True
+    return False
+
+
 def _seed_if_missing(db: Session, slug: str) -> AppGuide:
     row = db.query(AppGuide).filter(AppGuide.slug == slug).first()
-    if row:
-        return row
     data = default_guide(slug)
+    if row:
+        if slug == RECORDER_FEATURES_SLUG and _looks_like_legacy_recorder_guide(row):
+            row.title = data["title"]
+            row.subtitle = data["subtitle"]
+            row.items = data["items"]
+            row.footer_hint = data["footer_hint"]
+            row.updated_at = datetime.now()
+            db.commit()
+            db.refresh(row)
+        return row
     row = AppGuide(
         slug=data["slug"],
         title=data["title"],

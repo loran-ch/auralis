@@ -1,0 +1,46 @@
+/* LiveTrans Voice — 跨页面的体验基础。页面业务样式继续保留在各自 CSS 文件中。 */
+:root {
+  --app-primary: #0061a4;
+  --app-ink: #1a1c1d;
+  --app-muted: #5f6368;
+  --app-line: rgba(121, 116, 126, .2);
+  --app-surface: #fff;
+  --app-page: #faf9fa;
+  --app-radius: 1rem;
+  --app-shadow: 0 10px 28px rgba(36, 42, 48, .08);
+}
+
+html { scroll-behavior: smooth; }
+body { -webkit-tap-highlight-color: transparent; text-rendering: optimizeLegibility; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), a, label[for], select { touch-action: manipulation; }
+button:disabled { cursor: not-allowed; }
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid rgba(0, 97, 164, .28) !important;
+  outline-offset: 2px;
+}
+
+.app-page { width: min(100%, 72rem); margin-inline: auto; }
+.app-panel { border: 1px solid var(--app-line); border-radius: var(--app-radius); background: var(--app-surface); box-shadow: var(--app-shadow); }
+.app-page-title { color: var(--app-ink); letter-spacing: -.02em; }
+.app-topbar { border-bottom: 1px solid var(--app-line); background: rgba(255, 255, 255, .94); backdrop-filter: blur(14px); }
+.app-topbar__content { width: min(100%, 72rem); min-height: 4rem; margin-inline: auto; padding-inline: 1rem; }
+.app-icon-button { display: inline-flex; width: 2.5rem; height: 2.5rem; align-items: center; justify-content: center; border-radius: 999px; color: var(--app-primary); transition: background-color .16s ease, transform .16s ease; }
+.app-icon-button:hover { background: rgba(0, 97, 164, .08); }
+.app-icon-button:active { transform: scale(.94); }
+.app-primary-action { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .35rem; border-radius: .8rem; background: var(--app-primary); padding: .6rem .9rem; color: #fff; font-size: .875rem; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 97, 164, .2); transition: transform .16s ease, box-shadow .16s ease, opacity .16s ease; }
+.app-primary-action:hover { box-shadow: 0 7px 16px rgba(0, 97, 164, .26); }
+.app-primary-action:active { transform: translateY(1px); }
+.app-field-help { color: var(--app-muted); font-size: .75rem; line-height: 1.45; }
+
+@media (max-width: 640px) {
+  .app-page { width: 100%; }
+  .app-topbar__content { padding-inline: .75rem; }
+  .app-primary-action { min-height: 2.75rem; padding-inline: .8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

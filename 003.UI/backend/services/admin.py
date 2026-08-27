@@ -3,13 +3,15 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from config import ENVIRONMENT, DB_POOL_SIZE
+from config import DB_POOL_SIZE, ENVIRONMENT, LLM_QUOTA_WINDOW_DAYS
 from models.admin import AuditLog
 from models.lecture import Bookmark, Lecture, Transcription
+from models.llm_quota import LlmUsageEvent
 from models.user import User
+from services.llm_quota import get_quota_snapshot, window_start
 
 
 # ─── 审计日志工具 ─────────────────────────────────────────
@@ -37,23 +39,50 @@ def write_audit_log(
     return entry
 
 
+def _day_start_utc(now: Optional[datetime] = None) -> datetime:
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _count_active_users(db: Session, since: datetime, until: Optional[datetime] = None) -> int:
+    """有登录或课堂/用量行为的去重用户数。"""
+    since_naive = since.replace(tzinfo=None) if since.tzinfo else since
+    until_naive = until.replace(tzinfo=None) if until and until.tzinfo else until
+
+    login_q = db.query(User.id.label("uid")).filter(User.last_login_at >= since_naive)
+    if until_naive:
+        login_q = login_q.filter(User.last_login_at < until_naive)
+
+    lecture_q = db.query(Lecture.user_id.label("uid")).filter(Lecture.created_at >= since_naive)
+    if until_naive:
+        lecture_q = lecture_q.filter(Lecture.created_at < until_naive)
+
+    usage_q = db.query(LlmUsageEvent.user_id.label("uid")).filter(
+        LlmUsageEvent.created_at >= since_naive
+    )
+    if until_naive:
+        usage_q = usage_q.filter(LlmUsageEvent.created_at < until_naive)
+
+    union_sub = login_q.union(lecture_q, usage_q).subquery()
+    return int(db.query(func.count()).select_from(union_sub).scalar() or 0)
+
+
 # ─── Dashboard ────────────────────────────────────────────
 
 def get_dashboard_stats(db: Session) -> dict:
     now = datetime.now(timezone.utc)
-    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today = _day_start_utc(now)
     week_ago = today - timedelta(days=7)
+    since_30d = window_start(now)
 
     total_users = db.query(func.count(User.id)).scalar() or 0
-    active_today = (
-        db.query(func.count(User.id))
-        .filter(User.last_login_at >= today)
-        .scalar()
-        or 0
-    )
+    active_today = _count_active_users(db, today)
+    active_30d = _count_active_users(db, since_30d)
     new_this_week = (
         db.query(func.count(User.id))
-        .filter(User.created_at >= week_ago)
+        .filter(User.created_at >= week_ago.replace(tzinfo=None))
         .scalar()
         or 0
     )
@@ -66,23 +95,78 @@ def get_dashboard_stats(db: Session) -> dict:
         .scalar()
         or 0
     )
+    llm_tokens_30d = int(
+        db.query(func.coalesce(func.sum(LlmUsageEvent.total_tokens), 0))
+        .filter(LlmUsageEvent.created_at >= since_30d.replace(tzinfo=None))
+        .scalar()
+        or 0
+    )
 
     system_info = {
         "environment": ENVIRONMENT,
-        "version": "1.3.0",
+        "version": "1.4.0",
         "db_pool_size": DB_POOL_SIZE,
+        "llm_quota_window_days": LLM_QUOTA_WINDOW_DAYS,
     }
 
     return {
         "total_users": total_users,
         "active_today": active_today,
+        "active_30d": active_30d,
         "new_this_week": new_this_week,
         "total_lectures": total_lectures,
         "total_transcriptions": total_transcriptions,
         "total_bookmarks": total_bookmarks,
         "admin_count": admin_count,
+        "llm_tokens_30d": llm_tokens_30d,
         "system_info": system_info,
     }
+
+
+def get_timeseries(db: Session, *, days: int = 30) -> dict:
+    days = max(1, min(90, int(days)))
+    today = _day_start_utc()
+    start = today - timedelta(days=days - 1)
+    points = []
+    for offset in range(days):
+        day = start + timedelta(days=offset)
+        next_day = day + timedelta(days=1)
+        day_naive = day.replace(tzinfo=None)
+        next_naive = next_day.replace(tzinfo=None)
+        dau = _count_active_users(db, day, next_day)
+        new_users = int(
+            db.query(func.count(User.id))
+            .filter(User.created_at >= day_naive, User.created_at < next_naive)
+            .scalar()
+            or 0
+        )
+        completed = int(
+            db.query(func.count(Lecture.id))
+            .filter(
+                Lecture.status == "completed",
+                Lecture.created_at >= day_naive,
+                Lecture.created_at < next_naive,
+            )
+            .scalar()
+            or 0
+        )
+        tokens = int(
+            db.query(func.coalesce(func.sum(LlmUsageEvent.total_tokens), 0))
+            .filter(
+                LlmUsageEvent.created_at >= day_naive,
+                LlmUsageEvent.created_at < next_naive,
+            )
+            .scalar()
+            or 0
+        )
+        points.append({
+            "date": day.date().isoformat(),
+            "dau": dau,
+            "new_users": new_users,
+            "completed_lectures": completed,
+            "llm_tokens": tokens,
+        })
+    return {"days": days, "points": points}
 
 
 # ─── 用户管理 ─────────────────────────────────────────────
@@ -100,7 +184,12 @@ def list_users(
     if search:
         like = f"%{search}%"
         query = query.filter(
-            User.nickname.ilike(like) | User.phone.ilike(like) | User.email.ilike(like)
+            or_(
+                User.nickname.ilike(like),
+                User.phone.ilike(like),
+                User.email.ilike(like),
+                User.username.ilike(like),
+            )
         )
     if status:
         query = query.filter(User.status == status)
@@ -117,8 +206,18 @@ def list_users(
         .all()
     )
 
+    enriched = []
+    for user in items:
+        snap = get_quota_snapshot(db, user)
+        enriched.append({
+            "user": user,
+            "tokens_used": snap["tokens_used"],
+            "token_limit": snap["token_limit"],
+            "has_custom_limit": snap["has_custom_limit"],
+        })
+
     return {
-        "items": items,
+        "items": enriched,
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -130,13 +229,8 @@ def get_user_detail(db: Session, user_id: int) -> Optional[dict]:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         return None
-    lecture_count = (
-        db.query(func.count(Lecture.id))
-        .filter(Lecture.user_id == user_id)
-        .scalar()
-        or 0
-    )
-    return {"user": user, "lecture_count": lecture_count}
+    snap = get_quota_snapshot(db, user)
+    return {"user": user, **snap}
 
 
 def update_user_status(
@@ -187,7 +281,6 @@ def update_user_role(
     if not user:
         return {"success": False, "message": "用户不存在"}
 
-    # 防止撤销最后一个超管
     if user.role == "super_admin" and new_role != "super_admin":
         super_count = (
             db.query(func.count(User.id))
@@ -212,7 +305,7 @@ def update_user_role(
     db.commit()
     db.refresh(user)
 
-    role_text = {"user": "普通用户", "admin": "管理员", "super_admin": "超级管理员"}
+    role_text = {"user": "普通用户", "admin": "教师(admin)", "super_admin": "超级管理员"}
     return {"success": True, "message": f"角色已更新为{role_text.get(new_role, new_role)}"}
 
 
@@ -231,7 +324,6 @@ def delete_user(
     if user.role == "super_admin":
         return {"success": False, "message": "不能删除超级管理员"}
 
-    # 软删除：设置状态为 deleted
     user.status = "deleted"
     user.deleted_at = datetime.now(timezone.utc)
     write_audit_log(
@@ -318,14 +410,12 @@ def delete_lecture(
     if not lecture:
         return {"success": False, "message": "课堂不存在"}
 
-    # 记录快照用于审计
     snapshot = {
         "course_name": lecture.course_name,
         "user_id": lecture.user_id,
         "status": lecture.status,
     }
 
-    # CASCADE 自动清理 bookmark + transcription
     db.delete(lecture)
     write_audit_log(
         db,

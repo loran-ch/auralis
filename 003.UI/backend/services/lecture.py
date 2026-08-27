@@ -3,11 +3,12 @@ import random
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from config import ASR_CONTEXT_SENTENCES
 from models.lecture import Lecture, Transcription
+from models.course import Course
 
 def _now():
     """返回本地时间"""
@@ -32,11 +33,24 @@ _DEMO_SENTENCES = [
 # ─── 课堂管理 ────────────────────────────────────────────
 
 def start_lecture(db: Session, user_id: int, course_name: str,
-                  source_lang: str, target_lang: str) -> Lecture:
+                  source_lang: str, target_lang: str,
+                  translation_enabled: bool = True,
+                  course_id: Optional[int] = None) -> Lecture:
     """开始一堂新课"""
+    session_number = None
+    if course_id:
+        # 锁定课程行后再分配课次，避免同一课程的并发开始请求得到相同节次。
+        locked_course = db.query(Course).filter(Course.id == course_id).with_for_update().first()
+        if not locked_course:
+            raise ValueError("课程不存在")
+        session_number = int(db.query(func.coalesce(func.max(Lecture.session_number), 0)).filter(
+            Lecture.course_id == course_id
+        ).scalar() or 0) + 1
     lecture = Lecture(
         user_id=user_id, course_name=course_name,
         source_lang=source_lang, target_lang=target_lang,
+        translation_enabled=translation_enabled,
+        course_id=course_id, session_number=session_number,
         status="recording", lecture_date=_now().date(),
         started_at=_now(),
     )
@@ -65,31 +79,81 @@ def stop_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture
         Transcription.lecture_id == lecture_id,
         Transcription.is_bookmarked == True,
     ).count()
+    prev_duration = int(lecture.duration_seconds or 0)
+    max_end_ms = db.query(func.max(Transcription.end_offset_ms)).filter(
+        Transcription.lecture_id == lecture_id,
+    ).scalar()
+    from_offsets = int(max_end_ms / 1000) if max_end_ms else 0
+    wall = 0
     if lecture.started_at and lecture.ended_at:
-        lecture.duration_seconds = int(
-            (lecture.ended_at - lecture.started_at).total_seconds()
-        )
+        wall = max(0, int((lecture.ended_at - lecture.started_at).total_seconds()))
+    # 首次结束用墙上时钟；补录后优先用字幕时间轴，且不短于已累计时长。
+    if prev_duration > 0:
+        lecture.duration_seconds = max(prev_duration, from_offsets)
+    else:
+        lecture.duration_seconds = wall or from_offsets
+    db.commit()
+    db.refresh(lecture)
+    return lecture
+
+
+def reopen_lecture_for_append(db: Session, lecture_id: int, user_id: int) -> Lecture:
+    """把已结束课堂重新打开为可录制，便于补录。
+
+    若该课已是 recording/paused，直接返回（paused 会恢复）。
+    若另有未结束课堂，拒绝，避免两堂并行。
+    """
+    active = get_active_lecture(db, user_id)
+    if active and int(active.id) != int(lecture_id):
+        raise ValueError("你还有未结束的课堂，请先继续录完或结束后再补录")
+
+    lecture = db.query(Lecture).filter(
+        Lecture.id == lecture_id, Lecture.user_id == user_id
+    ).first()
+    if not lecture:
+        raise LookupError("课堂不存在")
+
+    if lecture.status in {"recording", "paused"}:
+        if lecture.status == "paused":
+            return resume_lecture(db, lecture.id, user_id) or lecture
+        return lecture
+
+    if lecture.status != "completed":
+        raise ValueError("当前课堂状态无法补录")
+
+    lecture.status = "recording"
+    lecture.ended_at = None
+    # duration_seconds 保留为此前累计时长，结束时再与字幕时间轴取 max。
     db.commit()
     db.refresh(lecture)
     return lecture
 
 
 def begin_lecture_session(db: Session, user_id: int, course_name: str,
-                          source_lang: str, target_lang: str) -> tuple[Lecture, bool, Optional[Lecture]]:
+                          source_lang: str, target_lang: str,
+                          translation_enabled: bool = True,
+                          course_id: Optional[int] = None,
+                          force_new: bool = False) -> tuple[Lecture, bool, Optional[Lecture]]:
     """开始或恢复课堂。
 
-    若当前有已暂停的课堂，恢复同一堂课（保留已有字幕）。
-    若有仍在录制中的课堂，先结束再开新课。
-    返回 (当前课堂, 是否恢复暂停课, 被结束的旧课堂)。
+    默认：若有未结束课堂（recording / paused），继续同一堂课并保留字幕。
+    force_new=True：先结束旧课再开新课。
+    返回 (当前课堂, 是否续录, 被结束的旧课堂)。
     """
     active = get_active_lecture(db, user_id)
-    if active and active.status == "paused":
-        lecture = resume_lecture(db, active.id, user_id) or active
+    if active and not force_new:
+        if active.status == "paused":
+            lecture = resume_lecture(db, active.id, user_id) or active
+        else:
+            lecture = active
         return lecture, True, None
+
     stopped = None
     if active:
         stopped = stop_lecture(db, active.id, user_id)
-    lecture = start_lecture(db, user_id, course_name, source_lang, target_lang)
+    lecture = start_lecture(
+        db, user_id, course_name, source_lang, target_lang, translation_enabled, course_id,
+    )
     return lecture, False, stopped
 
 
@@ -129,10 +193,19 @@ def resume_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lectu
 
 
 def get_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]:
-    return db.query(Lecture).filter(
-        Lecture.id == lecture_id,
-        Lecture.user_id == user_id,
-    ).first()
+    lecture = db.query(Lecture).filter(Lecture.id == lecture_id).first()
+    if not lecture:
+        return None
+    if int(lecture.user_id) == int(user_id):
+        return lecture
+    from services.courses import lecture_on_public_course
+    if lecture_on_public_course(db, lecture):
+        return lecture
+    return None
+
+
+def can_manage_lecture(lecture: Lecture, user_id: int) -> bool:
+    return int(lecture.user_id) == int(user_id)
 
 
 # ─── 转录 (演示模式) ──────────────────────────────────────
@@ -142,9 +215,12 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
                      translated_text: str = None,
                      start_offset_ms: int | None = None,
                      end_offset_ms: int | None = None,
-                     engine: str = "default") -> Optional[dict]:
+                     engine: str = "default",
+                     *,
+                     allow_demo: bool = False) -> Optional[dict]:
     """
-    保存转录句子。如果有前端传来的真实识别文本则使用，否则使用演示数据
+    保存转录句子。课堂录音必须传入真实识别文本；
+    仅显式 allow_demo=True 时才允许写入演示句（开发调试用）。
     """
     # 锁定课堂行，确保多请求并发写入时 sentence_order 唯一且连续。
     lecture = db.query(Lecture).filter(
@@ -158,15 +234,20 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
     # 如果前端传来了真实识别文本，直接保存
     if source_text:
         src = source_text
-        tgt = translated_text or source_text
-    else:
-        # 演示模式
+        tgt = (translated_text or source_text) if lecture.translation_enabled else source_text
+    elif allow_demo:
+        # 演示模式（仅显式开启）
         if count >= len(_DEMO_SENTENCES):
             src = "Thank you for your attention. Any questions?"
         else:
             src = _DEMO_SENTENCES[count]
-        from services.translator import translate
-        tgt = translate(src, lecture.source_lang, lecture.target_lang)
+        if lecture.translation_enabled:
+            from services.translator import translate
+            tgt = translate(src, lecture.source_lang, lecture.target_lang)
+        else:
+            tgt = src
+    else:
+        return None
 
     offset = count * 8000 if start_offset_ms is None else max(0, start_offset_ms)
     end_offset = offset + 8000 if end_offset_ms is None else max(offset, end_offset_ms)
@@ -205,9 +286,12 @@ def transcribe_audio(db: Session, lecture_id: int, user_id: int,
 
 def get_transcriptions(db: Session, lecture_id: int, user_id: int,
                        limit: int = 50) -> list:
+    lecture = get_lecture(db, lecture_id, user_id)
+    if not lecture:
+        return []
     return db.query(Transcription).filter(
         Transcription.lecture_id == lecture_id,
-        Transcription.user_id == user_id,
+        Transcription.user_id == lecture.user_id,
     ).order_by(Transcription.sentence_order).limit(limit).all()
 
 

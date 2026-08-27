@@ -2,13 +2,14 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LiveTrans Voice - Login</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
   <link rel="stylesheet" href="../css/login.css">
   <script src="../shared/tailwind-config.js"></script>
-  <script defer src="../js/login.js"></script>
+  <script defer src="../js/login.js?v=2"></script>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 bg-surface">
 <!-- Main Content -->
@@ -41,8 +42,8 @@
 <div class="relative group input-focus-ring flex items-center border border-outline-variant rounded-2xl overflow-hidden bg-surface-container transition-all">
 <span class="material-symbols-outlined absolute left-4 text-outline group-focus-within:text-primary transition-colors">lock</span>
 <input id="passwordInput" class="w-full pl-12 pr-12 py-4 bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-outline-variant" placeholder="请输入密码" type="password" autocomplete="current-password">
-<button class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button">
-<span class="material-symbols-outlined">visibility</span>
+<button id="togglePassword" class="absolute right-4 text-outline hover:text-on-surface transition-colors" type="button" aria-label="显示密码" title="显示密码">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
 </button>
 </div>
 </div>

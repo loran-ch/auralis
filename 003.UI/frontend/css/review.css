@@ -35,6 +35,14 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
             outline: 2px solid #005ea1;
             background: #e8f1fa;
         }
-        #assistant-log {
-            max-height: 280px;
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        #transcript-filter .js-transcript-filter.is-active {
+            background: #005ea1;
+            color: #fff;
         }

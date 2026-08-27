@@ -7,12 +7,15 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>LiveTrans Voice - 课堂记录</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/history.css">
+<link rel="stylesheet" href="../shared/app-ux.css?v=1">
+<link rel="stylesheet" href="../shared/app-navigation.css?v=1">
 <script src="../shared/tailwind-config.js"></script>
 <script src="../shared/auth-client.js?v=2"></script>
+<script defer src="../shared/app-navigation.js?v=1"></script>
 </head>
 <body class="bg-background text-on-surface font-body min-h-screen pb-24">
 
@@ -20,7 +23,7 @@
 <header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b border-outline-variant/20">
   <div class="flex items-center justify-between px-4 h-16 max-w-screen-xl mx-auto">
     <div class="flex items-center gap-3">
-      <button class="hover:bg-surface-variant/50 p-2 rounded-full relative" onclick="document.getElementById('navMenu').classList.toggle('hidden')">
+      <button type="button" data-nav-toggle aria-controls="navMenu" aria-expanded="false" class="hover:bg-surface-variant/50 p-2 rounded-full relative">
         <span class="material-symbols-outlined text-primary text-2xl">menu</span>
       </button>
       <h1 class="text-lg font-extrabold text-primary tracking-tight">LiveTrans Voice</h1>
@@ -32,14 +35,16 @@
 </header>
 
 <!-- Dropdown Menu -->
-<div id="navMenu" class="hidden fixed top-14 left-4 z-[100] bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[180px]">
-  <a href="recorder.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low text-sm font-medium"><span class="material-symbols-outlined text-primary">mic</span>实时录音</a>
-  <a href="history.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low text-sm font-medium"><span class="material-symbols-outlined text-primary">history</span>课堂记录</a>
-  <a href="knowledge-cards.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low text-sm font-medium"><span class="material-symbols-outlined text-primary">star</span>知识卡片</a>
-  <a href="profile.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low text-sm font-medium"><span class="material-symbols-outlined text-primary">person</span>个人中心</a>
-  <div class="border-t border-outline-variant/10 my-1"></div>
-  <a href="login.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low text-sm font-medium text-error"><span class="material-symbols-outlined">logout</span>退出登录</a>
-</div>
+<nav id="navMenu" class="app-nav-menu hidden" aria-label="主导航">
+  <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
+  <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
+  <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
+  <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+  <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
+  <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
+  <div class="app-nav-divider"></div>
+  <a href="login.html?next=history.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
+</nav>
 
 <!-- Main -->
 <main class="pt-20 px-4 max-w-3xl mx-auto">
@@ -53,6 +58,15 @@
   <div class="relative mb-3">
     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
     <input id="search" class="w-full pl-12 pr-4 py-3.5 bg-white rounded-xl border-none shadow-sm focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-outline/60" placeholder="搜索课堂记录..." type="text">
+  </div>
+
+  <div class="flex items-center gap-2 mb-3">
+    <span class="material-symbols-outlined text-primary">school</span>
+    <select id="course-filter" class="flex-1 px-3 py-2.5 bg-white rounded-xl border-none shadow-sm focus:ring-2 focus:ring-primary/20 text-sm text-on-surface">
+      <option value="">全部课程</option>
+      <option value="unassigned">未归入课程的记录</option>
+    </select>
+    <a href="courses.html" class="text-xs text-primary font-semibold whitespace-nowrap">管理课程</a>
   </div>
 
   <!-- Date Filter -->
@@ -129,6 +143,8 @@ var searchTimer = null;
 var dateFromEl = document.getElementById('date-from');
 var dateToEl = document.getElementById('date-to');
 var dateClearEl = document.getElementById('date-clear');
+var courseFilterEl = document.getElementById('course-filter');
+var currentCourseFilter = '';
 
 function renderCards(result) {
   var data = result.items || result;
@@ -159,9 +175,10 @@ function renderCards(result) {
     var bookmarked = l.bookmark_count > 0;
     var num = startNum + idx + 1;
     // 高亮搜索关键词
-    var displayName = l.course_name || '未命名';
+    var rawDisplayName = l.title || (l.session_number ? (l.course_name || '未命名') + ' · 第 ' + l.session_number + ' 节课' : (l.course_name || '未命名'));
+    var displayName = escapeHtml(rawDisplayName);
     if (currentSearch) {
-      displayName = highlightMatch(displayName, currentSearch);
+      displayName = highlightMatch(rawDisplayName, currentSearch);
     }
 
     html += '<div class="group bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/10 hover:shadow-md hover:border-primary/20 transition-all cursor-pointer" onclick="location.href=\'review.html?id='+l.id+'\'">';
@@ -172,14 +189,23 @@ function renderCards(result) {
     html += '<span class="text-sm font-extrabold text-primary">#'+num+'</span><span class="text-sm font-semibold text-on-surface-variant">'+d+'</span><span class="text-sm text-outline">'+t+'</span></div>';
     html += '<div class="flex justify-between items-start mb-3">';
     html += '<div class="flex-1"><h3 class="text-lg font-bold text-on-surface group-hover:text-primary transition-colors">'+displayName+'</h3>';
-    html += '<p class="text-xs text-outline mt-1 flex items-center gap-3"><span class="px-2 py-0.5 bg-primary/5 rounded-full text-primary text-[10px] font-semibold">'+escapeHtml(l.source_lang||'')+' → '+escapeHtml(l.target_lang||'')+'</span></p></div>';
+    var languageLabel = l.translation_enabled === false ? escapeHtml(l.source_lang||'') + ' · 仅记录' : escapeHtml(l.source_lang||'')+' → '+escapeHtml(l.target_lang||'');
+    html += '<p class="text-xs text-outline mt-1 flex items-center gap-3"><span class="px-2 py-0.5 bg-primary/5 rounded-full text-primary text-[10px] font-semibold">'+languageLabel+'</span></p></div>';
     html += '<div class="flex items-center gap-3">';
     if (bookmarked) html += '<span class="flex items-center gap-1 text-tertiary text-xs font-semibold"><span class="material-symbols-outlined text-sm" style="font-variation-settings:\'FILL\' 1;">star</span>'+l.bookmark_count+'</span>';
     html += '<span class="bg-primary/5 text-primary text-xs font-bold px-3 py-1.5 rounded-full">'+min+'</span>';
     html += '</div></div>';
-    html += '<div class="flex items-center justify-between"><p class="text-sm text-on-surface-variant">'+l.sentence_count+' 个句子</p>';
-    html += '<button class="text-error/60 hover:text-error hover:bg-error/5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="event.stopPropagation();del('+l.id+')"><span class="material-symbols-outlined text-sm">delete</span>删除</button>';
-    html += '</div></div>';
+    html += '<div class="flex items-center justify-between gap-2 flex-wrap"><p class="text-sm text-on-surface-variant">'+l.sentence_count+' 个句子</p>';
+    html += '<div class="flex items-center gap-1 flex-wrap" onclick="event.stopPropagation()">';
+    html += '<button type="button" class="text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="appendRecording('+l.id+')" title="在已有字幕后续录"><span class="material-symbols-outlined text-sm">mic</span>追加录音</button>';
+    html += '<label class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer" title="上传课件/PDF/图片">';
+    html += '<span class="material-symbols-outlined text-sm">upload_file</span>上传资料';
+    html += '<input type="file" class="hidden js-history-upload" data-id="'+l.id+'" accept=".jpg,.jpeg,.png,.webp,.pdf,.ppt,.pptx,image/*,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">';
+    html += '</label>';
+    html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="exportBriefing('+l.id+', this)" title="导出简报 Markdown"><span class="material-symbols-outlined text-sm">description</span>导出简报</button>';
+    html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="downloadMaterials('+l.id+', this)" title="打包下载简报与附件"><span class="material-symbols-outlined text-sm">folder_zip</span>资料包</button>';
+    html += '<button class="text-error/60 hover:text-error hover:bg-error/5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="del('+l.id+')"><span class="material-symbols-outlined text-sm">delete</span>删除</button>';
+    html += '</div></div></div>';
   });
 
   // Pagination — 搜索结果过多时也显示分页
@@ -193,6 +219,117 @@ function renderCards(result) {
   html += '<p class="text-center text-xs text-outline">共 '+total+' 条记录' + (currentSearch ? '（搜索: ' + escapeHtml(currentSearch) + '）' : '') + '</p>';
 
   el.innerHTML = html;
+  bindHistoryMaterialActions();
+}
+
+function historyToast(message) {
+  var existing = document.getElementById('history-toast');
+  if (existing) existing.remove();
+  var node = document.createElement('div');
+  node.id = 'history-toast';
+  node.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-[90%] rounded-xl bg-on-surface px-4 py-2.5 text-sm text-white shadow-lg';
+  node.textContent = message;
+  document.body.appendChild(node);
+  setTimeout(function () { node.remove(); }, 2800);
+}
+
+function downloadAuthorized(url, fallbackName, button) {
+  var original = button ? button.innerHTML : '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = '准备中…';
+  }
+  return fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } })
+    .then(function (response) {
+      if (!response.ok) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          var detail = data.detail;
+          if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+          throw new Error(detail || ('下载失败 (' + response.status + ')'));
+        });
+      }
+      var disposition = response.headers.get('Content-Disposition') || '';
+      var match = /filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)\"?/i.exec(disposition);
+      var filename = fallbackName;
+      if (match) {
+        try { filename = decodeURIComponent(match[1] || match[2]); } catch (e) { filename = match[1] || match[2] || fallbackName; }
+      }
+      return response.blob().then(function (blob) { return { blob: blob, filename: filename }; });
+    })
+    .then(function (payload) {
+      var objectUrl = URL.createObjectURL(payload.blob);
+      var link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = payload.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
+      historyToast('已开始下载');
+    })
+    .catch(function (err) {
+      historyToast(err.message || '下载失败');
+    })
+    .then(function () {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    });
+}
+
+function exportBriefing(lectureId, button) {
+  downloadAuthorized('/api/lectures/' + lectureId + '/briefing/export?format=md', '简报.md', button);
+}
+
+function appendRecording(lectureId) {
+  if (!lectureId) return;
+  window.location.href = 'recorder.html?append=' + encodeURIComponent(lectureId);
+}
+
+function downloadMaterials(lectureId, button) {
+  downloadAuthorized('/api/lectures/' + lectureId + '/materials/export', '资料包.zip', button);
+}
+
+function uploadHistoryMaterial(lectureId, file, input) {
+  if (!file) return;
+  var form = new FormData();
+  form.append('file', file);
+  form.append('category', 'material');
+  form.append('title', file.name || '学习资料');
+  form.append('create_item', 'false');
+  historyToast('正在上传…');
+  fetch('/api/lectures/' + lectureId + '/attachments', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + TOKEN },
+    body: form
+  }).then(function (response) {
+    return response.json().catch(function () { return {}; }).then(function (data) {
+      if (!response.ok) {
+        var detail = data.detail;
+        if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+        throw new Error(detail || '上传失败');
+      }
+      return data;
+    });
+  }).then(function () {
+    historyToast('资料已上传');
+  }).catch(function (err) {
+    historyToast(err.message || '上传失败');
+  }).then(function () {
+    if (input) input.value = '';
+  });
+}
+
+function bindHistoryMaterialActions() {
+  document.querySelectorAll('.js-history-upload').forEach(function (input) {
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      var lectureId = Number(input.getAttribute('data-id'));
+      if (!file || !lectureId) return;
+      uploadHistoryMaterial(lectureId, file, input);
+    });
+  });
 }
 
 function escapeHtml(str) {
@@ -218,6 +355,8 @@ function loadPage(p, search, dateFrom, dateTo) {
   if (search) url += '&search=' + encodeURIComponent(search);
   if (dateFrom) url += '&date_from=' + encodeURIComponent(dateFrom);
   if (dateTo) url += '&date_to=' + encodeURIComponent(dateTo);
+  if (currentCourseFilter === 'unassigned') url += '&unassigned=true';
+  else if (currentCourseFilter) url += '&course_id=' + encodeURIComponent(currentCourseFilter);
   fetch(url, { headers: { 'Authorization': 'Bearer ' + TOKEN } })
     .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(renderCards)
@@ -276,6 +415,28 @@ if (dateClearEl) {
     if (dateFromEl) dateFromEl.value = '';
     if (dateToEl) dateToEl.value = '';
     applyDateFilter();
+  });
+}
+
+function loadCourseFilters() {
+  if (!TOKEN || !courseFilterEl) return;
+  fetch('/api/courses?include_inactive=true', { headers: { 'Authorization': 'Bearer ' + TOKEN } })
+    .then(function (response) { return response.ok ? response.json() : []; })
+    .then(function (courses) {
+      (courses || []).forEach(function (course) {
+        var option = document.createElement('option');
+        option.value = course.id;
+        option.textContent = course.name + (course.term ? ' · ' + course.term : '') + (course.is_active ? '' : '（已归档）');
+        courseFilterEl.appendChild(option);
+      });
+    });
+}
+
+if (courseFilterEl) {
+  courseFilterEl.addEventListener('change', function () {
+    currentCourseFilter = this.value;
+    currentPage = 1;
+    loadPage(1, currentSearch, currentDateFrom, currentDateTo);
   });
 }
 
@@ -411,6 +572,7 @@ renderCards = function (result) {
 if (!TOKEN) {
   el.innerHTML = '<div class="text-center py-16"><span class="material-symbols-outlined text-5xl text-outline/30 mb-4 block">lock</span><p class="text-on-surface-variant">请先<a href="login.html" class="text-primary font-bold">登录</a></p></div>';
 } else {
+  loadCourseFilters();
   loadPage(1, '');
 }
 

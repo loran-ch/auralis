@@ -2,27 +2,32 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LiveTrans Voice - 知识卡片</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/knowledge-cards.css">
+<link rel="stylesheet" href="../shared/app-ux.css?v=1">
+<link rel="stylesheet" href="../shared/app-navigation.css?v=1">
 <script src="../shared/tailwind-config.js"></script>
 <script src="../shared/auth-client.js?v=2"></script>
+<script defer src="../shared/app-navigation.js?v=1"></script>
 </head><body class="bg-background text-on-background font-sans min-h-screen pb-24">
 
 <!-- Top AppBar -->
 <header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim">
 <div class="flex items-center justify-between px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
 <div class="flex items-center gap-4">
-<button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full relative" onclick="document.getElementById('navMenu').classList.toggle('hidden')"><span class="material-symbols-outlined text-primary" data-icon="menu">menu</span></button>
-<div id="navMenu" class="hidden fixed top-14 left-4 z-[100] bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[180px]">
-  <a href="recorder.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">mic</span>实时录音</a>
-  <a href="history.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">history</span>课堂记录</a>
-  <a href="knowledge-cards.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">star</span>知识卡片</a>
-  <a href="profile.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">person</span>个人中心</a>
-  <div class="border-t border-outline-variant/10 my-1"></div>
-  <a href="login.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-error"><span class="material-symbols-outlined text-xl">logout</span>退出登录</a>
-</div>
+<button type="button" data-nav-toggle aria-controls="navMenu" aria-expanded="false" class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full relative"><span class="material-symbols-outlined text-primary" data-icon="menu">menu</span></button>
+<nav id="navMenu" class="app-nav-menu hidden" aria-label="主导航">
+  <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
+  <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
+  <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
+  <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+  <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
+  <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
+  <div class="app-nav-divider"></div>
+  <a href="login.html?next=knowledge-cards.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
+</nav>
 <h1 class="font-display-current-source text-display-current-source text-primary dark:text-primary-fixed-dim">知识点收藏</h1>
 </div>
 <a class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center" href="profile.html"><span class="material-symbols-outlined text-on-surface-variant" data-icon="account_circle">account_circle</span></a>

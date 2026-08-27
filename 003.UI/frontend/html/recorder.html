@@ -2,37 +2,56 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LiveTrans Voice - 实时录音</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="../css/recorder.css?v=3">
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
+  <link rel="stylesheet" href="../shared/app-navigation.css?v=1">
+  <link rel="stylesheet" href="../css/recorder.css?v=4">
   <script src="../shared/tailwind-config.js"></script>
-  <script src="../shared/auth-client.js?v=2"></script>
+<script src="../shared/auth-client.js?v=2"></script>
+<script defer src="../shared/app-navigation.js?v=1"></script>
   <script>
 </script>
-<script defer src="../js/recorder.js?v=19"></script>
+<script defer src="../js/recorder.js?v=29"></script>
 </head>
-<body class="bg-surface text-on-surface font-display-current-source min-h-screen flex flex-col">
+<body class="bg-surface text-on-surface font-display-current-source h-dvh max-h-dvh overflow-hidden flex flex-col">
 <!-- Top AppBar -->
 <header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim flex items-center justify-between px-margin-mobile h-16 w-full max-w-screen-xl mx-auto">
 <div class="flex items-center gap-4">
-<button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center relative" onclick="document.getElementById('navMenu').classList.toggle('hidden')"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">menu</span></button>
-<div id="navMenu" class="hidden fixed top-14 left-4 z-[100] bg-white rounded-2xl shadow-2xl border border-outline-variant/20 py-2 min-w-[180px]">
-  <a href="recorder.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">mic</span>实时录音</a>
-  <a href="history.html" data-require-auth data-auth-reason="登录后即可查看课堂记录" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">history</span>课堂记录</a>
-  <a href="knowledge-cards.html" data-require-auth data-auth-reason="登录后即可查看知识卡片" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">star</span>知识卡片</a>
-  <a href="profile.html" data-require-auth data-auth-reason="登录后即可进入个人中心" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-on-surface"><span class="material-symbols-outlined text-primary text-xl">person</span>个人中心</a>
-  <div class="border-t border-outline-variant/10 my-1"></div>
-  <a id="nav-auth-link" href="login.html?next=recorder.html" class="flex items-center gap-3 px-5 py-3 hover:bg-surface-container-low transition-colors text-sm font-medium text-primary"><span class="material-symbols-outlined text-xl">login</span>登录 / 注册</a>
-</div>
+<button type="button" data-nav-toggle aria-controls="navMenu" aria-expanded="false" class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full flex items-center justify-center relative"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">menu</span></button>
+<nav id="navMenu" class="app-nav-menu hidden" aria-label="主导航">
+  <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
+  <a href="history.html" data-nav-page data-require-auth data-auth-reason="登录后即可查看课堂记录"><span class="material-symbols-outlined">history</span>课堂记录</a>
+  <a href="courses.html" data-nav-page data-require-auth data-auth-reason="登录后即可管理课程"><span class="material-symbols-outlined">school</span>课程中心</a>
+  <a href="assistant.html" data-nav-page data-require-auth data-auth-reason="登录后即可使用学习助手"><span class="material-symbols-outlined">psychology</span>学习助手</a>
+  <a href="knowledge-cards.html" data-nav-page data-require-auth data-auth-reason="登录后即可查看知识卡片"><span class="material-symbols-outlined">star</span>知识卡片</a>
+  <a href="profile.html" data-nav-page data-require-auth data-auth-reason="登录后即可进入个人中心"><span class="material-symbols-outlined">person</span>个人中心</a>
+  <div class="app-nav-divider"></div>
+  <a id="nav-auth-link" href="login.html?next=recorder.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
+</nav>
 <div class="flex flex-col">
 <h1 class="font-display-current-source text-primary dark:text-primary-fixed-dim font-bold text-lg leading-tight" id="course-name">课堂录音</h1>
+<div class="flex items-center gap-2 mt-0.5">
+  <select id="course-select" class="max-w-[168px] bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer text-on-surface-variant" title="选择课程">
+    <option value="">临时课堂（不归入课程）</option>
+  </select>
+  <a href="courses.html" class="text-[11px] text-primary hover:underline" data-require-auth data-auth-reason="登录后即可管理课程">管理</a>
+</div>
 <div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
   <select id="source-lang" class="bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer" title="识别语言">
     <option value="en">🇬🇧 English</option>
   </select>
-  <span>→</span>
+  <label class="inline-flex items-center gap-1 cursor-pointer" title="关闭后只保存原文和录音，不调用翻译服务">
+    <input id="translation-enabled" type="checkbox" class="rounded border-outline-variant text-primary focus:ring-primary/20">
+    <span>翻译</span>
+  </label>
+  <label class="inline-flex items-center gap-1 cursor-pointer" title="可选：同步保存摄像头画面；摄像头不可用时仍会正常录音">
+    <input id="video-enabled" type="checkbox" class="rounded border-outline-variant text-primary focus:ring-primary/20">
+    <span>录像</span>
+  </label>
+  <span id="translation-arrow">→</span>
   <select id="target-lang" class="bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer" title="翻译语言">
     <option value="zh-CN">🇨🇳 简体中文</option>
   </select>
@@ -51,47 +70,65 @@
 </div>
 </header>
 <!-- Main Content Canvas -->
-<main class="flex-1 min-h-0 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col">
+<main class="flex-1 min-h-0 mt-16 mb-40 px-margin-mobile max-w-screen-xl mx-auto w-full flex flex-col overflow-hidden">
+<!-- 异常中断后的续录提示 -->
+<div id="resumeBanner" class="hidden shrink-0 mt-3 mb-1 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
+  <p class="text-sm font-semibold text-on-surface">发现未结束的课堂</p>
+  <p id="resumeBannerInfo" class="text-xs text-on-surface-variant mt-1 leading-relaxed"></p>
+  <div class="flex gap-2 mt-3">
+    <button type="button" id="resumeContinueBtn" class="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90">继续录制</button>
+    <button type="button" id="resumeFinishBtn" class="flex-1 py-2.5 rounded-xl border border-outline-variant text-on-surface-variant text-sm font-medium hover:bg-surface-container-low">结束旧课</button>
+  </div>
+</div>
 <section id="feature-intro" class="flex-1 overflow-y-auto pt-stack-lg pb-4">
   <div class="max-w-lg mx-auto">
     <p class="text-[11px] font-semibold tracking-widest uppercase text-primary mb-1">LiveTrans Voice</p>
-    <h2 id="feature-intro-title" class="text-2xl font-extrabold text-ink-deep leading-tight mb-2">课堂实时翻译助手</h2>
-    <p id="feature-intro-subtitle" class="text-sm text-on-surface-variant mb-5">听外语课、记重点、课后复习。打开就能看它能做什么。</p>
+    <h2 id="feature-intro-title" class="text-2xl font-extrabold text-ink-deep leading-tight mb-2">课堂学习助手</h2>
+    <p id="feature-intro-subtitle" class="text-sm text-on-surface-variant mb-5">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <div id="feature-intro-items" class="space-y-3">
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-          <span class="material-symbols-outlined">subtitles</span>
+          <span class="material-symbols-outlined">school</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">实时双语字幕</h3>
-          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">授课语音转文字，原文和译文同步出现，像字幕一样往下走。</p>
+          <h3 class="font-bold text-ink-deep text-sm">课前：课程中心建课</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">创建课程并设置授课/翻译语言；录音前选好课程，课后记录会自动归档，方便按学期管理。</p>
         </div>
       </div>
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
-          <span class="material-symbols-outlined">translate</span>
+          <span class="material-symbols-outlined">subtitles</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">多语种听译</h3>
-          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">选择授课语言和你的母语，适合留学课堂、讲座和讨论课。</p>
+          <h3 class="font-bold text-ink-deep text-sm">课上：实时双语字幕</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">麦克风录音后，原文与译文同步滚动。也可关闭翻译，只保留录音与文字，适合母语课堂。</p>
         </div>
       </div>
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
-        <div class="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center flex-shrink-0">
+        <div class="w-10 h-10 rounded-xl bg-accent-purple/10 text-accent-purple flex items-center justify-center flex-shrink-0">
           <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">star</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">一键收藏知识点</h3>
-          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">把句子标成重要、疑问、考点或定义，课后变成知识卡片。</p>
+          <h3 class="font-bold text-ink-deep text-sm">课上：一键收藏重点</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">听到关键句点星标，标成重要 / 疑问 / 考点 / 定义；课后在「知识卡片」里集中复习。</p>
         </div>
       </div>
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-          <span class="material-symbols-outlined">history</span>
+          <span class="material-symbols-outlined">description</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">课堂回看</h3>
-          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">保存完整记录和录音，双语对照回放，从收藏处跳回原句。</p>
+          <h3 class="font-bold text-ink-deep text-sm">课后：自动课堂简报</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">结束录音后生成概览、重点、术语与待确认作业；每条结论可跳回字幕时间点核对。</p>
+        </div>
+      </div>
+      <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
+        <div class="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+          <span class="material-symbols-outlined">folder_zip</span>
+        </div>
+        <div>
+          <h3 class="font-bold text-ink-deep text-sm">资料：上传与一键导出</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">在课堂记录里上传 PPT / PDF / 图片；可导出简报 Markdown，或打包下载全部学习资料。</p>
         </div>
       </div>
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
@@ -99,26 +136,28 @@
           <span class="material-symbols-outlined">psychology</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">课后课堂助教</h3>
-          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">自动生成简报，还能问「这节课讲了什么」「有哪些考点」。</p>
+          <h3 class="font-bold text-ink-deep text-sm">随时：学习助手问答</h3>
+          <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">按课程检索笔记、拆解作业，也可粘贴报错/题目截图提问；回答会附上可跳转的课堂证据。</p>
         </div>
       </div>
     </div>
-    <p id="feature-intro-footer" class="text-center text-xs text-outline mt-5">点下方绿色麦克风开始 · 未登录会提示注册</p>
+    <p id="feature-intro-footer" class="text-center text-xs text-outline mt-5">建议先在「课程中心」建课 → 回来点绿色麦克风开始 · 未登录会提示注册</p>
   </div>
 </section>
+<video id="capture-preview" class="hidden" muted playsinline></video>
 <!-- Transcript History (Faded) -->
-<section class="flex-1 min-h-0 overflow-y-auto pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg" id="history-section" style="display:none">
+<section class="flex-1 min-h-0 overflow-y-auto overscroll-contain pt-stack-lg space-y-stack-lg fade-recede pb-stack-lg" id="history-section" style="display:none">
 <!-- 动态插入字幕 -->
 </section>
-<!-- Current Active Transcription Area -->
-<section class="py-stack-lg border-t border-surface-variant bg-surface" id="current-section" style="display:none">
+<!-- Current Active Transcription Area：固定在历史下方，不被长上下文顶出屏幕 -->
+<section class="shrink-0 border-t border-surface-variant bg-surface pt-3 pb-2 max-h-[38vh] overflow-y-auto overscroll-contain shadow-[0_-6px_16px_-12px_rgba(0,0,0,0.18)]" id="current-section" style="display:none">
 <div class="flex justify-between items-start gap-gutter">
-<div class="space-y-stack-sm flex-1">
-<h2 class="font-display-current-source text-xl sm:text-2xl font-bold text-ink-deep leading-tight break-words" id="current-source"></h2>
-<p class="font-display-current-trans text-base sm:text-lg text-secondary break-words" id="current-target"></p>
+<div class="space-y-stack-sm flex-1 min-w-0">
+<p id="previous-context" class="hidden text-sm text-on-surface-variant/80 leading-snug break-words"></p>
+<h2 class="font-display-current-source text-xl sm:text-2xl font-bold text-ink-deep leading-tight break-words max-h-[4.8em] overflow-y-auto" id="current-source"></h2>
+<p class="font-display-current-trans text-base sm:text-lg text-secondary break-words max-h-[3.6em] overflow-y-auto" id="current-target"></p>
 </div>
-<button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group" id="star-btn">
+<button class="elastic-star p-3 rounded-full bg-tertiary-fixed hover:bg-tertiary-fixed-dim transition-colors group shrink-0" id="star-btn">
 <span class="material-symbols-outlined text-tertiary text-2xl">star</span>
 </button>
 </div>
@@ -152,8 +191,8 @@
 </button>
 <div id="guide-popover" class="hidden absolute bottom-full left-0 mb-3 w-[min(20.5rem,calc(100vw-2rem))] z-[60]">
   <div class="guide-popover-card bg-white rounded-2xl shadow-2xl border border-outline-variant/20 p-4 max-h-[min(62vh,28rem)] overflow-y-auto">
-    <h3 id="guide-popover-title" class="text-base font-bold text-on-surface mb-1">课堂实时翻译助手</h3>
-    <p id="guide-popover-subtitle" class="text-xs text-on-surface-variant mb-3">听外语课、记重点、课后复习。</p>
+    <h3 id="guide-popover-title" class="text-base font-bold text-on-surface mb-1">课堂学习助手</h3>
+    <p id="guide-popover-subtitle" class="text-xs text-on-surface-variant mb-3">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <div id="guide-popover-items" class="space-y-2.5 text-sm text-on-surface"></div>
     <p id="guide-popover-footer" class="text-[11px] text-outline mt-3"></p>
   </div>
@@ -196,8 +235,8 @@
 <!-- 功能介绍弹窗 -->
 <div id="featureModal" class="hidden fixed inset-0 z-[80] bg-black/30 flex items-center justify-center px-4">
   <div class="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] overflow-y-auto p-6 shadow-2xl">
-    <h3 id="feature-modal-title" class="text-lg font-bold text-on-surface mb-1">课堂实时翻译助手</h3>
-    <p id="feature-modal-subtitle" class="text-sm text-on-surface-variant mb-4">课堂实时翻译，听懂、记下、课后还能问。</p>
+    <h3 id="feature-modal-title" class="text-lg font-bold text-on-surface mb-1">课堂学习助手</h3>
+    <p id="feature-modal-subtitle" class="text-sm text-on-surface-variant mb-4">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <ul id="feature-modal-items" class="space-y-3 text-sm text-on-surface"></ul>
     <button id="featureModalClose" type="button" class="mt-5 w-full py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90">知道了</button>
   </div>
@@ -220,11 +259,13 @@
 </div>
 
 <!-- 命名弹窗 -->
-<div id="nameModal" class="hidden fixed inset-0 z-60 bg-black/30 flex items-center justify-center">
+<div id="nameModal" class="hidden fixed inset-0 z-60 bg-black/30 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl w-[90%] max-w-sm p-6 shadow-2xl">
     <h3 class="text-lg font-bold text-on-surface mb-1">课堂已保存</h3>
-    <p class="text-sm text-secondary mb-4" id="nameModalInfo"></p>
-    <input id="nameInput" class="w-full px-4 py-3 border border-outline-variant rounded-xl text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 mb-3" placeholder="请输入课堂名称" maxlength="100">
+    <p class="text-sm text-secondary mb-3" id="nameModalSummary"></p>
+    <div id="nameModalMeta" class="mb-4 rounded-xl bg-surface-container-low/80 px-3.5 py-3 space-y-2 text-sm text-on-surface-variant"></div>
+    <label for="nameInput" class="block text-xs font-medium text-on-surface-variant mb-1.5">课堂标题</label>
+    <input id="nameInput" class="w-full px-4 py-3 border border-outline-variant rounded-xl text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20 mb-4" placeholder="请输入课堂标题" maxlength="100">
     <div class="flex gap-3">
       <button id="nameCancel" class="flex-1 py-3 text-secondary font-medium hover:bg-surface-container-low rounded-xl transition-colors">跳过</button>
       <button id="nameSave" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">保存</button>

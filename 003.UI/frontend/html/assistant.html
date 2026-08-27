@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveTrans Voice - 学习助手</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
+  <link rel="stylesheet" href="../shared/app-navigation.css?v=1">
+  <link rel="stylesheet" href="../css/assistant.css?v=2">
+  <script src="../shared/tailwind-config.js"></script>
+  <script src="../shared/auth-client.js?v=2"></script>
+  <script defer src="../shared/app-navigation.js?v=1"></script>
+</head>
+<body class="assistant-page min-h-screen bg-slate-50 text-slate-800">
+  <header class="app-topbar sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+      <div class="flex items-center gap-1">
+        <button type="button" data-nav-toggle aria-controls="navMenu" aria-expanded="false" class="app-icon-button" title="打开导航"><span class="material-symbols-outlined">menu</span></button>
+        <nav id="navMenu" class="app-nav-menu hidden" aria-label="主导航">
+          <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
+          <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
+          <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
+          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+          <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
+          <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
+          <div class="app-nav-divider"></div>
+          <a href="login.html?next=assistant.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
+        </nav>
+        <a href="history.html" class="hidden sm:flex items-center gap-2 text-sm font-semibold text-primary hover:opacity-80"><span class="material-symbols-outlined">arrow_back</span>课堂记录</a>
+      </div>
+      <div class="text-center"><h1 class="font-bold text-primary">学习助手</h1><p class="text-xs text-slate-500">基于已保存的课堂记录回答</p></div>
+      <a href="courses.html" class="text-sm font-semibold text-primary">课程中心</a>
+    </div>
+  </header>
+
+  <main class="mx-auto grid max-w-6xl gap-4 p-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <aside class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:min-h-[calc(100vh-112px)]">
+      <div class="course-tabs mb-3" role="tablist" aria-label="知识范围来源">
+        <button type="button" role="tab" id="scope-tab-mine" data-tab="mine" aria-selected="true" class="course-tab is-active">
+          我的课程<span id="scope-mine-count" class="course-tab-count">0</span>
+        </button>
+        <button type="button" role="tab" id="scope-tab-public" data-tab="public" aria-selected="false" class="course-tab">
+          公开课程<span id="scope-public-count" class="course-tab-count">0</span>
+        </button>
+      </div>
+      <label class="mb-1 block text-xs font-semibold text-slate-600" for="course-select">知识范围</label>
+      <select id="course-select" class="w-full rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary">
+        <option value="">选择一门课程</option>
+      </select>
+      <p id="scope-help" class="mt-2 text-xs leading-5 text-slate-500">选择课程后可查询全部课次，或仅勾选部分课次。</p>
+      <p id="scope-public-hint" class="mt-1 hidden text-xs leading-5 text-slate-500">公开课程为只读范围：可基于课主已完成课次提问。</p>
+      <div id="lecture-options" class="mt-3 hidden rounded-xl bg-slate-50 p-3">
+        <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold"><input id="all-lectures" type="checkbox" checked class="rounded border-slate-300 text-primary focus:ring-primary">整门课程</label>
+        <div id="lecture-list" class="mt-2 max-h-44 space-y-2 overflow-y-auto text-sm"></div>
+      </div>
+      <button id="new-thread" type="button" class="mt-4 flex w-full items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-white hover:opacity-90"><span class="material-symbols-outlined text-[18px]">add</span>新建会话</button>
+
+      <div class="mt-6 border-t border-slate-100 pt-4">
+        <h2 class="text-xs font-bold tracking-wide text-slate-500">历史会话</h2>
+        <div id="thread-list" class="mt-2 space-y-1"><p class="py-3 text-sm text-slate-400">选择课程后显示会话</p></div>
+      </div>
+    </aside>
+
+    <section class="flex min-h-[calc(100vh-112px)] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-100 px-5 py-4">
+        <div class="flex items-start justify-between gap-3"><div><h2 id="thread-title" class="font-bold">新学习会话</h2><p id="thread-scope" class="mt-1 text-xs text-slate-500">请先选择课程范围</p></div><button id="delete-thread" class="hidden rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500" title="删除会话"><span class="material-symbols-outlined">delete</span></button></div>
+        <p id="resource-note" class="mt-2 text-xs leading-5 text-slate-500">优先依据课堂记录回答；也可上传报错/题目截图。每次最多 500 字，并自动带上最近 6 条对话作上下文。</p>
+        <div id="capability-bar" class="mt-3 flex flex-wrap gap-2">
+          <button type="button" class="js-chip rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary" data-hint="search_notebook" data-q="老师是怎么讲这个概念的？">检索笔记</button>
+          <button type="button" class="js-chip rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary" data-hint="list_assignments" data-q="这门课目前有哪些作业？">拆解作业</button>
+          <button type="button" class="js-chip rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary" data-hint="get_notebook_overview" data-q="本课有哪些材料？">本课材料</button>
+        </div>
+      </div>
+      <div id="message-list" class="flex-1 space-y-4 overflow-y-auto p-5"></div>
+      <form id="ask-form" class="border-t border-slate-100 p-4">
+        <div id="screenshot-preview" class="mb-2 hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
+          <div class="flex items-start gap-3">
+            <img id="screenshot-thumb" alt="截图预览" class="h-16 w-16 rounded-lg object-cover border border-slate-200">
+            <div class="min-w-0 flex-1">
+              <p id="screenshot-status" class="text-xs font-semibold text-slate-600">已选择截图</p>
+              <p id="screenshot-ocr" class="mt-1 max-h-12 overflow-hidden text-[11px] leading-4 text-slate-400"></p>
+            </div>
+            <button id="screenshot-clear" type="button" class="rounded-lg p-1 text-slate-400 hover:bg-white hover:text-red-500" title="移除截图"><span class="material-symbols-outlined text-[18px]">close</span></button>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <label class="self-end cursor-pointer rounded-xl border border-slate-200 bg-white p-3 text-slate-500 hover:border-primary/40 hover:text-primary" title="上传截图提问（也可 Ctrl+V 粘贴）">
+            <span class="material-symbols-outlined text-[20px] block">add_photo_alternate</span>
+            <input id="screenshot-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+          </label>
+          <div class="min-w-0 flex-1">
+            <textarea id="question" rows="2" maxlength="500" placeholder="输入问题，或上传/粘贴报错截图… Enter 发送，Shift+Enter 换行" class="min-h-[48px] max-h-40 w-full resize-y rounded-xl border-slate-200 text-sm focus:border-primary focus:ring-primary"></textarea>
+            <div class="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-0.5 text-[11px] leading-4 text-slate-400">
+              <span id="composer-hint">Enter 发送 · Shift+Enter 换行 · 模型会参考最近 6 条对话</span>
+              <span id="char-count" class="tabular-nums text-slate-500">0 / 500</span>
+            </div>
+          </div>
+          <button id="send" class="self-end rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50" type="submit" disabled title="Enter 发送">发送</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+  var state = {
+    courses: [],
+    publicCourses: [],
+    lectures: [],
+    thread: null,
+    busy: false,
+    screenshot: null,
+    listTab: 'mine'
+  };
+  var params = new URLSearchParams(window.location.search);
+  var presetCourse = params.get('course_id') || '';
+  var presetLecture = params.get('lecture_id') || '';
+  var presetHint = params.get('hint') || '';
+  var presetAssignmentId = params.get('assignment_id') || '';
+  var presetQuestion = params.get('q') || params.get('question') || '';
+  var WELCOME_HTML = '<div class="rounded-xl bg-primary/5 p-4 text-sm leading-6 text-slate-600">'
+    + '<p class="font-semibold text-slate-700 mb-1">我可以帮你：</p>'
+    + '<p>1. <b>检索笔记</b> — 在字幕、简报和附件里找老师怎么讲的。</p>'
+    + '<p>2. <b>拆解作业</b> — 列出作业并给出学习步骤（不代写答卷）。</p>'
+    + '<p>3. <b>截图提问</b> — 上传报错/题目截图，结合课堂记录解释。</p>'
+    + '<p class="mt-2 text-xs text-slate-500">每次最多 500 字；Enter 发送，Shift+Enter 换行。也可点快捷入口或上传截图。</p>'
+    + '</div>';
+  var MAX_QUESTION_CHARS = 500;
+  var $ = function (id) { return document.getElementById(id); };
+  function api(path, options) {
+    options = options || {};
+    var headers = options.body ? { 'Content-Type': 'application/json' } : {};
+    return fetch('/api' + path, { method: options.method || 'GET', headers: headers, body: options.body }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) { if (!r.ok) throw new Error(data.detail || '请求失败'); return data; });
+    });
+  }
+  function escapeHtml(value) { var box = document.createElement('div'); box.textContent = value || ''; return box.innerHTML; }
+  function publicOthers() {
+    return (state.publicCourses || []).filter(function (course) { return !course.is_owner; });
+  }
+  function coursesForTab() {
+    return state.listTab === 'public' ? publicOthers() : (state.courses || []);
+  }
+  function syncScopeTabs() {
+    var onMine = state.listTab !== 'public';
+    var mineTab = $('scope-tab-mine');
+    var publicTab = $('scope-tab-public');
+    mineTab.classList.toggle('is-active', onMine);
+    publicTab.classList.toggle('is-active', !onMine);
+    mineTab.setAttribute('aria-selected', onMine ? 'true' : 'false');
+    publicTab.setAttribute('aria-selected', onMine ? 'false' : 'true');
+    $('scope-mine-count').textContent = String((state.courses || []).length);
+    $('scope-public-count').textContent = String(publicOthers().length);
+    $('scope-public-hint').classList.toggle('hidden', onMine);
+    $('scope-help').textContent = onMine
+      ? '选择课程后可查询全部课次，或仅勾选部分课次。'
+      : '选择公开课程后，可基于课主已完成课次提问或勾选部分课次。';
+  }
+  function fillCourseSelect(preferredId) {
+    var list = coursesForTab();
+    var current = preferredId != null ? String(preferredId) : String($('course-select').value || '');
+    var options = '<option value="">选择一门课程</option>' + list.map(function (course) {
+      var owner = state.listTab === 'public' && course.owner_nickname
+        ? ' · ' + course.owner_nickname
+        : '';
+      return '<option value="' + course.id + '">' + escapeHtml(course.name) + escapeHtml(owner) + '</option>';
+    }).join('');
+    $('course-select').innerHTML = options;
+    if (current && list.some(function (course) { return String(course.id) === current; })) {
+      $('course-select').value = current;
+    } else {
+      $('course-select').value = '';
+    }
+    syncScopeTabs();
+  }
+  function setListTab(tab) {
+    state.listTab = tab === 'public' ? 'public' : 'mine';
+    fillCourseSelect('');
+    return loadCourseScope();
+  }
+  function scopeIds() { return $('all-lectures').checked ? [] : Array.prototype.slice.call(document.querySelectorAll('.lecture-check:checked')).map(function (node) { return Number(node.value); }); }
+  function selectedCourse() { return Number($('course-select').value || 0); }
+  function formatScope() {
+    var course = coursesForTab().filter(function (item) { return item.id === selectedCourse(); })[0]
+      || (state.courses || []).concat(state.publicCourses || []).filter(function (item) { return item.id === selectedCourse(); })[0];
+    var ids = scopeIds();
+    if (!course) return ids.length ? '指定课堂记录 · ' + ids.length + ' 节课' : '请先选择课程范围';
+    var prefix = state.listTab === 'public' ? '公开 · ' : '';
+    return ids.length ? prefix + course.name + ' · ' + ids.length + ' 节指定课堂' : prefix + course.name + ' · 全部已完成课次';
+  }
+  function syncComposer() {
+    var value = $('question').value || '';
+    var len = value.length;
+    var counter = $('char-count');
+    var hint = $('composer-hint');
+    var nearLimit = len >= MAX_QUESTION_CHARS - 40;
+    var atLimit = len >= MAX_QUESTION_CHARS;
+    counter.textContent = len + ' / ' + MAX_QUESTION_CHARS;
+    counter.classList.toggle('text-amber-600', nearLimit && !atLimit);
+    counter.classList.toggle('font-semibold', nearLimit);
+    counter.classList.toggle('text-red-500', atLimit);
+    counter.classList.toggle('text-slate-500', !nearLimit);
+    if (atLimit) {
+      hint.textContent = '已达 500 字上限，请精简后再发送';
+      hint.classList.add('text-red-500');
+    } else if (nearLimit) {
+      hint.textContent = '接近上限（最多 500 字）· Enter 发送 · 最近 6 条对话会作为上下文';
+      hint.classList.remove('text-red-500');
+    } else {
+      hint.textContent = 'Enter 发送 · Shift+Enter 换行 · 模型会参考最近 6 条对话';
+      hint.classList.remove('text-red-500');
+    }
+    var canSend = !state.busy && (!!value.trim() || !!(state.screenshot && (state.screenshot.file || state.screenshot.url)));
+    $('send').disabled = !canSend;
+    var box = $('question');
+    box.style.height = 'auto';
+    box.style.height = Math.min(160, Math.max(48, box.scrollHeight)) + 'px';
+  }
+  function setBusy(value) {
+    state.busy = value;
+    $('question').disabled = value;
+    $('screenshot-input').disabled = value;
+    syncComposer();
+  }
+  function imageCitation(items) {
+    if (!items || !items.length) return null;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] && items[i].type === 'image' && items[i].url) return items[i];
+    }
+    return null;
+  }
+  function citations(items) {
+    if (!items || !items.length) return '';
+    var evidence = items.filter(function (item) { return item && item.type !== 'image'; });
+    if (!evidence.length) return '';
+    return '<div class="mt-3 space-y-1">' + evidence.map(function (item) {
+      var label = item.lecture_title || (item.session_number ? '第 ' + item.session_number + ' 节课' : '课堂记录');
+      var text = item.translated_text || item.source_text || '';
+      var href = item.lecture_id ? 'review.html?id=' + encodeURIComponent(item.lecture_id) : '#';
+      return '<a href="' + href + '" class="block rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:border-primary/40 hover:text-primary"><b>' + escapeHtml(label) + ' #' + escapeHtml(String(item.sentence_order || '')) + '</b> · ' + escapeHtml(text.slice(0, 100)) + '</a>';
+    }).join('') + '</div>';
+  }
+  function formatAssistantText(value) {
+    var html = escapeHtml(value || '').replace(/\n/g, '<br>');
+    html = html.replace(/【补充说明】([\s\S]*?)【\/补充说明】/g, function (_match, body) {
+      return '<div class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950"><div class="mb-1 text-[11px] font-semibold tracking-wide text-amber-700">补充说明 · 非课堂原文</div><div class="leading-6">' + body + '</div></div>';
+    });
+    html = html.replace(/【补充说明】([\s\S]*)$/g, function (_match, body) {
+      return '<div class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-950"><div class="mb-1 text-[11px] font-semibold tracking-wide text-amber-700">补充说明 · 非课堂原文</div><div class="leading-6">' + body + '</div></div>';
+    });
+    return html;
+  }
+  function toolCardHtml(payload) {
+    if (!payload) return '';
+    var label = payload.label || payload.tool || '工具';
+    var body = '';
+    if (payload.tool === 'search_notebook') {
+      body = (payload.hits || []).map(function (item) {
+        return '<div class="text-xs text-slate-600">[' + escapeHtml(item.ref || '') + '] ' + escapeHtml((item.text || '').slice(0, 80)) + '</div>';
+      }).join('') || '<div class="text-xs text-slate-400">未命中课堂句子</div>';
+    } else if (payload.tool === 'list_assignments') {
+      body = (payload.assignments || []).map(function (item) {
+        return '<div class="text-xs text-slate-600"><b>' + escapeHtml(item.assignment_id || '') + '</b> ' + escapeHtml((item.text || '').slice(0, 80)) + '</div>';
+      }).join('') || '<div class="text-xs text-slate-400">暂无作业</div>';
+    } else if (payload.tool === 'breakdown_assignment') {
+      body = '<div class="text-xs text-slate-600">' + escapeHtml((payload.text || '').slice(0, 120)) + '</div>';
+      if (payload.steps_hint && payload.steps_hint.length) {
+        body += '<ol class="mt-1 list-decimal pl-4 text-xs text-slate-500">' + payload.steps_hint.map(function (step) {
+          return '<li>' + escapeHtml(step) + '</li>';
+        }).join('') + '</ol>';
+      }
+    } else if (payload.tool === 'get_notebook_overview') {
+      body = (payload.lectures || []).map(function (item) {
+        return '<div class="text-xs text-slate-600">' + escapeHtml(item.lecture_title || '') + ' · 字幕 ' + (item.sentence_count || 0) + ' · 作业 ' + (item.assignment_count || 0) + '</div>';
+      }).join('') || '<div class="text-xs text-slate-400">暂无材料</div>';
+    }
+    return '<div class="mb-2 rounded-xl border border-slate-200 bg-white px-3 py-2"><div class="mb-1 text-[11px] font-semibold text-primary">' + escapeHtml(label) + '</div>' + body + '</div>';
+  }
+  function messageHtml(message) {
+    var user = message.role === 'user';
+    var image = imageCitation(message.citations);
+    var content = user
+      ? escapeHtml(message.content || '').replace(/\n/g, '<br>')
+      : formatAssistantText(message.content || '');
+    var imageHtml = image
+      ? '<a href="' + escapeHtml(image.url) + '" target="_blank" class="mb-2 block"><img src="' + escapeHtml(image.url) + '" alt="提问截图" class="max-h-40 rounded-xl border border-white/30 object-contain ' + (user ? 'border-white/40' : 'border-slate-200') + '"></a>'
+      : '';
+    return '<div class="flex ' + (user ? 'justify-end' : 'justify-start') + '"><div class="max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 ' + (user ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700') + '">' + imageHtml + content + (user ? '' : citations(message.citations)) + '</div></div>';
+  }
+  function renderMessages(messages) {
+    $('message-list').dataset.hasMessages = messages && messages.length ? 'true' : 'false';
+    $('message-list').innerHTML = messages && messages.length ? messages.map(messageHtml).join('') : WELCOME_HTML;
+    $('message-list').scrollTop = $('message-list').scrollHeight;
+  }
+  function appendMessage(message) {
+    var host = document.createElement('div');
+    host.innerHTML = messageHtml(message);
+    var node = host.firstElementChild;
+    $('message-list').appendChild(node);
+    $('message-list').dataset.hasMessages = 'true';
+    $('message-list').scrollTop = $('message-list').scrollHeight;
+    return node;
+  }
+  function setStreamText(node, value) {
+    node.innerHTML = formatAssistantText(value || '');
+  }
+  function startStreamingMessages(question, image) {
+    if ($('message-list').dataset.hasMessages !== 'true') $('message-list').innerHTML = '';
+    appendMessage({
+      role: 'user',
+      content: question,
+      citations: image && image.url ? [{ type: 'image', url: image.url, ocr_text: image.ocr_text || '' }] : []
+    });
+    var wrapper = document.createElement('div');
+    wrapper.className = 'flex justify-start';
+    var bubble = document.createElement('div');
+    bubble.className = 'max-w-[88%] rounded-2xl bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-700';
+    var tools = document.createElement('div');
+    tools.className = 'space-y-1';
+    var text = document.createElement('div');
+    text.className = 'whitespace-pre-wrap break-words';
+    text.textContent = '正在准备…';
+    var cite = document.createElement('div');
+    bubble.appendChild(tools); bubble.appendChild(text); bubble.appendChild(cite); wrapper.appendChild(bubble);
+    $('message-list').appendChild(wrapper);
+    $('message-list').scrollTop = $('message-list').scrollHeight;
+    return { tools: tools, text: text, citations: cite, pending: true, buffer: '' };
+  }
+  function clearScreenshot() {
+    state.screenshot = null;
+    $('screenshot-input').value = '';
+    $('screenshot-preview').classList.add('hidden');
+    $('screenshot-ocr').textContent = '';
+    $('screenshot-status').textContent = '已选择截图';
+    if ($('screenshot-thumb').src && $('screenshot-thumb').src.indexOf('blob:') === 0) {
+      try { URL.revokeObjectURL($('screenshot-thumb').src); } catch (e) {}
+    }
+    $('screenshot-thumb').removeAttribute('src');
+    syncComposer();
+  }
+  function showScreenshotPreview(file, meta) {
+    state.screenshot = meta || { file: file, url: '', ocr_text: '', ocr_status: 'local' };
+    $('screenshot-preview').classList.remove('hidden');
+    if (file) {
+      $('screenshot-thumb').src = URL.createObjectURL(file);
+    } else if (meta && meta.url) {
+      $('screenshot-thumb').src = meta.url;
+    }
+    $('screenshot-status').textContent = meta && meta.ocr_status === 'ready'
+      ? '截图已识别，可直接发送'
+      : (meta && meta.ocr_status === 'empty' ? '未识别到文字，建议补充说明' : '已选择截图');
+    $('screenshot-ocr').textContent = (meta && meta.ocr_text) ? meta.ocr_text.slice(0, 160) : ((meta && meta.error_message) || '');
+    syncComposer();
+  }
+  function acceptScreenshotFile(file) {
+    if (!file || !/^image\/(jpeg|png|webp)$/i.test(file.type || '')) {
+      alert('仅支持 jpg / png / webp 截图');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('截图不能超过 10MB');
+      return;
+    }
+    showScreenshotPreview(file, { file: file, url: '', ocr_text: '', ocr_status: 'local' });
+  }
+  function submitComposer() {
+    if (state.busy) return;
+    var value = $('question').value.trim();
+    if (!value && !state.screenshot) return;
+    $('question').value = '';
+    syncComposer();
+    ask(value);
+  }
+  function uploadScreenshot(threadId, file) {
+    var body = new FormData();
+    body.append('file', file);
+    return fetch('/api/assistant/threads/' + threadId + '/screenshots', {
+      method: 'POST',
+      body: body
+    }).then(function (response) {
+      return response.json().catch(function () { return {}; }).then(function (data) {
+        if (!response.ok) {
+          var detail = data.detail;
+          if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+          throw new Error(detail || '截图上传失败');
+        }
+        return data;
+      });
+    });
+  }
+  function parseSseFrame(frame) {
+    var event = 'message', data = [];
+    frame.split(/\r?\n/).forEach(function (line) {
+      if (line.indexOf('event:') === 0) event = line.slice(6).trim();
+      if (line.indexOf('data:') === 0) data.push(line.slice(5).trim());
+    });
+    if (!data.length) return null;
+    return { event: event, data: JSON.parse(data.join('\n')) };
+  }
+  function consumeSse(response, onEvent) {
+    if (!response.body || !response.body.getReader) return Promise.reject(new Error('浏览器不支持流式响应'));
+    var reader = response.body.getReader(), decoder = new TextDecoder('utf-8'), buffer = '';
+    function read() {
+      return reader.read().then(function (part) {
+        buffer += decoder.decode(part.value || new Uint8Array(), { stream: !part.done });
+        if (part.done) buffer += decoder.decode();
+        var boundary;
+        while ((boundary = buffer.search(/\r?\n\r?\n/)) >= 0) {
+          var frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + (buffer.charAt(boundary) === '\r' ? 4 : 2));
+          if (frame.trim()) {
+            var parsed = parseSseFrame(frame);
+            if (parsed) onEvent(parsed);
+          }
+        }
+        if (part.done) return;
+        return read();
+      });
+    }
+    return read();
+  }
+  function streamAsk(threadId, question, onEvent, options) {
+    options = options || {};
+    var body = { question: question || '' };
+    if (options.hint) body.hint = options.hint;
+    if (options.assignment_id) body.assignment_id = options.assignment_id;
+    if (options.image_url) body.image_url = options.image_url;
+    if (options.image_ocr) body.image_ocr = options.image_ocr;
+    return fetch('/api/assistant/threads/' + threadId + '/ask/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+      body: JSON.stringify(body)
+    }).then(function (response) {
+      if (!response.ok) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          var detail = data.detail;
+          if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+          throw new Error(detail || ('流式请求失败 (' + response.status + ')'));
+        });
+      }
+      return consumeSse(response, onEvent);
+    });
+  }
+  function renderThread(thread, messages) {
+    state.thread = thread || null;
+    $('thread-title').textContent = thread ? thread.title : '新学习会话';
+    $('thread-scope').textContent = formatScope();
+    $('delete-thread').classList.toggle('hidden', !thread);
+    renderMessages(messages || []);
+  }
+  function renderThreads(items) {
+    $('thread-list').innerHTML = items.length ? items.map(function (thread) {
+      return '<button type="button" data-thread="' + thread.id + '" class="thread-item w-full rounded-xl px-3 py-2 text-left hover:bg-primary/5"><span class="block truncate text-sm font-medium">' + escapeHtml(thread.title) + '</span><span class="mt-0.5 block truncate text-xs text-slate-400">' + escapeHtml(thread.last_message_preview || '尚未提问') + '</span></button>';
+    }).join('') : '<p class="py-3 text-sm text-slate-400">还没有会话</p>';
+    document.querySelectorAll('.thread-item').forEach(function (node) { node.addEventListener('click', function () { loadThread(Number(node.dataset.thread)); }); });
+  }
+  function loadThreads() { var courseId = selectedCourse(); if (!courseId) { renderThreads([]); return Promise.resolve(); } return api('/assistant/threads?course_id=' + courseId).then(renderThreads); }
+  function loadThread(id) { return api('/assistant/threads/' + id).then(function (data) { renderThread(data, data.messages); }); }
+  function renderLectures() {
+    var list = $('lecture-list');
+    list.innerHTML = state.lectures.length ? state.lectures.map(function (lecture) {
+      var title = lecture.title || ('第 ' + (lecture.session_number || '—') + ' 节课');
+      return '<label class="flex cursor-pointer items-center gap-2"><input class="lecture-check rounded border-slate-300 text-primary focus:ring-primary" type="checkbox" value="' + lecture.id + '"><span class="truncate">' + escapeHtml(title) + '</span></label>';
+    }).join('') : '<p class="text-xs text-slate-400">该课程还没有已完成的课堂记录</p>';
+    if (presetLecture) { var node = document.querySelector('.lecture-check[value="' + presetLecture + '"]'); if (node) { $('all-lectures').checked = false; node.checked = true; } }
+    document.querySelectorAll('.lecture-check').forEach(function (node) { node.addEventListener('change', function () { if (node.checked) $('all-lectures').checked = false; $('thread-scope').textContent = formatScope(); }); });
+  }
+  function loadCourseScope() {
+    var courseId = selectedCourse(); state.thread = null; renderThread(null, []); presetLecture = '';
+    if (!courseId) { state.lectures = []; $('lecture-options').classList.add('hidden'); return loadThreads(); }
+    return api('/lectures?course_id=' + courseId + '&size=100').then(function (data) {
+      state.lectures = data.items || []; $('lecture-options').classList.remove('hidden'); $('all-lectures').checked = true; renderLectures(); return loadThreads();
+    });
+  }
+  function createThread() {
+    var courseId = selectedCourse();
+    var ids = scopeIds();
+    if (!courseId && !ids.length) throw new Error('请先选择课程或课堂记录');
+    return api('/assistant/threads', { method: 'POST', body: JSON.stringify({ course_id: courseId || null, lecture_ids: ids }) }).then(function (thread) { renderThread(thread, []); return loadThreads(); });
+  }
+  function ask(question, options) {
+    options = options || {};
+    var pendingShot = state.screenshot;
+    if (state.busy) return;
+    if (!question && !(pendingShot && (pendingShot.file || pendingShot.url))) return;
+    setBusy(true);
+    var streamView = null, completed = false;
+    var displayQuestion = question || '请根据截图帮我看看这是什么问题或错误，并结合课堂笔记解释。';
+    var preparation = state.thread ? Promise.resolve() : createThread();
+    preparation.then(function () {
+      if (!state.thread || !state.thread.id) throw new Error('请先选择课程并创建学习会话');
+      if (pendingShot && pendingShot.file && !pendingShot.url) {
+        $('screenshot-status').textContent = '正在识别截图…';
+        return uploadScreenshot(state.thread.id, pendingShot.file).then(function (uploaded) {
+          state.screenshot = {
+            file: pendingShot.file,
+            url: uploaded.url,
+            ocr_text: uploaded.ocr_text || '',
+            ocr_status: uploaded.ocr_status,
+            error_message: uploaded.error_message
+          };
+          showScreenshotPreview(null, state.screenshot);
+          return state.screenshot;
+        });
+      }
+      return pendingShot;
+    }).then(function (shot) {
+      streamView = startStreamingMessages(displayQuestion, shot);
+      var askOptions = {
+        hint: options.hint || '',
+        assignment_id: options.assignment_id || '',
+        image_url: shot && shot.url ? shot.url : '',
+        image_ocr: shot && shot.ocr_text ? shot.ocr_text : ''
+      };
+      clearScreenshot();
+      return streamAsk(state.thread.id, displayQuestion, function (event) {
+        if (event.event === 'tool_start') {
+          var tip = document.createElement('div');
+          tip.className = 'mb-1 text-[11px] text-slate-400';
+          tip.textContent = '正在调用 · ' + (event.data.tool || '工具');
+          streamView.tools.appendChild(tip);
+          $('message-list').scrollTop = $('message-list').scrollHeight;
+          return;
+        }
+        if (event.event === 'tool_result') {
+          var card = document.createElement('div');
+          card.innerHTML = toolCardHtml(event.data.result || {});
+          if (card.firstElementChild) streamView.tools.appendChild(card.firstElementChild);
+          $('message-list').scrollTop = $('message-list').scrollHeight;
+          return;
+        }
+        if (event.event === 'delta') {
+          if (streamView.pending) { streamView.buffer = ''; streamView.pending = false; }
+          streamView.buffer += event.data.content || '';
+          setStreamText(streamView.text, streamView.buffer);
+          $('message-list').scrollTop = $('message-list').scrollHeight;
+          return;
+        }
+        if (event.event === 'done') {
+          completed = true;
+          var finalAnswer = event.data.answer || streamView.buffer || '课堂助手未返回内容。';
+          setStreamText(streamView.text, finalAnswer);
+          streamView.citations.innerHTML = citations(event.data.citations || []);
+          state.thread = event.data.thread || state.thread;
+          $('thread-title').textContent = (state.thread && state.thread.title) || '学习会话';
+          $('delete-thread').classList.remove('hidden');
+          $('message-list').scrollTop = $('message-list').scrollHeight;
+          return;
+        }
+        if (event.event === 'error') throw new Error(event.data.message || '流式回答失败');
+      }, askOptions);
+    }).then(function () {
+      if (!completed) throw new Error('回答连接意外结束，请重试');
+      return loadThreads();
+    }).catch(function (err) {
+      if (streamView && !completed) setStreamText(streamView.text, '回答生成失败：' + (err.message || '请重试'));
+      else alert(err.message || '提问失败');
+    }).then(function () { setBusy(false); });
+  }
+  $('ask-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    submitComposer();
+  });
+  $('question').addEventListener('input', syncComposer);
+  $('question').addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter') return;
+    // 中文输入法选词阶段不触发发送。
+    if (event.isComposing || event.keyCode === 229) return;
+    if (event.shiftKey) return;
+    event.preventDefault();
+    submitComposer();
+  });
+  $('question').addEventListener('paste', function (event) {
+    var items = event.clipboardData && event.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image/') === 0) {
+        var file = items[i].getAsFile();
+        if (file) {
+          event.preventDefault();
+          acceptScreenshotFile(file);
+        }
+        break;
+      }
+    }
+  });
+  $('screenshot-input').addEventListener('change', function () {
+    var file = $('screenshot-input').files && $('screenshot-input').files[0];
+    if (!file) return;
+    acceptScreenshotFile(file);
+    $('screenshot-input').value = '';
+  });
+  $('screenshot-clear').addEventListener('click', clearScreenshot);
+  syncComposer();
+  document.querySelectorAll('.js-chip').forEach(function (node) {
+    node.addEventListener('click', function () {
+      var hint = node.getAttribute('data-hint') || '';
+      var q = node.getAttribute('data-q') || '';
+      if (hint === 'list_assignments' || hint === 'breakdown_assignment') {
+        ask(q || '请列出作业并帮我拆解学习步骤', { hint: hint === 'list_assignments' ? 'list_assignments' : 'breakdown_assignment' });
+        return;
+      }
+      ask(q || '请检索相关课堂笔记', { hint: hint || 'search_notebook' });
+    });
+  });
+  $('new-thread').addEventListener('click', function () { renderThread(null, []); });
+  $('all-lectures').addEventListener('change', function () { if ($('all-lectures').checked) document.querySelectorAll('.lecture-check').forEach(function (node) { node.checked = false; }); $('thread-scope').textContent = formatScope(); });
+  $('delete-thread').addEventListener('click', function () { if (!state.thread || !confirm('删除这个学习会话？')) return; api('/assistant/threads/' + state.thread.id, { method: 'DELETE' }).then(function () { renderThread(null, []); return loadThreads(); }).catch(function (err) { alert(err.message); }); });
+  var presetReady = (presetLecture && !presetCourse) ? api('/lectures/' + encodeURIComponent(presetLecture)).then(function (lecture) {
+    presetCourse = lecture.course_id ? String(lecture.course_id) : '';
+    if (!presetCourse) {
+      state.lectures = [lecture];
+    }
+  }) : Promise.resolve();
+  presetReady.then(function () {
+    return Promise.all([api('/courses'), api('/courses/public')]);
+  }).then(function (results) {
+    state.courses = results[0] || [];
+    state.publicCourses = results[1] || [];
+    if (presetCourse) {
+      var inMine = state.courses.some(function (course) { return String(course.id) === String(presetCourse); });
+      var inPublic = publicOthers().some(function (course) { return String(course.id) === String(presetCourse); });
+      state.listTab = (!inMine && inPublic) ? 'public' : 'mine';
+      fillCourseSelect(presetCourse);
+      $('course-select').value = presetCourse;
+      return loadCourseScope();
+    }
+    fillCourseSelect('');
+    if (presetLecture && state.lectures.length) {
+      $('course-select').insertAdjacentHTML('beforeend', '<option value="0">本节课堂（未归类）</option>');
+      $('course-select').value = '0';
+      $('lecture-options').classList.remove('hidden');
+      $('all-lectures').checked = false;
+      renderLectures();
+      return loadThreads();
+    }
+    return loadCourseScope();
+  }).then(function () {
+    if (!presetQuestion && !presetHint && !presetAssignmentId) return;
+    var question = presetQuestion;
+    if (!question && presetAssignmentId) question = '请拆解作业 ' + presetAssignmentId;
+    if (!question && presetHint === 'list_assignments') question = '这门课目前有哪些作业？';
+    if (!question && presetHint === 'search_notebook') question = '请检索相关课堂笔记';
+    if (!question && presetHint === 'get_notebook_overview') question = '本课有哪些材料？';
+    if (!question) return;
+    ask(question, {
+      hint: presetHint || (presetAssignmentId ? 'breakdown_assignment' : ''),
+      assignment_id: presetAssignmentId || ''
+    });
+  }).catch(function (err) { $('scope-help').textContent = err.message || '课程加载失败'; });
+  $('scope-tab-mine').addEventListener('click', function () { setListTab('mine'); });
+  $('scope-tab-public').addEventListener('click', function () { setListTab('public'); });
+  $('course-select').addEventListener('change', loadCourseScope);
+  renderMessages([]);
+})();
+</script>
+</body>
+</html>

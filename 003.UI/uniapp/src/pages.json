@@ -6,6 +6,8 @@
     { "path": "pages/history/index", "style": { "navigationStyle": "custom", "enablePullDownRefresh": true } },
     { "path": "pages/review/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/cards/index", "style": { "navigationStyle": "custom", "enablePullDownRefresh": true } },
+    { "path": "pages/courses/index", "style": { "navigationStyle": "custom", "enablePullDownRefresh": true } },
+    { "path": "pages/assistant/index", "style": { "navigationStyle": "custom" } },
     { "path": "pages/profile/index", "style": { "navigationStyle": "custom", "enablePullDownRefresh": true } },
     { "path": "pages/admin/index", "style": { "navigationStyle": "custom" } }
   ],

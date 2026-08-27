@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveTrans Voice - 课程中心</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
+  <link rel="stylesheet" href="../shared/app-navigation.css?v=1">
+  <link rel="stylesheet" href="../css/courses.css?v=2">
+  <script src="../shared/tailwind-config.js"></script>
+  <script src="../shared/auth-client.js?v=2"></script>
+  <script defer src="../shared/app-navigation.js?v=1"></script>
+</head>
+<body class="courses-page bg-surface text-on-surface min-h-screen font-[Inter]">
+  <header class="app-topbar sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-outline-variant/20">
+    <div class="h-16 px-4 max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-1">
+        <button type="button" data-nav-toggle aria-controls="navMenu" aria-expanded="false" class="app-icon-button" title="打开导航"><span class="material-symbols-outlined">menu</span></button>
+        <nav id="navMenu" class="app-nav-menu hidden" aria-label="主导航">
+          <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
+          <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
+          <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
+          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+          <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
+          <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
+          <div class="app-nav-divider"></div>
+          <a href="login.html?next=courses.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
+        </nav>
+        <a href="recorder.html" class="font-extrabold text-primary hidden sm:flex items-center gap-2"><span class="material-symbols-outlined">arrow_back</span>LiveTrans Voice</a>
+      </div>
+      <a href="recorder.html" class="app-primary-action"><span class="material-symbols-outlined text-lg">mic</span><span class="hidden sm:inline">开始录音</span></a>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto p-4 md:p-8">
+    <div class="mb-6">
+      <p class="text-xs tracking-widest font-bold text-primary">COURSE CENTER</p>
+      <h1 class="text-3xl font-extrabold mt-1">课程中心</h1>
+      <p class="text-sm text-on-surface-variant mt-2">创建课程后，每次录音会自动归档为第几节课，并保留课后简报和音频记录。管理员可将课程公开给其他登录用户只读浏览。</p>
+    </div>
+    <div class="grid lg:grid-cols-[340px_1fr] gap-6">
+      <aside class="space-y-5">
+        <form id="course-form" class="bg-white border border-outline-variant/20 rounded-2xl p-5 shadow-sm space-y-3">
+          <h2 class="font-bold text-lg">新建课程</h2>
+          <input name="name" required maxlength="256" placeholder="课程名称，例如：Python 程序设计" class="w-full rounded-xl border-outline-variant/40 text-sm" />
+          <div class="grid grid-cols-2 gap-2">
+            <input name="term" maxlength="64" placeholder="学期（可选）" class="w-full rounded-xl border-outline-variant/40 text-sm" />
+            <input name="professor_name" maxlength="128" placeholder="授课教师（可选）" class="w-full rounded-xl border-outline-variant/40 text-sm" />
+          </div>
+          <input name="room" maxlength="64" placeholder="教室（可选）" class="w-full rounded-xl border-outline-variant/40 text-sm" />
+          <div class="grid grid-cols-2 gap-2">
+            <select name="source_lang" class="rounded-xl border-outline-variant/40 text-sm"><option value="en">英语</option><option value="zh-CN">中文</option><option value="ja">日语</option><option value="de">德语</option></select>
+            <select name="target_lang" class="rounded-xl border-outline-variant/40 text-sm"><option value="zh-CN">翻译为中文</option><option value="en">翻译为英语</option><option value="ja">翻译为日语</option></select>
+          </div>
+          <label class="flex items-center gap-2 text-sm"><input name="translation_enabled" type="checkbox" class="rounded text-primary">课堂中翻译</label>
+          <details class="text-sm text-on-surface-variant">
+            <summary class="cursor-pointer">添加固定上课时间（可选）</summary>
+            <div class="grid grid-cols-3 gap-2 mt-2">
+              <select name="day_of_week" class="rounded-xl border-outline-variant/40 text-xs"><option value="">星期</option><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select>
+              <input name="start_time" type="time" class="rounded-xl border-outline-variant/40 text-xs">
+              <input name="end_time" type="time" class="rounded-xl border-outline-variant/40 text-xs">
+            </div>
+          </details>
+          <button class="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-white">创建课程</button>
+          <p id="form-message" class="text-xs hidden"></p>
+        </form>
+        <section class="course-list-panel bg-white border border-outline-variant/20 rounded-2xl p-3 shadow-sm">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="course-tabs flex-1" role="tablist" aria-label="课程列表">
+              <button type="button" role="tab" id="tab-mine" data-tab="mine" aria-selected="true" aria-controls="course-list" class="course-tab is-active">
+                我的课程<span id="mine-count" class="course-tab-count">0</span>
+              </button>
+              <button type="button" role="tab" id="tab-public" data-tab="public" aria-selected="false" aria-controls="public-course-list" class="course-tab">
+                公开课程<span id="public-count" class="course-tab-count">0</span>
+              </button>
+            </div>
+            <button id="refresh" class="text-sm text-primary shrink-0 px-1" type="button">刷新</button>
+          </div>
+          <p id="public-tab-hint" class="hidden text-xs text-on-surface-variant mb-2 px-1">其他用户公开的课程，可只读查看已完成课次与简报。</p>
+          <div id="course-list" role="tabpanel" aria-labelledby="tab-mine" class="space-y-2"><p class="text-sm text-on-surface-variant p-3">加载中…</p></div>
+          <div id="public-course-list" role="tabpanel" aria-labelledby="tab-public" class="space-y-2 hidden"><p class="text-sm text-on-surface-variant p-3">加载中…</p></div>
+        </section>
+      </aside>
+      <section id="course-detail" class="min-h-[420px] bg-white border border-outline-variant/20 rounded-2xl p-6 shadow-sm">
+        <div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center text-on-surface-variant"><span class="material-symbols-outlined text-5xl text-primary/50">school</span><p class="mt-3 font-medium">选择或创建一门课程</p><p class="text-sm mt-1">开始录音时选择它，系统会自动排列第一节、第二节……</p></div>
+      </section>
+    </div>
+  </main>
+  <script>
+  (function () {
+    var API = '/api', courses = [], publicCourses = [], activeId = null, activeSource = 'mine', listTab = 'mine';
+    function escapeHtml(value) { var el = document.createElement('div'); el.textContent = value == null ? '' : String(value); return el.innerHTML; }
+    function currentUser() {
+      try { return JSON.parse(localStorage.getItem('livetrans_user') || 'null') || {}; } catch (e) { return {}; }
+    }
+    function isAdminRole() {
+      var role = currentUser().role || '';
+      return role === 'admin' || role === 'super_admin';
+    }
+    function publicOthers() {
+      return publicCourses.filter(function (course) { return !course.is_owner; });
+    }
+    function api(path, opts) {
+      opts = opts || {}; var token = localStorage.getItem('livetrans_token') || '';
+      return fetch(API + path, { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: opts.body ? JSON.stringify(opts.body) : undefined })
+        .then(function (response) { return response.json().catch(function () { return {}; }).then(function (body) { if (!response.ok) throw new Error(body.detail || '请求失败'); return body; }); });
+    }
+    function duration(value) { var mins = Math.floor((value || 0) / 60); return Math.floor(mins / 60) + '小时' + (mins % 60) + '分'; }
+    function day(value) { return ['','周一','周二','周三','周四','周五','周六','周日'][value] || ''; }
+    function findCourse(id) {
+      var mine = courses.find(function (c) { return c.id === id; });
+      if (mine) return { course: mine, source: 'mine' };
+      var pub = publicCourses.find(function (c) { return c.id === id; });
+      if (pub) return { course: pub, source: 'public' };
+      return null;
+    }
+    function courseRowHtml(course, source) {
+      var selected = course.id === activeId && activeSource === source;
+      var badge = course.is_public ? '<span class="ml-1 text-[10px] text-primary font-semibold">公开</span>' : '';
+      var owner = source === 'public' && course.owner_nickname ? '<div class="text-xs text-on-surface-variant mt-1">课主 · ' + escapeHtml(course.owner_nickname) + '</div>' : '';
+      return '<button data-id="' + course.id + '" data-source="' + source + '" class="course-row w-full text-left rounded-xl border p-3 transition ' + (selected ? 'border-primary bg-primary/5' : 'border-outline-variant/25 bg-white hover:bg-surface-container-low') + '"><div class="font-semibold text-sm truncate"><span class="inline-block w-2 h-2 rounded-full mr-2" style="background:' + escapeHtml(course.color) + '"></span>' + escapeHtml(course.name) + badge + '</div><div class="text-xs text-on-surface-variant mt-1">' + escapeHtml(course.term || '未标注学期') + (course.room ? ' · ' + escapeHtml(course.room) : '') + '</div>' + owner + '</button>';
+    }
+    function bindList(rootId) {
+      var root = document.getElementById(rootId);
+      root.querySelectorAll('.course-row').forEach(function (button) {
+        button.onclick = function () { showCourse(Number(button.dataset.id), button.dataset.source); };
+      });
+    }
+    function syncTabs() {
+      var mineTab = document.getElementById('tab-mine');
+      var publicTab = document.getElementById('tab-public');
+      var mineList = document.getElementById('course-list');
+      var publicList = document.getElementById('public-course-list');
+      var hint = document.getElementById('public-tab-hint');
+      var onMine = listTab === 'mine';
+      mineTab.classList.toggle('is-active', onMine);
+      publicTab.classList.toggle('is-active', !onMine);
+      mineTab.setAttribute('aria-selected', onMine ? 'true' : 'false');
+      publicTab.setAttribute('aria-selected', onMine ? 'false' : 'true');
+      mineList.classList.toggle('hidden', !onMine);
+      publicList.classList.toggle('hidden', onMine);
+      hint.classList.toggle('hidden', onMine);
+      document.getElementById('mine-count').textContent = String(courses.length);
+      document.getElementById('public-count').textContent = String(publicOthers().length);
+    }
+    function setListTab(tab, opts) {
+      opts = opts || {};
+      listTab = tab === 'public' ? 'public' : 'mine';
+      syncTabs();
+      if (!opts.skipSelect) {
+        if (listTab === 'mine') {
+          if (activeSource !== 'mine' || !courses.some(function (c) { return c.id === activeId; })) {
+            if (courses.length) showCourse(courses[0].id, 'mine');
+            else document.getElementById('course-detail').innerHTML = '<div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center text-on-surface-variant"><span class="material-symbols-outlined text-5xl text-primary/50">school</span><p class="mt-3 font-medium">还没有课程</p><p class="text-sm mt-1">先在上方创建一门课程吧。</p></div>';
+          }
+        } else {
+          var others = publicOthers();
+          if (activeSource !== 'public' || !others.some(function (c) { return c.id === activeId; })) {
+            if (others.length) showCourse(others[0].id, 'public');
+            else document.getElementById('course-detail').innerHTML = '<div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center text-on-surface-variant"><span class="material-symbols-outlined text-5xl text-primary/50">public</span><p class="mt-3 font-medium">暂无公开课程</p><p class="text-sm mt-1">管理员公开课程后，会出现在这里供只读浏览。</p></div>';
+          }
+        }
+      }
+    }
+    function renderList() {
+      var mineRoot = document.getElementById('course-list');
+      var publicRoot = document.getElementById('public-course-list');
+      if (!courses.length) {
+        mineRoot.innerHTML = '<p class="text-sm text-on-surface-variant p-3">还没有课程，先创建一门吧。</p>';
+      } else {
+        mineRoot.innerHTML = courses.map(function (course) { return courseRowHtml(course, 'mine'); }).join('');
+        bindList('course-list');
+      }
+      var others = publicOthers();
+      if (!others.length) {
+        publicRoot.innerHTML = '<p class="text-sm text-on-surface-variant p-3">暂无管理员公开的课程。</p>';
+      } else {
+        publicRoot.innerHTML = others.map(function (course) { return courseRowHtml(course, 'public'); }).join('');
+        bindList('public-course-list');
+      }
+      syncTabs();
+    }
+    function showCourse(id, source) {
+      activeId = id;
+      activeSource = source || (findCourse(id) || {}).source || 'mine';
+      listTab = activeSource === 'public' ? 'public' : 'mine';
+      renderList();
+      document.getElementById('course-detail').innerHTML = '<p class="text-sm text-on-surface-variant">加载课程记录…</p>';
+      api('/courses/' + id + '/overview').then(function (data) {
+        var course = data.course, schedules = data.schedules || [], lectures = data.recent_lectures || [];
+        var canManage = !!data.can_manage;
+        var actions = '';
+        if (canManage) {
+          actions =
+            '<div class="flex flex-wrap gap-2"><a href="recorder.html" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">选择后录音</a>' +
+            '<button id="archive" class="rounded-xl border border-outline-variant/40 px-3 py-2 text-sm">归档</button>' +
+            '<button id="delete-course" class="rounded-xl border border-error/40 text-error px-3 py-2 text-sm">删除课程</button></div>';
+        } else {
+          actions = '<span class="inline-flex items-center rounded-full bg-surface-container-low px-3 py-1 text-xs text-on-surface-variant">只读浏览</span>';
+        }
+        var publicToggle = '';
+        if (canManage && isAdminRole()) {
+          publicToggle =
+            '<label class="mt-3 flex items-center gap-2 text-sm">' +
+            '<input id="public-toggle" type="checkbox" class="rounded text-primary" ' + (course.is_public ? 'checked' : '') + '>' +
+            '公开给所有登录用户（只读）</label>' +
+            '<p class="text-xs text-on-surface-variant mt-1">开启后，其他用户可在左侧「公开课程」页签中查看已完成课次与简报入口。</p>';
+        } else if (course.is_public) {
+          publicToggle = '<p class="text-xs text-primary mt-2">已公开' + (course.owner_nickname ? ' · 课主 ' + escapeHtml(course.owner_nickname) : '') + '</p>';
+        }
+        document.getElementById('course-detail').innerHTML =
+          '<div class="flex flex-wrap justify-between gap-4 border-b border-outline-variant/20 pb-5"><div><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full" style="background:' + escapeHtml(course.color) + '"></span><h2 class="text-2xl font-extrabold">' + escapeHtml(course.name) + '</h2></div><p class="text-sm text-on-surface-variant mt-2">' + escapeHtml(course.term || '未标注学期') + (course.professor_name ? ' · ' + escapeHtml(course.professor_name) : '') + (course.room ? ' · ' + escapeHtml(course.room) : '') + '</p><p class="text-xs text-on-surface-variant mt-1">' + escapeHtml(course.source_lang) + (course.translation_enabled ? ' → ' + escapeHtml(course.target_lang) : ' · 仅记录') + '</p>' + publicToggle + '</div>' + actions + '</div>' +
+          '<div class="grid sm:grid-cols-3 gap-3 py-5"><div class="rounded-xl bg-surface-container-low p-4"><p class="text-xs text-on-surface-variant">已记录课次</p><p class="text-2xl font-extrabold mt-1">' + data.lecture_count + '</p></div><div class="rounded-xl bg-surface-container-low p-4"><p class="text-xs text-on-surface-variant">已完成课堂</p><p class="text-2xl font-extrabold mt-1">' + data.completed_lecture_count + '</p></div><div class="rounded-xl bg-surface-container-low p-4"><p class="text-xs text-on-surface-variant">累计录音</p><p class="text-2xl font-extrabold mt-1">' + duration(data.total_duration_seconds) + '</p></div></div>' +
+          (canManage ? ('<h3 class="font-bold">上课时间</h3><p class="text-sm text-on-surface-variant mt-2">' + (schedules.length ? schedules.map(function (s) { return day(s.day_of_week) + ' ' + String(s.start_time).slice(0,5) + '–' + String(s.end_time).slice(0,5); }).join('　') : '尚未设置固定上课时间') + '</p>') : '') +
+          '<h3 class="font-bold mt-6">课程课次</h3><div class="mt-2 divide-y divide-outline-variant/20">' + (lectures.length ? lectures.map(function (l) { return '<a href="review.html?id=' + l.id + '" class="block py-3 hover:bg-surface-container-low rounded-lg px-2 -mx-2"><div class="flex justify-between gap-3"><span class="font-semibold">' + escapeHtml(l.title || ('第 ' + (l.session_number || '—') + ' 节课')) + '</span><span class="text-xs text-on-surface-variant">' + escapeHtml((l.started_at || l.lecture_date || '').replace('T',' ').slice(0,16)) + '</span></div><p class="text-xs text-on-surface-variant mt-1">' + duration(l.duration_seconds) + ' · ' + (l.sentence_count || 0) + ' 条记录</p></a>'; }).join('') : '<p class="py-5 text-sm text-on-surface-variant">' + (canManage ? '还没有课堂记录。返回录音页选择此课程后开始第一节课。' : '暂无已完成的公开课次。') + '</p>') + '</div>';
+        if (canManage) {
+          document.getElementById('archive').onclick = function () { if (!confirm('归档后不能再从录音页选择此课程，已有课堂记录不受影响。')) return; api('/courses/' + id, { method: 'DELETE' }).then(loadCourses).catch(function (e) { alert(e.message); }); };
+          document.getElementById('delete-course').onclick = function () { if (!confirm('永久删除“' + course.name + '”？课程本身会消失；已有课堂录音、字幕和汇报会保留，但变为未归类记录。')) return; api('/courses/' + id + '?permanent=true', { method: 'DELETE' }).then(loadCourses).catch(function (e) { alert(e.message); }); };
+          var toggle = document.getElementById('public-toggle');
+          if (toggle) {
+            toggle.onchange = function () {
+              var next = !!toggle.checked;
+              toggle.disabled = true;
+              api('/courses/' + id, { method: 'PATCH', body: { is_public: next } }).then(function () {
+                return loadCourses();
+              }).catch(function (e) {
+                toggle.checked = !next;
+                alert(e.message);
+              }).finally(function () { toggle.disabled = false; });
+            };
+          }
+        }
+      }).catch(function (e) { document.getElementById('course-detail').innerHTML = '<p class="text-error">' + escapeHtml(e.message) + '</p>'; });
+    }
+    function loadCourses() {
+      return Promise.all([api('/courses'), api('/courses/public')]).then(function (results) {
+        courses = results[0] || [];
+        publicCourses = results[1] || [];
+        var mineIds = {};
+        courses.forEach(function (c) { mineIds[c.id] = true; });
+        var others = publicOthers();
+        var publicIds = {};
+        others.forEach(function (c) { publicIds[c.id] = true; });
+        if (activeSource === 'mine' && !mineIds[activeId]) {
+          activeId = null;
+        }
+        if (activeSource === 'public' && !publicIds[activeId]) {
+          activeId = null;
+        }
+        if (!activeId) {
+          if (listTab === 'public' && others.length) {
+            activeId = others[0].id;
+            activeSource = 'public';
+          } else if (courses.length) {
+            activeId = courses[0].id;
+            activeSource = 'mine';
+            listTab = 'mine';
+          } else if (others.length) {
+            activeId = others[0].id;
+            activeSource = 'public';
+            listTab = 'public';
+          }
+        } else {
+          listTab = activeSource === 'public' ? 'public' : 'mine';
+        }
+        renderList();
+        if (activeId) showCourse(activeId, activeSource);
+        else document.getElementById('course-detail').innerHTML = '<div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center text-on-surface-variant"><span class="material-symbols-outlined text-5xl text-primary/50">school</span><p class="mt-3 font-medium">选择或创建一门课程</p></div>';
+      }).catch(function () { window.location.href = 'login.html?next=courses.html'; });
+    }
+    document.getElementById('tab-mine').onclick = function () { setListTab('mine'); };
+    document.getElementById('tab-public').onclick = function () { setListTab('public'); };
+    document.getElementById('refresh').onclick = loadCourses;
+    document.getElementById('course-form').onsubmit = function (event) { event.preventDefault(); var form = new FormData(event.target); var notice = document.getElementById('form-message'); var payload = { name: form.get('name'), term: form.get('term') || null, professor_name: form.get('professor_name') || null, room: form.get('room') || null, source_lang: form.get('source_lang'), target_lang: form.get('target_lang'), translation_enabled: form.get('translation_enabled') === 'on' }; notice.className = 'text-xs text-on-surface-variant'; notice.textContent = '正在创建…'; api('/courses', { method: 'POST', body: payload }).then(function (course) { var dayOfWeek = form.get('day_of_week'), start = form.get('start_time'), end = form.get('end_time'); if (dayOfWeek || start || end) { if (!dayOfWeek || !start || !end) throw new Error('固定上课时间需要同时填写星期、开始和结束时间'); return api('/courses/' + course.id + '/schedules', { method: 'POST', body: { day_of_week: Number(dayOfWeek), start_time: start, end_time: end } }).then(function () { return course; }); } return course; }).then(function (course) { notice.className = 'text-xs text-secondary'; notice.textContent = '课程已创建'; event.target.reset(); activeId = course.id; activeSource = 'mine'; listTab = 'mine'; loadCourses(); }).catch(function (e) { notice.className = 'text-xs text-error'; notice.textContent = e.message; }); };
+    loadCourses();
+  })();
+  </script>
+</body>
+</html>

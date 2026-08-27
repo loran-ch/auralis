@@ -1,6 +1,15 @@
 /* LiveTrans Voice — recorder.css */
 .material-symbols-outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24;}
-body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased;min-height:max(884px,100dvh);}
+html,body{height:100%;}
+body{
+  background-color:#FAF9FA;
+  color:#1A1C1D;
+  font-family:Inter,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100dvh;
+  max-height:100dvh;
+  overflow:hidden;
+}
 
 @keyframes pulse-soft {
   0%,100%{transform:scale(1);opacity:1}
@@ -22,8 +31,8 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
 .waveform-bar{animation:wave 1.2s ease-in-out infinite}
 .subtitle-enter{animation:subtitle-enter .2s ease-out}
 .fade-recede{
-  mask-image:none;
-  -webkit-mask-image:none;
+  mask-image:linear-gradient(to bottom, transparent 0%, #000 12%, #000 100%);
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 12%, #000 100%);
 }
 .elastic-star:active{transform:scale(1.5);transition:transform .2s cubic-bezier(.175,.885,.32,1.275)}
 .feature-card{transition:transform .15s ease,box-shadow .15s ease}
@@ -31,3 +40,26 @@ body{background-color:#FAF9FA;color:#1A1C1D;font-family:Inter,sans-serif;-webkit
 .guide-popover-card::after{content:"";position:absolute;left:1.35rem;bottom:-8px;width:16px;height:16px;background:#fff;border-right:1px solid rgba(120,120,128,.18);border-bottom:1px solid rgba(120,120,128,.18);transform:rotate(45deg)}
 #guide-btn.guide-open{color:#6750A4}
 #guide-btn.guide-open .w-10{background:rgba(103,80,164,.18)}
+
+/* 录音页：历史自己滚，底部大字区始终可见 */
+#history-section{
+  -webkit-overflow-scrolling:touch;
+}
+#current-section{
+  -webkit-overflow-scrolling:touch;
+}
+#current-source,
+#current-target{
+  scrollbar-width:thin;
+}
+
+/* 移动端的课程、语言与状态信息不再挤在 64px 顶栏内。 */
+@media (max-width:640px){
+  body > header.fixed{height:5.5rem;align-items:flex-start;padding-top:.35rem;}
+  body > header.fixed > div{height:5rem;align-items:flex-start;padding-top:.15rem;}
+  body > header.fixed #course-name{font-size:1rem;}
+  body > header.fixed #course-select{max-width:9rem;}
+  body > main{margin-top:5.5rem !important;}
+  body > header.fixed .app-nav-menu{top:5.5rem;}
+  #status-text{max-width:3.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+}

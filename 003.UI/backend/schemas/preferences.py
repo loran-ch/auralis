@@ -69,6 +69,7 @@ class UserStatsResp(BaseModel):
 
 
 class CourseScheduleCreate(BaseModel):
+    course_id: Optional[int] = Field(None, gt=0)
     course_name: str = Field(..., min_length=1, max_length=256)
     source_lang: str = Field(default="en", pattern=LANG_PATTERN)
     target_lang: str = Field(default="zh-CN", pattern=LANG_PATTERN)
@@ -94,6 +95,7 @@ class CourseScheduleCreate(BaseModel):
 
 
 class CourseScheduleUpdate(BaseModel):
+    course_id: Optional[int] = Field(None, gt=0)
     course_name: Optional[str] = Field(None, min_length=1, max_length=256)
     source_lang: Optional[str] = Field(None, pattern=LANG_PATTERN)
     target_lang: Optional[str] = Field(None, pattern=LANG_PATTERN)
@@ -108,6 +110,7 @@ class CourseScheduleUpdate(BaseModel):
 
 class CourseScheduleResp(BaseModel):
     id: int
+    course_id: Optional[int] = None
     course_name: str
     source_lang: str
     target_lang: str

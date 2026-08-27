@@ -1,13 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
-        // Password toggle logic
-        const togglePass = document.querySelector('button .material-symbols-outlined[data-icon="visibility"]');
-        const passInput = document.querySelector('input[type="password"]');
-        
-        if (togglePass && passInput) {
-            togglePass.parentElement.addEventListener('click', () => {
-                const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passInput.setAttribute('type', type);
-                togglePass.textContent = type === 'password' ? 'visibility' : 'visibility_off';
-            });
-        }
+  function bindToggle(buttonId, inputId) {
+    const button = document.getElementById(buttonId);
+    const input = document.getElementById(inputId);
+    if (!button || !input) return;
+    const icon = button.querySelector('.material-symbols-outlined');
+    button.addEventListener('click', () => {
+      const show = input.getAttribute('type') === 'password';
+      input.setAttribute('type', show ? 'text' : 'password');
+      if (icon) icon.textContent = show ? 'visibility_off' : 'visibility';
+      button.setAttribute('aria-label', show ? '隐藏密码' : '显示密码');
+      button.setAttribute('title', show ? '隐藏密码' : '显示密码');
     });
+  }
+
+  bindToggle('toggleRegisterPassword', 'registerPassword');
+  bindToggle('toggleConfirmPassword', 'registerConfirmPassword');
+});

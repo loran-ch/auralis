@@ -34,11 +34,12 @@
   var reloginSubmit = document.getElementById('relogin-submit');
 
   function isAdminRole(role) {
-    return role === 'admin' || role === 'super_admin';
+    // 平台后台仅超级管理员可进；教师角色 admin 不能进。
+    return role === 'super_admin';
   }
 
   function showReloginModal(reason) {
-    if (reloginReason) reloginReason.textContent = reason || '请使用管理员账号登录后继续';
+    if (reloginReason) reloginReason.textContent = reason || '请使用超级管理员账号登录后继续';
     if (reloginMsg) {
       reloginMsg.classList.add('hidden');
       reloginMsg.textContent = '';
@@ -58,9 +59,9 @@
     TOKEN = localStorage.getItem('livetrans_token');
     IS_SUPER_ADMIN = user.role === 'super_admin';
     if (adminNameEl) adminNameEl.textContent = user.nickname || '管理员';
-    if (adminRoleEl) adminRoleEl.textContent = IS_SUPER_ADMIN ? '超级管理员' : '管理员';
+    if (adminRoleEl) adminRoleEl.textContent = '超级管理员';
     var auditNav = document.getElementById('nav-audit-log');
-    if (auditNav) auditNav.style.display = IS_SUPER_ADMIN ? '' : 'none';
+    if (auditNav) auditNav.style.display = '';
     hideReloginModal();
     if (!eventsBound) {
       initEvents();
@@ -88,8 +89,9 @@
             LiveTransAuth.clearSession();
           }
           showReloginModal(
-            isAdminRole(user.role) ? '登录已失效，请重新登录' :
-              (res.ok ? '当前账号没有管理权限，请使用管理员账号重新登录' : '登录已失效，请重新登录')
+            user.role === 'admin'
+              ? '教师账号不能进入平台管理后台，请使用超级管理员登录'
+              : (res.ok ? '当前账号没有超级管理员权限' : '登录已失效，请重新登录')
           );
           return;
         }
@@ -134,7 +136,9 @@
       .then(function (d) {
         if (!d.tokens || !d.tokens.access_token || !d.user) throw new Error('登录响应格式异常');
         if (!isAdminRole(d.user.role)) {
-          throw new Error('当前账号没有管理权限，请使用管理员账号登录');
+          throw new Error(d.user.role === 'admin'
+            ? '教师账号不能进入平台管理后台，请使用超级管理员登录'
+            : '当前账号没有超级管理员权限');
         }
         localStorage.setItem('livetrans_token', d.tokens.access_token);
         if (d.tokens.refresh_token) localStorage.setItem('livetrans_refresh_token', d.tokens.refresh_token);
@@ -234,7 +238,7 @@
 
   function roleBadge(role) {
     var map = { admin: 'badge-admin', super_admin: 'badge-super' };
-    var label = { user: '用户', admin: '管理员', super_admin: '超管' };
+    var label = { user: '用户', admin: '教师', super_admin: '超管' };
     var cls = map[role] || '';
     return '<span class="badge ' + cls + '">' + (label[role] || role) + '</span>';
   }
@@ -345,10 +349,11 @@
 
   // ─── Dashboard ──────────────────────────────────────────
   function loadDashboard() {
-    api('/dashboard')
-      .then(function (stats) {
-        renderStatCards(stats);
-        renderSystemInfo(stats.system_info);
+    Promise.all([api('/dashboard'), api('/stats/timeseries?days=30')])
+      .then(function (results) {
+        renderStatCards(results[0]);
+        renderSystemInfo(results[0].system_info);
+        renderTrendChart(results[1]);
       })
       .catch(function () { toast('加载仪表盘失败'); });
   }
@@ -356,9 +361,11 @@
   function renderStatCards(stats) {
     var cards = [
       { icon: 'group', label: '总用户', value: stats.total_users, color: 'text-primary' },
-      { icon: 'today', label: '今日活跃', value: stats.active_today, color: 'text-green-600' },
+      { icon: 'today', label: '今日活跃(DAU)', value: stats.active_today, color: 'text-green-600' },
+      { icon: 'calendar_month', label: '近30日活跃', value: stats.active_30d, color: 'text-teal-600' },
       { icon: 'menu_book', label: '总课堂', value: stats.total_lectures, color: 'text-blue-600' },
-      { icon: 'translate', label: '总翻译', value: stats.total_transcriptions, color: 'text-purple-600' },
+      { icon: 'translate', label: '总翻译句', value: stats.total_transcriptions, color: 'text-purple-600' },
+      { icon: 'token', label: '近30日LLM Tokens', value: stats.llm_tokens_30d, color: 'text-amber-600' },
       { icon: 'bookmark', label: '总收藏', value: stats.total_bookmarks, color: 'text-orange-500' },
       { icon: 'admin_panel_settings', label: '管理员数', value: stats.admin_count, color: 'text-red-500' },
     ];
@@ -370,7 +377,7 @@
           '<span class="material-symbols-outlined text-2xl ' + c.color + '">' + c.icon + '</span>' +
         '</div>' +
         '<div>' +
-          '<p class="text-2xl font-bold text-on-surface">' + (c.value || 0) + '</p>' +
+          '<p class="text-2xl font-bold text-on-surface">' + formatNumber(c.value || 0) + '</p>' +
           '<p class="text-xs text-on-surface-variant">' + c.label + '</p>' +
         '</div>' +
       '</div>';
@@ -379,12 +386,80 @@
     document.getElementById('stat-cards').innerHTML = html;
   }
 
+  function formatNumber(value) {
+    var n = Number(value) || 0;
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 10000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  function renderTrendChart(data) {
+    var canvas = document.getElementById('trend-chart');
+    var legend = document.getElementById('trend-legend');
+    if (!canvas || !data || !data.points) return;
+    var points = data.points || [];
+    var width = Math.max(640, canvas.parentElement ? canvas.parentElement.clientWidth - 24 : 640);
+    var height = 180;
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, width, height);
+    if (!points.length) {
+      ctx.fillStyle = '#717782';
+      ctx.fillText('暂无趋势数据', 16, 24);
+      return;
+    }
+    var pad = { top: 16, right: 16, bottom: 28, left: 36 };
+    var chartW = width - pad.left - pad.right;
+    var chartH = height - pad.top - pad.bottom;
+    var maxDau = Math.max.apply(null, points.map(function (p) { return p.dau || 0; }).concat([1]));
+    var maxTokens = Math.max.apply(null, points.map(function (p) { return p.llm_tokens || 0; }).concat([1]));
+
+    function xAt(i) { return pad.left + (points.length === 1 ? chartW / 2 : (i / (points.length - 1)) * chartW); }
+    function yDau(v) { return pad.top + chartH - (v / maxDau) * chartH; }
+    function yTok(v) { return pad.top + chartH - (v / maxTokens) * chartH; }
+
+    ctx.strokeStyle = '#E5E7EB';
+    ctx.beginPath();
+    ctx.moveTo(pad.left, pad.top + chartH);
+    ctx.lineTo(pad.left + chartW, pad.top + chartH);
+    ctx.stroke();
+
+    function drawLine(getter, color, yFn) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      points.forEach(function (p, i) {
+        var x = xAt(i), y = yFn(getter(p));
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+    drawLine(function (p) { return p.dau || 0; }, '#16A34A', yDau);
+    drawLine(function (p) { return p.new_users || 0; }, '#2563EB', yDau);
+    drawLine(function (p) { return p.llm_tokens || 0; }, '#D97706', yTok);
+
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '10px sans-serif';
+    [0, Math.floor(points.length / 2), points.length - 1].forEach(function (i) {
+      if (i < 0 || i >= points.length) return;
+      ctx.fillText((points[i].date || '').slice(5), xAt(i) - 12, height - 8);
+    });
+
+    if (legend) {
+      legend.innerHTML =
+        '<span><span class="inline-block w-3 h-1 bg-green-600 mr-1 align-middle"></span>DAU</span>' +
+        '<span><span class="inline-block w-3 h-1 bg-blue-600 mr-1 align-middle"></span>新增用户</span>' +
+        '<span><span class="inline-block w-3 h-1 bg-amber-600 mr-1 align-middle"></span>LLM Tokens（右轴相对）</span>';
+    }
+  }
+
   function renderSystemInfo(info) {
     if (!info) return;
     document.getElementById('system-info').innerHTML =
       '<div><span class="text-on-surface-variant">环境</span><p class="font-semibold mt-1">' + escapeHtml(info.environment) + '</p></div>' +
       '<div><span class="text-on-surface-variant">版本</span><p class="font-semibold mt-1">' + escapeHtml(info.version) + '</p></div>' +
-      '<div><span class="text-on-surface-variant">数据库连接池</span><p class="font-semibold mt-1">' + (info.db_pool_size || '--') + '</p></div>' +
+      '<div><span class="text-on-surface-variant">额度窗口</span><p class="font-semibold mt-1">' + (info.llm_quota_window_days || 30) + ' 天</p></div>' +
       '<div><span class="text-on-surface-variant">运行状态</span><p class="font-semibold mt-1 text-green-600">正常</p></div>';
   }
 
@@ -410,12 +485,16 @@
   function renderUsersTable(data) {
     var items = data.items || [];
     if (items.length === 0) {
-      document.getElementById('users-table-body').innerHTML = '<tr><td colspan="8" class="text-center py-12 text-on-surface-variant">暂无数据</td></tr>';
+      document.getElementById('users-table-body').innerHTML = '<tr><td colspan="9" class="text-center py-12 text-on-surface-variant">暂无数据</td></tr>';
       return;
     }
 
     var html = '';
     items.forEach(function (u) {
+      var used = u.tokens_used || 0;
+      var limit = u.token_limit || 0;
+      var quotaLabel = formatNumber(used) + ' / ' + formatNumber(limit);
+      if (u.has_custom_limit) quotaLabel += ' · 自定义';
       html += '<tr>' +
         '<td>' + u.id + '</td>' +
         '<td class="font-medium">' + escapeHtml(u.nickname) + '</td>' +
@@ -423,6 +502,7 @@
         '<td>' + roleBadge(u.role) + '</td>' +
         '<td>' + statusBadge(u.status) + '</td>' +
         '<td><span class="badge ' + (u.member_level === 'premium' ? 'badge-premium' : 'badge-free') + '">' + (u.member_level === 'premium' ? '高级' : '免费') + '</span></td>' +
+        '<td class="text-xs">' + escapeHtml(quotaLabel) + '</td>' +
         '<td class="text-xs text-on-surface-variant">' + formatDate(u.created_at) + '</td>' +
         '<td class="text-right">' + renderUserActions(u) + '</td>' +
       '</tr>';
@@ -444,17 +524,17 @@
       actions += '<button class="user-enable-btn text-xs px-3 py-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors mr-1" data-uid="' + u.id + '">启用</button>';
     }
 
-    // 角色变更 (仅超管)
-    if (IS_SUPER_ADMIN) {
-      actions += '<select class="user-role-select text-xs px-2 py-1.5 rounded-lg border border-outline-variant/30 bg-white mr-1" data-uid="' + u.id + '">' +
-        '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>用户</option>' +
-        '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>管理员</option>' +
-        '<option value="super_admin"' + (u.role === 'super_admin' ? ' selected' : '') + '>超管</option>' +
-      '</select>';
-    }
+    // 角色变更 (仅超管) — 文案：admin=教师
+    actions += '<select class="user-role-select text-xs px-2 py-1.5 rounded-lg border border-outline-variant/30 bg-white mr-1" data-uid="' + u.id + '">' +
+      '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>用户</option>' +
+      '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>教师</option>' +
+      '<option value="super_admin"' + (u.role === 'super_admin' ? ' selected' : '') + '>超管</option>' +
+    '</select>';
 
-    // 删除 (仅超管，不能删自己或超管)
-    if (IS_SUPER_ADMIN && u.role !== 'super_admin') {
+    actions += '<button class="user-quota-btn text-xs px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors mr-1" data-uid="' + u.id + '" data-limit="' + (u.has_custom_limit ? (u.token_limit || '') : '') + '" data-used="' + (u.tokens_used || 0) + '">额度</button>';
+
+    // 删除 (不能删自己或超管)
+    if (u.role !== 'super_admin') {
       actions += '<button class="user-delete-btn text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" data-uid="' + u.id + '" data-name="' + escapeHtml(u.nickname) + '">删除</button>';
     }
 
@@ -486,14 +566,45 @@
 
     // 角色变更下拉
     document.querySelectorAll('.user-role-select').forEach(function (sel) {
+      sel.dataset.prev = sel.value;
       sel.addEventListener('change', function () {
         var uid = parseInt(sel.dataset.uid);
         var newRole = sel.value;
-        showConfirm('确定要变更该用户角色为 ' + (newRole === 'super_admin' ? '超级管理员' : newRole === 'admin' ? '管理员' : '普通用户') + ' 吗？', function () {
+        var prev = sel.dataset.prev || 'user';
+        sel.value = prev;
+        var label = newRole === 'super_admin' ? '超级管理员' : newRole === 'admin' ? '教师(admin)' : '普通用户';
+        showConfirm('确定要变更该用户角色为 ' + label + ' 吗？', function () {
           api('/users/' + uid + '/role', { method: 'PATCH', body: JSON.stringify({ role: newRole }) })
             .then(function (r) { toast(r.message); loadUsers(); })
             .catch(function (e) { toast(e.detail || '操作失败'); });
         });
+      });
+    });
+
+    document.querySelectorAll('.user-quota-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var uid = parseInt(btn.dataset.uid, 10);
+        var current = btn.dataset.limit;
+        var used = btn.dataset.used || '0';
+        var input = window.prompt(
+          '设置滚动 30 天 LLM Token 上限（已用 ' + used + '）。\n留空并确定 = 恢复会员默认额度；输入 0 表示禁止调用。',
+          current || ''
+        );
+        if (input === null) return;
+        var body;
+        if (String(input).trim() === '') {
+          body = { token_limit: null };
+        } else {
+          var n = parseInt(String(input).trim(), 10);
+          if (isNaN(n) || n < 0) {
+            toast('请输入非负整数或留空');
+            return;
+          }
+          body = { token_limit: n };
+        }
+        api('/users/' + uid + '/quota', { method: 'PATCH', body: JSON.stringify(body) })
+          .then(function () { toast('额度已更新'); loadUsers(); })
+          .catch(function (e) { toast(e.detail || '更新失败'); });
       });
     });
 
@@ -594,9 +705,10 @@
     var actionLabels = {
       'user.status_active': '用户启用',
       'user.status_disabled': '用户禁用',
-      'user.role_admin': '提升管理员',
+      'user.role_admin': '提升教师',
       'user.role_super_admin': '提升超管',
       'user.role_user': '降级用户',
+      'user.quota_update': '调整LLM额度',
       'user.delete': '删除用户',
       'lecture.delete': '删除课堂',
       'guide.update': '更新功能说明'

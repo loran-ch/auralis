@@ -61,6 +61,7 @@ class CourseSchedule(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    course_id = Column(BigInteger, ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
     course_name = Column(String(256), nullable=False)
     source_lang = Column(String(5), nullable=False)
     target_lang = Column(String(5), nullable=False)

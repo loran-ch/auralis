@@ -9,6 +9,8 @@ from middleware.admin_auth import require_admin, require_super_admin
 from models.user import User
 from schemas.admin import (
     AdminLectureResp,
+    AdminUserQuotaReq,
+    AdminUserQuotaResp,
     AdminUserResp,
     AdminUserRoleReq,
     AdminUserStatusReq,
@@ -17,11 +19,13 @@ from schemas.admin import (
     PageResp,
     RegistrationSettingReq,
     RegistrationSettingResp,
+    TimeseriesResp,
 )
 from schemas.auth import MsgResp
 from schemas.guide import GuideResp, GuideUpdateReq
 from services import admin as admin_service
 from services.guide import get_guide, update_guide
+from services.llm_quota import get_quota_snapshot, set_user_token_limit
 from services.registration import (get_registration_setting,
                                    update_registration_setting)
 
@@ -42,6 +46,16 @@ def api_dashboard(
     """系统概览统计"""
     stats = admin_service.get_dashboard_stats(db)
     return DashboardStatsResp(**stats)
+
+
+@router.get("/stats/timeseries", response_model=TimeseriesResp)
+def api_timeseries(
+    days: int = Query(30, ge=1, le=90),
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """近 N 日 DAU / 新增 / 完成课次 / LLM tokens 趋势。"""
+    return TimeseriesResp(**admin_service.get_timeseries(db, days=days))
 
 
 @router.get("/settings/registration", response_model=RegistrationSettingResp)
@@ -81,8 +95,15 @@ def api_list_users(
 ):
     """用户列表（分页 + 搜索 + 筛选）"""
     result = admin_service.list_users(db, page, page_size, search, status, role)
+    items = []
+    for row in result["items"]:
+        payload = AdminUserResp.model_validate(row["user"]).model_dump()
+        payload["tokens_used"] = row["tokens_used"]
+        payload["token_limit"] = row["token_limit"]
+        payload["has_custom_limit"] = row["has_custom_limit"]
+        items.append(AdminUserResp(**payload))
     return PageResp(
-        items=[AdminUserResp.model_validate(item) for item in result["items"]],
+        items=items,
         total=result["total"],
         page=result["page"],
         page_size=result["page_size"],
@@ -100,7 +121,47 @@ def api_get_user(
     result = admin_service.get_user_detail(db, user_id)
     if not result:
         raise HTTPException(status_code=404, detail="用户不存在")
-    return AdminUserResp.model_validate(result["user"])
+    payload = AdminUserResp.model_validate(result["user"]).model_dump()
+    payload["tokens_used"] = result["tokens_used"]
+    payload["token_limit"] = result["token_limit"]
+    payload["has_custom_limit"] = result["has_custom_limit"]
+    return AdminUserResp(**payload)
+
+
+@router.get("/users/{user_id}/quota", response_model=AdminUserQuotaResp)
+def api_get_user_quota(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return AdminUserQuotaResp(**get_quota_snapshot(db, user))
+
+
+@router.patch("/users/{user_id}/quota", response_model=AdminUserQuotaResp)
+def api_update_user_quota(
+    user_id: int,
+    req: AdminUserQuotaReq,
+    request: Request,
+    admin: User = Depends(require_super_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    try:
+        snap = set_user_token_limit(
+            db,
+            user=user,
+            token_limit=req.token_limit,
+            admin=admin,
+            ip_address=_client_ip(request),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return AdminUserQuotaResp(**snap)
 
 
 @router.patch("/users/{user_id}/status", response_model=MsgResp)

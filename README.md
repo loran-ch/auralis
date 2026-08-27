@@ -4,7 +4,7 @@ LiveTrans Voice 是一个 FastAPI + MySQL 的课堂实时翻译原型。后端�
 
 ## 本地运行
 
-1. 启动 MySQL。新库依次执行 `004.数据库脚本/01_livetrans_voice_建表.sql` 与 `02_livetrans_voice_初始化数据.sql`；已有旧库再执行 `03_livetrans_voice_企业级索引升级.sql`。
+1. 启动 MySQL。新库依次执行 `004.数据库脚本/01_livetrans_voice_建表.sql` 与 `02_livetrans_voice_初始化数据.sql`；已有旧库再执行 `03_livetrans_voice_企业级索引升级.sql`。如启用课堂简报与课堂助手，还需执行 `07_lecture_briefings.sql`、`09_classroom_assistant_upgrade.sql`、`10_record_only_mode.sql`、`11_courses_p0.sql` 与 `12_lecture_titles.sql`。
 2. 在项目根目录创建虚拟环境并安装 `003.UI/backend/requirements.txt`。
 3. 参考 `.env.example`，通过 PowerShell、进程管理器或部署平台设置环境变量。
 4. 从 `003.UI/backend` 启动：
@@ -42,6 +42,7 @@ LiveTrans Voice 是一个 FastAPI + MySQL 的课堂实时翻译原型。后端�
 - 课程表新增、查询、修改、停用，并校验时间冲突。
 - 课堂开始、暂停、恢复、结束、查询、改名、批量删除及录音上传。
 - 实时文本翻译、转录持久化、收藏标签/备注，以及按周动态统计。
+- 课堂结束后自动生成带转录时间点引用的简报，识别出的作业与通知会标记为“待确认”。
 
 开发环境可在 `/docs` 查看完整 OpenAPI 文档；生产环境默认关闭文档与测试页面。
 

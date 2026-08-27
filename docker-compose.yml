@@ -21,6 +21,15 @@ services:
       - ./004.数据库脚本/02_livetrans_voice_生产基础数据.sql:/docker-entrypoint-initdb.d/02_production_seed.sql:ro
       - ./004.数据库脚本/07_lecture_briefings.sql:/docker-entrypoint-initdb.d/03_briefings.sql:ro
       - ./004.数据库脚本/08_app_guides.sql:/docker-entrypoint-initdb.d/04_guides.sql:ro
+      - ./004.数据库脚本/09_classroom_assistant_upgrade.sql:/docker-entrypoint-initdb.d/05_classroom_assistant.sql:ro
+      - ./004.数据库脚本/10_record_only_mode.sql:/docker-entrypoint-initdb.d/06_record_only_mode.sql:ro
+      - ./004.数据库脚本/11_courses_p0.sql:/docker-entrypoint-initdb.d/07_courses_p0.sql:ro
+      - ./004.数据库脚本/12_lecture_titles.sql:/docker-entrypoint-initdb.d/08_lecture_titles.sql:ro
+      - ./004.数据库脚本/13_learning_assistant_threads.sql:/docker-entrypoint-initdb.d/09_assistant_threads.sql:ro
+      - ./004.数据库脚本/14_classroom_media_p0.sql:/docker-entrypoint-initdb.d/10_classroom_media.sql:ro
+      - ./004.数据库脚本/15_media_ocr_verification.sql:/docker-entrypoint-initdb.d/11_media_ocr_verification.sql:ro
+      - ./004.数据库脚本/19_public_courses_p0.sql:/docker-entrypoint-initdb.d/12_public_courses.sql:ro
+      - ./004.数据库脚本/20_admin_llm_quota_p0.sql:/docker-entrypoint-initdb.d/13_admin_llm_quota.sql:ro
     ports:
       - "127.0.0.1:3306:3306"
     healthcheck:

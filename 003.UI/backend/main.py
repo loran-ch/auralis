@@ -20,6 +20,8 @@ from routers.preferences import router as preferences_router
 from routers.admin import router as admin_router
 from routers.speech_stream import router as speech_stream_router
 from routers.guide import router as guide_router
+from routers.courses import router as courses_router
+from routers.assistant import router as assistant_router
 
 app = FastAPI(
     title="LiveTrans Voice API",
@@ -60,7 +62,8 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=(self)"
+    # 摄像头只对本站页面开放；录音仍可在无摄像头的设备上独立使用。
+    response.headers["Permissions-Policy"] = "camera=(self), geolocation=(), microphone=(self)"
     if request.url.path == "/" or request.url.path.startswith(("/html/", "/js/", "/shared/")):
         # 原型阶段没有构建产物哈希，强制协商缓存以避免旧脚本破坏 API 兼容性。
         response.headers["Cache-Control"] = "no-cache"
@@ -76,6 +79,8 @@ app.include_router(preferences_router)
 app.include_router(admin_router)
 app.include_router(speech_stream_router)
 app.include_router(guide_router)
+app.include_router(courses_router)
+app.include_router(assistant_router)
 
 
 @app.get("/health/live", include_in_schema=False)

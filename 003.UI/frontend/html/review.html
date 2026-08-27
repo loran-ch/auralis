@@ -2,11 +2,12 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LiveTrans Voice - 已完成课堂回顾</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
 
+  <link rel="stylesheet" href="../shared/app-ux.css?v=1">
   <link rel="stylesheet" href="../css/review.css">
   <script src="../shared/tailwind-config.js"></script>
   <script src="../shared/auth-client.js?v=2"></script>
@@ -23,6 +24,9 @@
 </div>
 </div>
 <div class="flex items-center gap-2">
+<button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full ease-out duration-200" onclick="window.location.href='assistant.html?lecture_id='+encodeURIComponent(new URLSearchParams(window.location.search).get('id') || '')">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">psychology</span>
+</button>
 <button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full ease-out duration-200" onclick="window.location.href='review.html'">
 <span class="material-symbols-outlined text-on-surface-variant dark:text-outline">share</span>
 </button>
@@ -48,19 +52,30 @@
     <div>
       <h3 class="text-base font-bold text-ink-deep flex items-center gap-2">
         <span class="material-symbols-outlined text-primary text-[20px]">summarize</span>课堂简报
+        <span id="briefing-edited-badge" class="hidden text-[10px] font-semibold tracking-wide text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full">已修订</span>
       </h3>
       <p id="briefing-status" class="text-xs text-ink-subdued mt-1">正在检查简报…</p>
     </div>
-    <button id="briefing-refresh" type="button" class="hidden text-xs font-semibold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">重新生成</button>
+    <div class="flex flex-wrap items-center justify-end gap-1">
+      <button id="briefing-edit" type="button" class="hidden text-xs font-semibold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">修订简报</button>
+      <button id="briefing-save" type="button" class="hidden text-xs font-semibold text-white bg-primary hover:opacity-90 px-3 py-1.5 rounded-lg transition-colors">保存修订</button>
+      <button id="briefing-cancel" type="button" class="hidden text-xs font-semibold text-ink-subdued hover:bg-surface-container-low px-3 py-1.5 rounded-lg transition-colors">取消</button>
+      <button id="briefing-refresh" type="button" class="hidden text-xs font-semibold text-primary hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">重新生成</button>
+    </div>
   </div>
   <div id="briefing-body" class="text-sm text-on-surface-variant">加载中...</div>
+</section>
+<!-- 课堂媒体：录像、关键帧与候选短片 -->
+<section id="media-panel" class="hidden mt-stack-md rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
+  <div class="mb-3"><h3 class="text-base font-bold text-ink-deep flex items-center gap-2"><span class="material-symbols-outlined text-primary text-[20px]">video_library</span>课堂媒体</h3><p class="text-xs text-ink-subdued mt-1">视频可选；关键帧等待 OCR 处理后会显示板书文字。</p></div>
+  <div id="media-body" class="text-sm text-on-surface-variant"></div>
 </section>
 <!-- 问这堂课 -->
 <section id="assistant-panel" class="mt-stack-md rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
   <h3 class="text-base font-bold text-ink-deep flex items-center gap-2 mb-1">
     <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>问这堂课
   </h3>
-  <p id="assistant-hint" class="text-xs text-ink-subdued mb-3">根据本堂转录和收藏回答，点击 #编号 可跳到原句。</p>
+  <p id="assistant-hint" class="text-xs text-ink-subdued mb-3">根据本堂转录和收藏回答；每次最多 500 字，并带上最近几轮对话。点击 #编号 可跳到原句。</p>
   <div class="flex flex-wrap gap-2 mb-3">
     <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="这节课讲了什么">这节课讲了什么</button>
     <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="教授强调了哪些考点">有哪些考点</button>
@@ -68,14 +83,36 @@
     <button type="button" class="js-preset-q text-xs px-3 py-1.5 rounded-full bg-primary/5 text-primary font-medium hover:bg-primary/10" data-q="我标了疑问的几句帮我解释">解释我的疑问</button>
   </div>
   <div id="assistant-log" class="space-y-3 overflow-y-auto mb-3 text-sm"></div>
-  <form id="assistant-form" class="flex gap-2">
-    <input id="assistant-input" class="flex-1 px-3 py-2.5 rounded-xl border border-outline-variant/40 text-sm focus:ring-2 focus:ring-primary/20" placeholder="问这一堂课…" maxlength="500" autocomplete="off">
-    <button id="assistant-send" type="submit" class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90">发送</button>
+  <form id="assistant-form">
+    <div class="flex gap-2">
+      <input id="assistant-input" class="flex-1 px-3 py-2.5 rounded-xl border border-outline-variant/40 text-sm focus:ring-2 focus:ring-primary/20" placeholder="问这一堂课… Enter 发送" maxlength="500" autocomplete="off">
+      <button id="assistant-send" type="submit" class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50" disabled>发送</button>
+    </div>
+    <div class="mt-1.5 flex items-center justify-between gap-2 px-0.5 text-[11px] text-ink-subdued">
+      <span id="assistant-composer-hint">Enter 发送 · 最多 500 字</span>
+      <span id="assistant-char-count" class="tabular-nums">0 / 500</span>
+    </div>
   </form>
 </section>
 <!-- Transcript Section -->
-<section id="transcript-container" class="transcript-container mt-stack-lg space-y-stack-lg overflow-y-auto">
-<div id="transcript-loading" class="text-center py-12 text-on-surface-variant">加载中...</div>
+<section class="mt-stack-lg">
+  <div class="flex items-end justify-between gap-3 mb-2">
+    <h3 class="text-base font-bold text-ink-deep flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary text-[20px]">subtitles</span>课堂字幕
+    </h3>
+    <p id="transcript-filter-hint" class="text-xs text-ink-subdued">全部句子</p>
+  </div>
+  <nav id="transcript-filter" class="sticky top-16 z-40 -mx-margin-mobile px-margin-mobile py-2 bg-surface/95 backdrop-blur flex gap-2 overflow-x-auto hide-scrollbar border-b border-outline-variant/20 mb-3" aria-label="字幕筛选">
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold" data-filter="all">全部 <span class="js-filter-count opacity-80">0</span></button>
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold" data-filter="bookmarked">已收藏 <span class="js-filter-count opacity-80">0</span></button>
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold" data-filter="important">重要 <span class="js-filter-count opacity-80">0</span></button>
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold" data-filter="definition">定义 <span class="js-filter-count opacity-80">0</span></button>
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold" data-filter="exam">考点 <span class="js-filter-count opacity-80">0</span></button>
+    <button type="button" class="js-transcript-filter flex-none px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold" data-filter="question">疑问 <span class="js-filter-count opacity-80">0</span></button>
+  </nav>
+  <div id="transcript-container" class="transcript-container space-y-stack-lg overflow-y-auto">
+    <div id="transcript-loading" class="text-center py-12 text-on-surface-variant">加载中...</div>
+  </div>
 </section>
 
 <!-- Bottom Audio Player -->
@@ -118,8 +155,11 @@
         <span class="material-symbols-outlined text-2xl">forward_10</span>
       </button>
     </div>
-    <!-- Right: 导出 -->
-    <div class="flex justify-end">
+    <!-- Right: 追加 / 导出 -->
+    <div class="flex justify-end gap-2">
+      <button id="append-recording-btn" class="flex items-center gap-1.5 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:bg-primary/5 transition-colors" title="在已有字幕后续录">
+        <span class="material-symbols-outlined text-base">mic</span>追加录音
+      </button>
       <button id="export-btn" class="flex items-center gap-1.5 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-xs font-medium hover:opacity-90 transition-opacity">
         <span class="material-symbols-outlined text-base">download</span>导出
       </button>
@@ -168,21 +208,22 @@
 <div id="exportModal" class="hidden fixed inset-0 z-80 bg-black/30 flex items-center justify-center">
   <div class="bg-white rounded-2xl w-[90%] max-w-sm p-6 shadow-2xl">
     <h3 class="text-lg font-bold text-on-surface mb-4">导出课堂记录</h3>
-    <!-- 格式选择 -->
-    <p class="text-sm text-on-surface-variant mb-2">选择导出格式</p>
-    <div class="flex gap-2 mb-5">
-      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-format="word">Word</button>
-      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="pdf">PDF</button>
-      <button class="export-format flex-1 py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="txt">TXT</button>
+    <p class="text-sm text-on-surface-variant mb-2">选择导出内容</p>
+    <div class="grid grid-cols-2 gap-2 mb-5">
+      <button class="export-format py-2.5 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-format="word">字幕 Word</button>
+      <button class="export-format py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="pdf">字幕 PDF</button>
+      <button class="export-format py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="txt">字幕 TXT</button>
+      <button class="export-format py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="briefing-md">简报 Markdown</button>
+      <button class="export-format col-span-2 py-2.5 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-format="materials-zip">资料包 ZIP（简报+附件）</button>
     </div>
-    <!-- 字号选择 -->
-    <p class="text-sm text-on-surface-variant mb-2">选择字号</p>
-    <div class="flex gap-2 mb-6">
-      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="12">小号</button>
-      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-size="16">中号</button>
-      <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="20">大号</button>
+    <div id="export-fontsize-block">
+      <p class="text-sm text-on-surface-variant mb-2">字幕字号</p>
+      <div class="flex gap-2 mb-6">
+        <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="12">小号</button>
+        <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-primary bg-primary/5 text-primary font-semibold text-sm transition-colors" data-size="16">中号</button>
+        <button class="export-fontsize flex-1 py-2 rounded-xl border-2 border-outline-variant text-on-surface-variant font-medium text-sm hover:border-primary/30 transition-colors" data-size="20">大号</button>
+      </div>
     </div>
-    <!-- 操作按钮 -->
     <div class="flex gap-3">
       <button id="exportCancel" class="flex-1 py-3 text-secondary font-medium hover:bg-surface-container-low rounded-xl transition-colors">取消</button>
       <button id="exportConfirm" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">导出</button>
@@ -199,10 +240,16 @@
   var toastEl = document.getElementById('toast');
   var tagPickerCallback = null;
   var transcriptionsData = [];  // 存储转录数据用于导出
+  var transcriptFilter = 'all';
   var currentBriefing = null;
   var lectureStatus = '';
+  var translationEnabled = true;
   var briefingTimer = null;
   var briefingPolls = 0;
+  var briefingEditing = false;
+  var briefingDraft = null;
+  var lectureAttachments = [];
+  var lectureCourseId = '';
   var chatHistory = [];
   var asking = false;
 
@@ -223,7 +270,20 @@
       headers: headers,
       body: opts.body || undefined
     }).then(function(r) {
-      return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || 'fail'); return d; });
+      if (r.status === 204) {
+        if (!r.ok) throw new Error('fail');
+        return {};
+      }
+      return r.json().then(function(d) {
+        if (!r.ok) {
+          var detail = d.detail;
+          if (Array.isArray(detail)) {
+            detail = detail.map(function (item) { return item.msg || JSON.stringify(item); }).join('; ');
+          }
+          throw new Error(detail || 'fail');
+        }
+        return d;
+      });
     });
   }
 
@@ -254,6 +314,14 @@
   }
 
   function jumpToSentence(order, startMs) {
+    var target = transcriptionsData.find(function (t) {
+      return Number(t.sentence_order) === Number(order);
+    });
+    // 当前筛选把目标句藏起来时，先切回全部再定位。
+    if (target && !matchesTranscriptFilter(target, transcriptFilter) && transcriptFilter !== 'all') {
+      setTranscriptFilter('all', { silent: true });
+      renderTranscriptList();
+    }
     var el = document.getElementById('sentence-' + order);
     if (el) {
       document.querySelectorAll('.sentence-jump-active').forEach(function (node) {
@@ -311,36 +379,252 @@
     briefingPolls = 0;
   }
 
+  function cloneBriefing(data) {
+    return JSON.parse(JSON.stringify(data || {}));
+  }
+
+  function setBriefingMode(editing) {
+    briefingEditing = !!editing;
+    var editBtn = document.getElementById('briefing-edit');
+    var saveBtn = document.getElementById('briefing-save');
+    var cancelBtn = document.getElementById('briefing-cancel');
+    var refreshBtn = document.getElementById('briefing-refresh');
+    var ready = currentBriefing && (currentBriefing.status === 'ready' || currentBriefing.status === 'empty' || currentBriefing.status === 'failed');
+    if (editBtn) editBtn.classList.toggle('hidden', editing || !ready || currentBriefing.status === 'failed');
+    if (saveBtn) saveBtn.classList.toggle('hidden', !editing);
+    if (cancelBtn) cancelBtn.classList.toggle('hidden', !editing);
+    if (refreshBtn) refreshBtn.classList.toggle('hidden', editing || !ready);
+  }
+
+  function citationBadge(order) {
+    if (!order) return '<span class="ml-1 text-[10px] text-tertiary">无课堂引用</span>';
+    return '';
+  }
+
+  function sourceBadge(item) {
+    if (!item) return '';
+    if (item.source === 'user_added') return '<span class="ml-1 text-[10px] text-primary">人工补充</span>';
+    if (item.source === 'from_attachment') return '<span class="ml-1 text-[10px] text-primary">来自附件</span>';
+    return '';
+  }
+
+  function emptySectionHint(title, section) {
+    return '<div class="mb-3 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low/40 px-3 py-3">' +
+      '<p class="text-xs font-bold text-on-surface-variant mb-1">' + title + '</p>' +
+      '<p class="text-xs text-ink-subdued mb-2">自动识别未发现明确内容，可补充文字或上传截图/PDF。</p>' +
+      '<div class="flex flex-wrap gap-2">' +
+        '<button type="button" class="js-open-supplement text-xs font-semibold text-primary" data-section="' + section + '">补充' + title + '</button>' +
+        '<button type="button" class="js-focus-upload text-xs font-semibold text-on-surface-variant" data-category="' + (section === 'exam_hints' ? 'exam' : 'assignment') + '">上传附件</button>' +
+      '</div></div>';
+  }
+
+  function renderSupplementPanel() {
+    return '<div id="briefing-supplement" class="mt-4 border-t border-outline-variant/20 pt-4">' +
+      '<p class="text-xs font-bold text-on-surface-variant mb-2">人工补录</p>' +
+      '<div class="grid gap-2 sm:grid-cols-[120px_1fr]">' +
+        '<select id="supplement-section" class="rounded-lg border-outline-variant/40 text-xs">' +
+          '<option value="assignments">作业/通知</option>' +
+          '<option value="exam_hints">考点</option>' +
+          '<option value="key_points">要点</option>' +
+          '<option value="questions">疑问</option>' +
+        '</select>' +
+        '<input id="supplement-order" type="number" min="0" value="0" class="rounded-lg border-outline-variant/40 text-xs" placeholder="句号，0=无引用">' +
+      '</div>' +
+      '<textarea id="supplement-text" rows="2" maxlength="1000" class="mt-2 w-full rounded-xl border-outline-variant/40 text-sm" placeholder="输入缺失的作业、考点等内容…"></textarea>' +
+      '<div class="mt-2 flex justify-end"><button type="button" id="supplement-submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white">添加到简报</button></div>' +
+      '<div class="mt-4">' +
+        '<p class="text-xs font-bold text-on-surface-variant mb-2">本节附件</p>' +
+        '<div class="flex flex-wrap items-end gap-2 mb-2">' +
+          '<select id="attachment-category" class="rounded-lg border-outline-variant/40 text-xs">' +
+            '<option value="material">课件/资料</option>' +
+            '<option value="assignment">作业</option>' +
+            '<option value="exam">考点</option>' +
+            '<option value="notice">通知</option>' +
+            '<option value="other">其他</option>' +
+          '</select>' +
+          '<label class="text-xs text-ink-subdued flex items-center gap-1"><input id="attachment-create-item" type="checkbox" class="rounded border-outline-variant/40">同时生成简报条目</label>' +
+          '<input id="attachment-file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf,.ppt,.pptx,image/*,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" class="text-xs max-w-full">' +
+          '<button type="button" id="attachment-upload" class="rounded-lg border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary">上传</button>' +
+        '</div>' +
+        '<div id="attachment-list" class="space-y-2 text-xs text-on-surface-variant">加载附件中…</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function categoryLabel(category) {
+    return ({ assignment: '作业', exam: '考点', notice: '通知', other: '其他', material: '课件/资料' })[category] || category;
+  }
+
+  function renderAttachmentList() {
+    var host = document.getElementById('attachment-list');
+    if (!host) return;
+    if (!lectureAttachments.length) {
+      host.innerHTML = '<p class="text-ink-subdued">还没有附件。可上传课件 PPT、PDF、作业截图或板书。</p>';
+      return;
+    }
+    host.innerHTML = lectureAttachments.map(function (item) {
+      var isImage = (item.content_type || '').indexOf('image/') === 0 || /\.(png|jpe?g|webp)$/i.test(item.url || '');
+      var preview = isImage
+        ? '<a href="' + escapeHtml(item.url) + '" target="_blank" class="block"><img src="' + escapeHtml(item.url) + '" alt="" class="h-16 w-24 rounded-lg object-cover border border-outline-variant/20"></a>'
+        : '<a href="' + escapeHtml(item.url) + '" target="_blank" class="text-primary font-semibold">打开文件</a>';
+      return '<div class="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/20 px-3 py-2">' +
+        '<div class="min-w-0 flex-1">' +
+          '<p class="font-medium text-ink-deep truncate">' + escapeHtml(item.title || '附件') + '</p>' +
+          '<p class="text-[11px] text-ink-subdued">' + escapeHtml(categoryLabel(item.category)) + '</p>' +
+          '<div class="mt-1">' + preview + '</div>' +
+        '</div>' +
+        '<button type="button" class="js-delete-attachment text-[11px] font-semibold text-error" data-id="' + item.id + '">删除</button>' +
+      '</div>';
+    }).join('');
+    host.querySelectorAll('.js-delete-attachment').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (!confirm('删除这个附件？')) return;
+        api('/lectures/' + LID + '/attachments/' + button.getAttribute('data-id'), { method: 'DELETE' })
+          .then(function () { return loadAttachments(); })
+          .catch(function (err) { toast(err.message || '删除失败'); });
+      });
+    });
+  }
+
+  function loadAttachments() {
+    return api('/lectures/' + LID + '/attachments').then(function (items) {
+      lectureAttachments = items || [];
+      renderAttachmentList();
+      return items;
+    }).catch(function () {
+      lectureAttachments = [];
+      var host = document.getElementById('attachment-list');
+      if (host) host.innerHTML = '<p class="text-error">附件加载失败</p>';
+    });
+  }
+
+  function bindSupplementPanel() {
+    var submit = document.getElementById('supplement-submit');
+    if (submit) {
+      submit.addEventListener('click', function () {
+        var section = document.getElementById('supplement-section').value;
+        var text = (document.getElementById('supplement-text').value || '').trim();
+        var order = Number(document.getElementById('supplement-order').value || 0);
+        if (!text) { toast('请输入补充内容'); return; }
+        submit.disabled = true;
+        api('/lectures/' + LID + '/briefing/items', {
+          method: 'POST',
+          body: JSON.stringify({
+            section: section,
+            text: text,
+            sentence_order: order,
+            needs_confirmation: false
+          })
+        }).then(function (data) {
+          document.getElementById('supplement-text').value = '';
+          toast('已补充到简报');
+          renderBriefing(data);
+        }).catch(function (err) {
+          toast(err.message || '补充失败');
+        }).then(function () { submit.disabled = false; });
+      });
+    }
+    var uploadBtn = document.getElementById('attachment-upload');
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', function () {
+        var fileInput = document.getElementById('attachment-file');
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (!file) { toast('请先选择文件'); return; }
+        var form = new FormData();
+        form.append('file', file);
+        form.append('category', document.getElementById('attachment-category').value || 'other');
+        form.append('title', file.name || '课堂附件');
+        form.append('create_item', document.getElementById('attachment-create-item').checked ? 'true' : 'false');
+        form.append('item_text', (document.getElementById('supplement-text').value || file.name || '').trim());
+        uploadBtn.disabled = true;
+        fetch('/api/lectures/' + LID + '/attachments', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + TOKEN },
+          body: form
+        }).then(function (response) {
+          return response.json().catch(function () { return {}; }).then(function (data) {
+            if (!response.ok) {
+              var detail = data.detail;
+              if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+              throw new Error(detail || '上传失败');
+            }
+            return data;
+          });
+        }).then(function () {
+          toast('附件已上传');
+          if (fileInput) fileInput.value = '';
+          return Promise.all([loadAttachments(), loadBriefing()]);
+        }).catch(function (err) {
+          toast(err.message || '上传失败');
+        }).then(function () { uploadBtn.disabled = false; });
+      });
+    }
+    document.querySelectorAll('.js-open-supplement').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var section = button.getAttribute('data-section');
+        var select = document.getElementById('supplement-section');
+        if (select && section) select.value = section;
+        var panel = document.getElementById('briefing-supplement');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        var text = document.getElementById('supplement-text');
+        if (text) text.focus();
+      });
+    });
+    document.querySelectorAll('.js-focus-upload').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var category = button.getAttribute('data-category') || 'other';
+        var select = document.getElementById('attachment-category');
+        if (select) select.value = category;
+        var file = document.getElementById('attachment-file');
+        if (file) file.click();
+        var panel = document.getElementById('briefing-supplement');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+  }
+
   function renderBriefing(data) {
     currentBriefing = data;
     var body = document.getElementById('briefing-body');
-    var refreshBtn = document.getElementById('briefing-refresh');
+    var badge = document.getElementById('briefing-edited-badge');
     if (!body) return data;
     var status = data && data.status;
-    if (refreshBtn) {
-      refreshBtn.classList.toggle('hidden', !(status === 'ready' || status === 'failed' || status === 'empty'));
-    }
+    if (badge) badge.classList.toggle('hidden', !(data && data.edit_status === 'edited'));
+    if (!briefingEditing) setBriefingMode(false);
     if (status === 'generating' || status === 'missing') {
       setBriefingStatus(status === 'generating' ? '正在生成课堂简报…' : '尚未生成，正在启动…');
       body.innerHTML = '<div class="animate-pulse h-16 bg-surface-container-low rounded-xl"></div>';
       return data;
     }
-    if (status === 'empty') {
-      setBriefingStatus('没有转录内容');
-      body.innerHTML = '<p class="text-on-surface-variant">这堂课还没有转录，无法生成简报。</p>';
+    if (status === 'empty' && !briefingEditing) {
+      setBriefingStatus('没有转录内容，仍可人工补充作业/考点');
+      body.innerHTML = '<p class="text-on-surface-variant mb-3">这堂课还没有转录。你可以直接补充作业、考点，或上传截图/PDF。</p>' + renderSupplementPanel();
+      bindSupplementPanel();
+      loadAttachments();
       return data;
     }
-    if (status === 'failed') {
+    if (status === 'failed' && !briefingEditing) {
       setBriefingStatus('生成失败');
-      body.innerHTML = '<p class="text-error">' + escapeHtml(data.error_message || '简报生成失败') + '</p>';
+      body.innerHTML = '<p class="text-error mb-3">' + escapeHtml(data.error_message || '简报生成失败') + '</p>' + renderSupplementPanel();
+      bindSupplementPanel();
+      loadAttachments();
       return data;
     }
-    if (status !== 'ready') {
+    if (status !== 'ready' && status !== 'empty' && !briefingEditing) {
       setBriefingStatus('暂无简报');
       body.innerHTML = '<p class="text-on-surface-variant">打开已完成的课堂后会自动生成简报。</p>';
       return data;
     }
+
+    if (briefingEditing) {
+      setBriefingStatus('修订模式：改完后点保存。句号填 0 表示无课堂引用。');
+      body.innerHTML = renderBriefingEditor(briefingDraft || data);
+      bindBriefingEditor(body);
+      return data;
+    }
+
     var providerHint = data.provider && data.provider.indexOf('llm:') === 0 ? '大模型润色' : '根据字幕抽取';
+    if (data.edit_status === 'edited') providerHint = '人工修订版';
     setBriefingStatus(providerHint + (data.error_message ? ' · ' + data.error_message : ''));
     var html = '';
     if (data.overview) {
@@ -350,27 +634,228 @@
       html += '<p class="text-xs font-bold text-on-surface-variant mb-1">大纲</p><ul class="space-y-1 mb-3">';
       data.outline.forEach(function (item) {
         html += '<li>' + jumpButton(item.start_order, item.start_offset_ms, '#' + item.start_order + ' ' + (item.title || '')) +
-          (item.summary && item.summary !== item.title ? '<span class="text-ink-subdued"> · ' + escapeHtml(item.summary) + '</span>' : '') + '</li>';
+          (item.summary && item.summary !== item.title ? '<span class="text-ink-subdued"> · ' + escapeHtml(item.summary) + '</span>' : '') +
+          citationBadge(item.start_order) + '</li>';
       });
       html += '</ul>';
     }
     function block(title, items, mapItem) {
       if (!items || !items.length) return;
       html += '<p class="text-xs font-bold text-on-surface-variant mb-1">' + title + '</p>';
-      html += citationList(mapItem ? items.map(mapItem) : items);
+      html += citationList((mapItem ? items.map(mapItem) : items).map(function (item) {
+        var text = item.text || '';
+        if (item.source === 'user_added') text += '（人工补充）';
+        if (item.source === 'from_attachment') text += '（来自附件）';
+        return Object.assign({}, item, { text: text });
+      }));
     }
     block('要点', data.key_points);
-    block('考点', data.exam_hints);
+    if (data.exam_hints && data.exam_hints.length) {
+      block('考点', data.exam_hints);
+    } else {
+      html += emptySectionHint('考点', 'exam_hints');
+    }
+    if (data.assignments && data.assignments.length) {
+      html += '<p class="text-xs font-bold text-on-surface-variant mb-1">作业与通知</p>';
+      html += '<div class="mt-2 flex flex-col gap-1">' + data.assignments.map(function (item, index) {
+        var note = item.needs_confirmation ? '<span class="ml-1 text-[10px] text-tertiary">待确认</span>' : '<span class="ml-1 text-[10px] text-primary">已确认</span>';
+        var assignmentId = 'L' + LID + 'A' + index;
+        var assistantUrl = 'assistant.html?lecture_id=' + encodeURIComponent(LID)
+          + (lectureCourseId ? '&course_id=' + encodeURIComponent(lectureCourseId) : '')
+          + '&hint=breakdown_assignment&assignment_id=' + encodeURIComponent(assignmentId)
+          + '&q=' + encodeURIComponent('请拆解作业 ' + assignmentId + '：' + (item.text || '').slice(0, 80));
+        var actions = item.needs_confirmation
+          ? '<button type="button" class="js-confirm-assignment text-[11px] font-semibold text-primary" data-index="' + index + '">确认</button>'
+          : '';
+        actions += '<a class="js-breakdown-assignment text-[11px] font-semibold text-primary ml-2" href="' + assistantUrl + '">让助手拆解</a>';
+        actions += '<button type="button" class="js-delete-assignment text-[11px] font-semibold text-error ml-2" data-index="' + index + '">删除</button>';
+        return '<div class="rounded-lg border border-outline-variant/20 px-3 py-2"><button type="button" class="text-left text-xs text-on-surface-variant hover:text-primary w-full" data-jump="' +
+          item.sentence_order + '" data-start-ms="' + (item.start_offset_ms || 0) + '">#' + (item.sentence_order || '—') + ' ' +
+          escapeHtml(item.text || '') + note + citationBadge(item.sentence_order) + sourceBadge(item) + '</button><div class="mt-1 text-right">' + actions + '</div></div>';
+      }).join('') + '</div>';
+    } else {
+      html += emptySectionHint('作业', 'assignments');
+    }
     block('疑问', data.questions);
     block('术语', data.terms, function (item) {
       return {
         sentence_order: item.sentence_order,
         start_offset_ms: item.start_offset_ms,
-        text: (item.term || '') + (item.explanation ? '：' + item.explanation : '')
+        text: (item.term || '') + (item.explanation ? '：' + item.explanation : ''),
+        source: item.source
       };
     });
+    html += renderSupplementPanel();
     body.innerHTML = html || '<p class="text-on-surface-variant">简报已生成，但没有可展示的要点。</p>';
+    body.querySelectorAll('.js-confirm-assignment').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var index = Number(button.getAttribute('data-index'));
+        button.disabled = true;
+        api('/lectures/' + LID + '/briefing/assignments/' + index + '/confirm', { method: 'POST' })
+          .then(renderBriefing)
+          .catch(function (err) { toast(err.message || '确认失败'); button.disabled = false; });
+      });
+    });
+    body.querySelectorAll('.js-delete-assignment').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (!confirm('删除这条作业/通知？')) return;
+        var index = Number(button.getAttribute('data-index'));
+        button.disabled = true;
+        api('/lectures/' + LID + '/briefing/assignments/' + index, { method: 'DELETE' })
+          .then(renderBriefing)
+          .catch(function (err) { toast(err.message || '删除失败'); button.disabled = false; });
+      });
+    });
+    bindSupplementPanel();
+    loadAttachments();
     return data;
+  }
+
+  function editorList(section, items, fields) {
+    items = items || [];
+    var html = '<div class="mb-3" data-section="' + section + '"><div class="flex items-center justify-between mb-1"><p class="text-xs font-bold text-on-surface-variant">' + fields.title + '</p><button type="button" class="js-add-item text-[11px] font-semibold text-primary" data-section="' + section + '">新增</button></div>';
+    if (!items.length) html += '<p class="text-xs text-ink-subdued mb-2">暂无条目</p>';
+    items.forEach(function (item, index) {
+      html += '<div class="mb-2 rounded-xl border border-outline-variant/30 p-2 space-y-1" data-index="' + index + '">';
+      fields.inputs.forEach(function (input) {
+        var value = item[input.key] == null ? '' : item[input.key];
+        if (input.type === 'textarea') {
+          html += '<textarea class="js-field w-full rounded-lg border-outline-variant/40 text-xs" rows="2" data-key="' + input.key + '" placeholder="' + input.label + '">' + escapeHtml(String(value)) + '</textarea>';
+        } else {
+          html += '<input class="js-field w-full rounded-lg border-outline-variant/40 text-xs" type="' + (input.type || 'text') + '" data-key="' + input.key + '" placeholder="' + input.label + '" value="' + escapeHtml(String(value)) + '">';
+        }
+      });
+      if (fields.confirmable) {
+        html += '<label class="flex items-center gap-2 text-[11px] text-ink-subdued"><input class="js-field" type="checkbox" data-key="needs_confirmation" ' + (item.needs_confirmation ? 'checked' : '') + '>仍待确认</label>';
+      }
+      html += '<div class="text-right"><button type="button" class="js-remove-item text-[11px] font-semibold text-error" data-section="' + section + '" data-index="' + index + '">删除</button></div></div>';
+    });
+    return html + '</div>';
+  }
+
+  function renderBriefingEditor(data) {
+    var html = '<div class="mb-3"><p class="text-xs font-bold text-on-surface-variant mb-1">概述</p><textarea id="briefing-overview-input" class="w-full rounded-xl border-outline-variant/40 text-sm" rows="4">' + escapeHtml(data.overview || '') + '</textarea></div>';
+    html += editorList('outline', data.outline, {
+      title: '大纲',
+      inputs: [
+        { key: 'title', label: '标题' },
+        { key: 'summary', label: '摘要', type: 'textarea' },
+        { key: 'start_order', label: '起始句号（0=无引用）', type: 'number' },
+        { key: 'end_order', label: '结束句号', type: 'number' }
+      ]
+    });
+    html += editorList('key_points', data.key_points, {
+      title: '要点',
+      inputs: [
+        { key: 'text', label: '要点内容', type: 'textarea' },
+        { key: 'sentence_order', label: '句号（0=无引用）', type: 'number' }
+      ]
+    });
+    html += editorList('exam_hints', data.exam_hints, {
+      title: '考点',
+      inputs: [
+        { key: 'text', label: '考点内容', type: 'textarea' },
+        { key: 'sentence_order', label: '句号（0=无引用）', type: 'number' }
+      ]
+    });
+    html += editorList('assignments', data.assignments, {
+      title: '作业与通知',
+      confirmable: true,
+      inputs: [
+        { key: 'text', label: '作业/通知内容', type: 'textarea' },
+        { key: 'sentence_order', label: '句号（0=无引用）', type: 'number' },
+        { key: 'due_date', label: '截止日期（可选）' }
+      ]
+    });
+    html += editorList('questions', data.questions, {
+      title: '疑问',
+      inputs: [
+        { key: 'text', label: '疑问内容', type: 'textarea' },
+        { key: 'sentence_order', label: '句号（0=无引用）', type: 'number' }
+      ]
+    });
+    html += editorList('terms', data.terms, {
+      title: '术语',
+      inputs: [
+        { key: 'term', label: '术语' },
+        { key: 'explanation', label: '解释', type: 'textarea' },
+        { key: 'sentence_order', label: '句号（0=无引用）', type: 'number' }
+      ]
+    });
+    return html;
+  }
+
+  function blankItem(section) {
+    if (section === 'outline') return { title: '', summary: '', start_order: 0, end_order: 0, start_offset_ms: 0 };
+    if (section === 'terms') return { term: '', explanation: '', source_text: '', sentence_order: 0, start_offset_ms: 0 };
+    if (section === 'assignments') return { text: '', source_text: '', sentence_order: 0, start_offset_ms: 0, due_date: null, needs_confirmation: true };
+    return { text: '', source_text: '', sentence_order: 0, start_offset_ms: 0 };
+  }
+
+  function syncBriefingDraftFromDom(root) {
+    if (!briefingDraft) return;
+    var overview = document.getElementById('briefing-overview-input');
+    if (overview) briefingDraft.overview = overview.value;
+    ['outline', 'key_points', 'exam_hints', 'assignments', 'questions', 'terms'].forEach(function (section) {
+      var host = root.querySelector('[data-section="' + section + '"]');
+      if (!host) return;
+      var rows = [];
+      host.querySelectorAll(':scope > [data-index]').forEach(function (row) {
+        var item = blankItem(section);
+        row.querySelectorAll('.js-field').forEach(function (field) {
+          var key = field.getAttribute('data-key');
+          if (field.type === 'checkbox') item[key] = field.checked;
+          else if (field.type === 'number') item[key] = Number(field.value || 0);
+          else item[key] = field.value;
+        });
+        rows.push(item);
+      });
+      briefingDraft[section] = rows;
+    });
+  }
+
+  function bindBriefingEditor(root) {
+    root.querySelectorAll('.js-add-item').forEach(function (button) {
+      button.addEventListener('click', function () {
+        syncBriefingDraftFromDom(root);
+        var section = button.getAttribute('data-section');
+        briefingDraft[section] = briefingDraft[section] || [];
+        briefingDraft[section].push(blankItem(section));
+        renderBriefing(currentBriefing);
+      });
+    });
+    root.querySelectorAll('.js-remove-item').forEach(function (button) {
+      button.addEventListener('click', function () {
+        syncBriefingDraftFromDom(root);
+        var section = button.getAttribute('data-section');
+        var index = Number(button.getAttribute('data-index'));
+        (briefingDraft[section] || []).splice(index, 1);
+        renderBriefing(currentBriefing);
+      });
+    });
+  }
+
+  function collectBriefingPatch() {
+    var body = document.getElementById('briefing-body');
+    syncBriefingDraftFromDom(body);
+    return {
+      overview: briefingDraft.overview || '',
+      outline: briefingDraft.outline || [],
+      key_points: briefingDraft.key_points || [],
+      exam_hints: briefingDraft.exam_hints || [],
+      questions: briefingDraft.questions || [],
+      terms: briefingDraft.terms || [],
+      assignments: (briefingDraft.assignments || []).map(function (item) {
+        return {
+          text: item.text || '',
+          source_text: item.source_text || '',
+          sentence_order: Number(item.sentence_order || 0),
+          start_offset_ms: Number(item.start_offset_ms || 0),
+          due_date: item.due_date || null,
+          needs_confirmation: item.needs_confirmation !== false
+        };
+      })
+    };
   }
 
   function pollBriefing() {
@@ -391,11 +876,14 @@
     }, 2000);
   }
 
-  function requestBriefing(force) {
+  function requestBriefing(force, confirmOverwrite) {
     setBriefingStatus(force ? '正在重新生成…' : '正在生成课堂简报…');
+    briefingEditing = false;
+    briefingDraft = null;
+    setBriefingMode(false);
     return api('/lectures/' + LID + '/briefing', {
       method: 'POST',
-      body: JSON.stringify({ force: !!force })
+      body: JSON.stringify({ force: !!force, confirm_overwrite: !!confirmOverwrite })
     }).then(function (data) {
       renderBriefing(data);
       if (data.status === 'generating' || data.status === 'missing') pollBriefing();
@@ -404,6 +892,7 @@
       setBriefingStatus('简报加载失败');
       var body = document.getElementById('briefing-body');
       if (body) body.innerHTML = '<p class="text-error">' + escapeHtml(err.message || '失败') + '</p>';
+      throw err;
     });
   }
 
@@ -420,6 +909,79 @@
       var body = document.getElementById('briefing-body');
       if (body) body.innerHTML = '<p class="text-error">' + escapeHtml(err.message || '失败') + '</p>';
     });
+  }
+
+  function formatMediaTime(ms) {
+    var seconds = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+    return Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
+  }
+
+  function renderMedia(data) {
+    var panel = document.getElementById('media-panel');
+    var body = document.getElementById('media-body');
+    if (!panel || !body) return;
+    var assets = data.assets || [];
+    var video = assets.filter(function (x) { return x.type === 'video'; })[0];
+    var frames = assets.filter(function (x) { return x.type === 'frame'; });
+    var clips = data.clips || [];
+    if (!video && !frames.length && !clips.length) return;
+    panel.classList.remove('hidden');
+    var html = '';
+    if (video) html += '<video id="lecture-video" class="w-full max-h-72 rounded-xl bg-black mb-3" controls preload="metadata" src="' + escapeHtml(video.url) + '"></video>';
+    if (clips.length) html += '<h4 class="font-semibold text-ink-deep text-sm mb-2">重点短片候选</h4><div class="space-y-2 mb-3">' + clips.slice(0, 8).map(function (clip) { var available = video ? '' : ' disabled'; var exported = clip.media_url ? '<a class="text-xs font-semibold text-primary" href="' + escapeHtml(clip.media_url) + '" target="_blank">打开短片</a>' : '<button class="js-clip-export text-xs font-semibold text-primary" data-clip-id="' + clip.id + '"' + (clip.status === 'exporting' || !video ? ' disabled' : '') + '>' + (clip.status === 'exporting' ? '导出中…' : '导出短片') + '</button>'; return '<div class="rounded-xl border border-outline-variant/20 px-3 py-2"><button type="button" class="js-video-jump w-full text-left hover:text-primary' + (video ? '' : ' opacity-50') + '" data-video-ms="' + clip.start_offset_ms + '"' + available + '><span class="font-medium text-ink-deep">' + escapeHtml(clip.title) + '</span><span class="ml-2 text-xs text-primary">' + formatMediaTime(clip.start_offset_ms) + '–' + formatMediaTime(clip.end_offset_ms) + '</span><p class="mt-1 text-xs text-ink-subdued truncate">' + escapeHtml(clip.reason || '课堂重点') + '</p></button><div class="mt-1 text-right">' + exported + '</div></div>'; }).join('') + '</div>';
+    if (frames.length) html += '<h4 class="font-semibold text-ink-deep text-sm mb-2">板书 / PPT 候选帧</h4><div class="grid grid-cols-3 gap-2">' + frames.slice(0, 12).map(function (frame) { return '<a href="' + escapeHtml(frame.url) + '" target="_blank" class="block"><img class="aspect-video w-full rounded-lg object-cover border border-outline-variant/20" loading="lazy" src="' + escapeHtml(frame.url) + '"><span class="block mt-1 text-[11px] text-ink-subdued">' + formatMediaTime(frame.start_offset_ms) + ' · ' + escapeHtml((frame.metadata || {}).ocr_status || '待 OCR') + '</span></a>'; }).join('') + '</div>';
+    body.innerHTML = html;
+    body.querySelectorAll('.js-video-jump').forEach(function (button) { button.addEventListener('click', function () { var player = document.getElementById('lecture-video'); if (!player) return; player.currentTime = Number(button.getAttribute('data-video-ms') || 0) / 1000; player.play().catch(function () {}); }); });
+    body.querySelectorAll('.js-clip-export').forEach(function (button) { button.addEventListener('click', function () { button.disabled = true; button.textContent = '导出中…'; api('/lectures/' + LID + '/media/clips/' + button.getAttribute('data-clip-id') + '/export', { method: 'POST' }).then(function () { toast('正在导出短片，完成后可刷新查看'); setTimeout(loadMedia, 3500); }).catch(function (err) { button.disabled = false; button.textContent = '导出短片'; toast(err.message || '导出失败'); }); }); });
+  }
+
+  function loadMedia() { return api('/lectures/' + LID + '/media').then(renderMedia).catch(function () {}); }
+
+  function renderVerification(card, record) {
+    var old = card.querySelector('.verification-result');
+    if (old) old.remove();
+    var result = document.createElement('div');
+    result.className = 'verification-result mt-2 rounded-lg bg-primary/5 px-3 py-2 text-xs leading-5 text-ink-deep';
+    if (record.status === 'suggested') {
+      result.innerHTML = '<b>核验建议：</b>' + escapeHtml(record.suggested_text || '') + '<br><span class="text-ink-subdued">原文不会自动覆盖，请自行确认候选结果。</span><button type="button" class="js-confirm-verification ml-2 text-primary font-semibold" data-verification-id="' + record.id + '">确认候选</button>';
+      result.querySelector('.js-confirm-verification').addEventListener('click', function (event) { var button = event.currentTarget; button.disabled = true; api('/lectures/' + LID + '/transcriptions/' + card.getAttribute('data-trans-id') + '/verifications/' + record.id + '/confirm', { method: 'POST' }).then(function (data) { renderVerification(card, data); }).catch(function (err) { toast(err.message || '确认失败'); button.disabled = false; }); });
+    } else if (record.status === 'confirmed') {
+      result.innerHTML = '<b>已确认候选：</b>' + escapeHtml(record.suggested_text || '') + '<br><span class="text-ink-subdued">原始课堂转录仍已保留。</span>';
+    } else if (record.status === 'unchanged') {
+      result.textContent = '二次核验未发现与原转录不同的内容。';
+    } else if (record.status === 'unavailable') {
+      result.textContent = '暂无法完成音频二次识别：' + (record.error_message || '识别服务不可用') + '。';
+    } else if (record.status === 'failed') {
+      result.textContent = '核验失败：' + (record.error_message || '请稍后重试');
+    } else {
+      result.textContent = '正在从对应音视频片段进行二次核验…';
+    }
+    card.appendChild(result);
+  }
+
+  function requestVerification(card, button) {
+    var tid = card.getAttribute('data-trans-id');
+    if (!tid) return;
+    button.disabled = true;
+    button.textContent = '核验中…';
+    api('/lectures/' + LID + '/transcriptions/' + tid + '/verify', { method: 'POST' }).then(function (created) {
+      renderVerification(card, created);
+      var attempts = 0;
+      function poll() {
+        attempts += 1;
+        api('/lectures/' + LID + '/transcriptions/' + tid + '/verifications').then(function (items) {
+          var record = (items || []).filter(function (item) { return item.id === created.id; })[0];
+          if (!record || record.status === 'processing') {
+            if (attempts < 30) setTimeout(poll, 2000);
+            return;
+          }
+          renderVerification(card, record);
+          button.textContent = '再次核验';
+          button.disabled = false;
+        }).catch(function () { button.textContent = '再次核验'; button.disabled = false; });
+      }
+      setTimeout(poll, 1500);
+    }).catch(function (err) { toast(err.message || '无法发起核验'); button.textContent = '核验此句'; button.disabled = false; });
   }
 
   function appendChat(role, text, citations) {
@@ -440,10 +1002,31 @@
 
   function setAsking(on) {
     asking = on;
-    var send = document.getElementById('assistant-send');
     var input = document.getElementById('assistant-input');
-    if (send) send.disabled = on;
     if (input) input.disabled = on;
+    syncAssistantComposer();
+  }
+
+  function syncAssistantComposer() {
+    var input = document.getElementById('assistant-input');
+    var send = document.getElementById('assistant-send');
+    var counter = document.getElementById('assistant-char-count');
+    var hint = document.getElementById('assistant-composer-hint');
+    if (!input || !send || !counter) return;
+    var len = (input.value || '').length;
+    var nearLimit = len >= 460;
+    var atLimit = len >= 500;
+    counter.textContent = len + ' / 500';
+    counter.classList.toggle('text-amber-700', nearLimit && !atLimit);
+    counter.classList.toggle('font-semibold', nearLimit);
+    counter.classList.toggle('text-error', atLimit);
+    if (hint) {
+      hint.textContent = atLimit
+        ? '已达 500 字上限，请精简后再发送'
+        : (nearLimit ? '接近上限（最多 500 字）' : 'Enter 发送 · 最多 500 字');
+      hint.classList.toggle('text-error', atLimit);
+    }
+    send.disabled = asking || !(input.value || '').trim();
   }
 
   function askAssistant(question) {
@@ -469,26 +1052,77 @@
 
   var briefingRefresh = document.getElementById('briefing-refresh');
   if (briefingRefresh) {
-    briefingRefresh.addEventListener('click', function () { requestBriefing(true); });
+    briefingRefresh.addEventListener('click', function () {
+      var edited = currentBriefing && currentBriefing.edit_status === 'edited';
+      if (edited && !confirm('简报已人工修订。重新生成将覆盖这些修改，是否继续？')) return;
+      requestBriefing(true, edited).catch(function (err) {
+        if (String(err.message || '').indexOf('人工修订') >= 0) {
+          if (confirm(err.message + '\n确认覆盖并重新生成？')) requestBriefing(true, true);
+        } else {
+          toast(err.message || '重新生成失败');
+        }
+      });
+    });
+  }
+  var briefingEdit = document.getElementById('briefing-edit');
+  if (briefingEdit) {
+    briefingEdit.addEventListener('click', function () {
+      if (!currentBriefing || currentBriefing.status === 'generating') return;
+      briefingDraft = cloneBriefing(currentBriefing);
+      setBriefingMode(true);
+      renderBriefing(currentBriefing);
+    });
+  }
+  var briefingCancel = document.getElementById('briefing-cancel');
+  if (briefingCancel) {
+    briefingCancel.addEventListener('click', function () {
+      briefingDraft = null;
+      setBriefingMode(false);
+      renderBriefing(currentBriefing);
+    });
+  }
+  var briefingSave = document.getElementById('briefing-save');
+  if (briefingSave) {
+    briefingSave.addEventListener('click', function () {
+      var payload = collectBriefingPatch();
+      briefingSave.disabled = true;
+      api('/lectures/' + LID + '/briefing', { method: 'PATCH', body: JSON.stringify(payload) })
+        .then(function (data) {
+          briefingDraft = null;
+          setBriefingMode(false);
+          renderBriefing(data);
+          toast('简报修订已保存');
+        })
+        .catch(function (err) { toast(err.message || '保存失败'); })
+        .then(function () { briefingSave.disabled = false; });
+    });
   }
   document.querySelectorAll('.js-preset-q').forEach(function (btn) {
     btn.addEventListener('click', function () { askAssistant(btn.getAttribute('data-q')); });
   });
   var assistantForm = document.getElementById('assistant-form');
   if (assistantForm) {
+    var assistantInput = document.getElementById('assistant-input');
+    if (assistantInput) {
+      assistantInput.addEventListener('input', syncAssistantComposer);
+    }
     assistantForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var input = document.getElementById('assistant-input');
       var text = input ? input.value : '';
       if (input) input.value = '';
+      syncAssistantComposer();
       askAssistant(text);
     });
+    syncAssistantComposer();
   }
 
   function loadLectureInfo() {
     return api('/lectures/' + LID).then(function (lecture) {
       lectureStatus = lecture.status || '';
-      var title = lecture.course_name || '课堂回顾';
+      lectureCourseId = lecture.course_id ? String(lecture.course_id) : '';
+      translationEnabled = lecture.translation_enabled !== false;
+      var title = lecture.title || (lecture.session_number ? (lecture.course_name || '课堂回顾') + ' · 第 ' + lecture.session_number + ' 节课' : (lecture.course_name || '课堂回顾'));
       var dateText = lecture.lecture_date
         ? new Date(lecture.lecture_date + 'T00:00:00').toLocaleDateString('zh-CN') : '';
       document.getElementById('review-title').textContent = title;
@@ -501,6 +1135,10 @@
       if (audio && lecture.audio_url) {
         audio.src = lecture.audio_url;
         audio.dispatchEvent(new CustomEvent('lecture-audio-ready'));
+      }
+      var appendBtn = document.getElementById('append-recording-btn');
+      if (appendBtn) {
+        appendBtn.classList.toggle('hidden', lectureStatus !== 'completed');
       }
       return lecture;
     }).catch(function (error) {
@@ -545,102 +1183,174 @@
   });
 
   // ─── 渲染 ─────────────────────────────────────
-  function render() {
-    api('/lectures/' + LID + '/transcriptions?limit=400')
-    .then(function(transcriptions) {
-      var container = document.getElementById('transcript-container');
-      if (!container) return;
-      container.innerHTML = '';
+  function matchesTranscriptFilter(item, filter) {
+    if (!filter || filter === 'all') return true;
+    if (filter === 'bookmarked') return !!item.is_bookmarked;
+    return !!item.is_bookmarked && item.bookmark_tag === filter;
+  }
 
-      if (!transcriptions || !transcriptions.length) {
-        container.innerHTML = '<div class="text-center py-12 text-on-surface-variant">暂无转录内容</div>';
-        transcriptionsData = [];
-        return;
+  function filteredTranscriptions() {
+    return (transcriptionsData || []).filter(function (item) {
+      return matchesTranscriptFilter(item, transcriptFilter);
+    });
+  }
+
+  function updateTranscriptFilterUi() {
+    var counts = { all: 0, bookmarked: 0, important: 0, definition: 0, exam: 0, question: 0 };
+    (transcriptionsData || []).forEach(function (item) {
+      counts.all += 1;
+      if (!item.is_bookmarked) return;
+      counts.bookmarked += 1;
+      if (counts[item.bookmark_tag] != null) counts[item.bookmark_tag] += 1;
+    });
+    document.querySelectorAll('.js-transcript-filter').forEach(function (button) {
+      var filter = button.getAttribute('data-filter');
+      button.classList.toggle('is-active', filter === transcriptFilter);
+      if (filter === transcriptFilter) {
+        button.classList.add('bg-primary', 'text-white');
+        button.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+      } else {
+        button.classList.remove('bg-primary', 'text-white');
+        button.classList.add('bg-surface-container-high', 'text-on-surface-variant');
       }
+      var countEl = button.querySelector('.js-filter-count');
+      if (countEl) countEl.textContent = String(counts[filter] || 0);
+    });
+    var hint = document.getElementById('transcript-filter-hint');
+    if (!hint) return;
+    var labels = {
+      all: '全部句子',
+      bookmarked: '仅已收藏',
+      important: '仅重要',
+      definition: '仅定义',
+      exam: '仅考点',
+      question: '仅疑问'
+    };
+    var shown = filteredTranscriptions().length;
+    hint.textContent = (labels[transcriptFilter] || '筛选结果') + ' · ' + shown + ' 句';
+  }
 
-      transcriptionsData = transcriptions;
+  function setTranscriptFilter(filter, options) {
+    options = options || {};
+    transcriptFilter = filter || 'all';
+    updateTranscriptFilterUi();
+    if (!options.silent) renderTranscriptList();
+  }
 
-      transcriptions.forEach(function(t) {
-        var isBookmarked = t.is_bookmarked;
-        var cls = isBookmarked ? 'bg-orange-50/50 p-4 border-l-4 border-tertiary-container' : 'p-3';
-        var starFilled = isBookmarked ? "'FILL' 1" : "'FILL' 0";
-        var tagLabel = isBookmarked ? (tagNames[t.bookmark_tag] || '⭐已收藏') : '';
+  function upsertTranscriptionBookmark(tid, patch) {
+    transcriptionsData = (transcriptionsData || []).map(function (item) {
+      if (Number(item.id) !== Number(tid)) return item;
+      var next = Object.assign({}, item);
+      if (patch && patch.is_bookmarked) {
+        next.is_bookmarked = true;
+        next.bookmark_tag = patch.bookmark_tag;
+      } else {
+        next.is_bookmarked = false;
+        next.bookmark_tag = null;
+      }
+      return next;
+    });
+  }
 
-        var div = document.createElement('div');
-        div.className = 'group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
-        div.id = 'sentence-' + t.sentence_order;
-        div.setAttribute('data-trans-id', t.id);
-        div.setAttribute('data-sentence-order', t.sentence_order);
-        div.setAttribute('data-start-ms', t.start_offset_ms || 0);
-        div.innerHTML =
-          '<div class="flex justify-between items-start gap-3">' +
-            '<div class="flex-1 flex flex-col gap-2">' +
-              '<div class="flex items-center gap-2">' +
-                '<span class="text-[10px] font-mono text-outline">#' + t.sentence_order + '</span>' +
-                (tagLabel ? '<span class="bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[t.bookmark_tag] || 'bg-primary') + '"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagLabel) + '</span>' : '') +
-              '</div>' +
-              '<p class="text-body-history-source text-ink-deep">' + escapeHtml(t.source_text || '') + '</p>' +
-              '<p class="text-body-history-trans text-secondary">' + escapeHtml(t.translated_text || '') + '</p>' +
+  function renderTranscriptList() {
+    var container = document.getElementById('transcript-container');
+    if (!container) return;
+    updateTranscriptFilterUi();
+    container.innerHTML = '';
+
+    if (!transcriptionsData || !transcriptionsData.length) {
+      container.innerHTML = '<div class="text-center py-12 text-on-surface-variant">暂无转录内容</div>';
+      return;
+    }
+
+    var items = filteredTranscriptions();
+    if (!items.length) {
+      container.innerHTML = '<div class="text-center py-12 text-on-surface-variant">当前筛选下没有句子。可切换到「全部」查看完整字幕。</div>';
+      return;
+    }
+
+    items.forEach(function (t) {
+      var isBookmarked = !!t.is_bookmarked;
+      var cls = isBookmarked ? 'bg-orange-50/50 p-4 border-l-4 border-tertiary-container' : 'p-3';
+      var starFilled = isBookmarked ? "'FILL' 1" : "'FILL' 0";
+      var tagLabel = isBookmarked ? (tagNames[t.bookmark_tag] || '⭐已收藏') : '';
+
+      var div = document.createElement('div');
+      div.className = 'group relative hover:bg-surface-container-low ' + cls + ' rounded-lg transition-colors';
+      div.id = 'sentence-' + t.sentence_order;
+      div.setAttribute('data-trans-id', t.id);
+      div.setAttribute('data-sentence-order', t.sentence_order);
+      div.setAttribute('data-start-ms', t.start_offset_ms || 0);
+      div.innerHTML =
+        '<div class="flex justify-between items-start gap-3">' +
+          '<div class="flex-1 flex flex-col gap-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="text-[10px] font-mono text-outline">#' + t.sentence_order + '</span>' +
+              (tagLabel ? '<span class="bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[t.bookmark_tag] || 'bg-primary') + '"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagLabel) + '</span>' : '') +
             '</div>' +
+            '<p class="text-body-history-source text-ink-deep">' + escapeHtml(t.source_text || '') + '</p>' +
+            (translationEnabled ? '<p class="text-body-history-trans text-secondary">' + escapeHtml(t.translated_text || '') + '</p>' : '') +
+          '</div>' +
+          '<div class="flex flex-col gap-1">' +
+            '<button class="js-verify-btn flex-shrink-0 px-2 h-8 rounded-full text-[11px] text-primary hover:bg-primary/5 transition-colors" title="从对应音视频片段二次核验">核验此句</button>' +
             '<button class="js-bookmark-btn flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center hover:bg-tertiary-fixed/50 transition-colors" title="' + (isBookmarked ? '取消收藏' : '收藏') + '">' +
               '<span class="material-symbols-outlined text-tertiary text-lg" style="font-variation-settings:' + starFilled + ';">star</span>' +
             '</button>' +
-          '</div>';
-        container.appendChild(div);
+          '</div>' +
+        '</div>';
+      container.appendChild(div);
 
-        // 收藏按钮事件
-        var btn = div.querySelector('.js-bookmark-btn');
-        var starSpan = btn.querySelector('span');
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var tid = parseInt(div.getAttribute('data-trans-id'));
-          if (!tid) return;
+      var btn = div.querySelector('.js-bookmark-btn');
+      var verifyBtn = div.querySelector('.js-verify-btn');
+      if (verifyBtn) verifyBtn.addEventListener('click', function (e) { e.stopPropagation(); requestVerification(div, verifyBtn); });
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var tid = parseInt(div.getAttribute('data-trans-id'), 10);
+        if (!tid) return;
 
-          if (isBookmarked) {
-            api('/bookmarks/by-transcription/' + tid, { method: 'DELETE' })
+        if (isBookmarked) {
+          api('/bookmarks/by-transcription/' + tid, { method: 'DELETE' })
+            .then(function () {
+              toast('已取消收藏');
+              upsertTranscriptionBookmark(tid, { is_bookmarked: false });
+              renderTranscriptList();
+            })
+            .catch(function (err) { toast(err.message || '取消失败'); });
+        } else {
+          showTagPicker(btn, function (tag) {
+            api('/bookmarks', {
+              method: 'POST',
+              body: JSON.stringify({ transcription_id: tid, tag: tag })
+            })
               .then(function () {
-                toast('已取消收藏');
-                starSpan.style.fontVariationSettings = "'FILL' 0";
-                btn.title = '收藏';
-                div.classList.remove('bg-orange-50/50', 'border-l-4', 'border-tertiary-container');
-                div.classList.add('p-3');
-                var badge = div.querySelector('.bookmark-badge');
-                if (badge) badge.remove();
-                isBookmarked = false;
+                toast('已收藏');
+                upsertTranscriptionBookmark(tid, { is_bookmarked: true, bookmark_tag: tag });
+                renderTranscriptList();
               })
-              .catch(function (err) { toast(err.message || '取消失败'); });
-          } else {
-            showTagPicker(btn, function (tag) {
-              api('/bookmarks', {
-                method: 'POST',
-                body: JSON.stringify({ transcription_id: tid, tag: tag })
-              })
-                .then(function () {
-                  toast('已收藏');
-                  starSpan.style.fontVariationSettings = "'FILL' 1";
-                  btn.title = '取消收藏';
-                  div.classList.add('bg-orange-50/50', 'border-l-4', 'border-tertiary-container');
-                  div.classList.remove('p-3');
-                  var firstChild = div.querySelector('.flex-1');
-                  if (firstChild) {
-                    var badge = document.createElement('span');
-                    badge.className = 'bookmark-badge inline-flex items-center gap-1 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white ' + (tagColors[tag] || 'bg-primary');
-                    badge.innerHTML = '<span class="material-symbols-outlined text-[12px]" style="font-variation-settings:\'FILL\' 1;">star</span>' + escapeHtml(tagNames[tag] || tag);
-                    firstChild.insertBefore(badge, firstChild.firstChild);
-                  }
-                  isBookmarked = true;
-                })
-                .catch(function (err) { toast(err.message || '收藏失败'); });
-            });
-          }
-        });
+              .catch(function (err) { toast(err.message || '收藏失败'); });
+          });
+        }
       });
+    });
+  }
+
+  function render() {
+    api('/lectures/' + LID + '/transcriptions?limit=400')
+    .then(function (transcriptions) {
+      transcriptionsData = transcriptions || [];
+      renderTranscriptList();
     })
     .catch(function (err) {
       var container = document.getElementById('transcript-container');
       if (container) container.innerHTML = '<div class="text-center py-12 text-error">加载失败: ' + escapeHtml(err.message) + '</div>';
     });
   }
+
+  document.querySelectorAll('.js-transcript-filter').forEach(function (button) {
+    button.addEventListener('click', function () {
+      setTranscriptFilter(button.getAttribute('data-filter') || 'all');
+    });
+  });
 
   // ─── 导出功能 ─────────────────────────────────
   var exportModal = document.getElementById('exportModal');
@@ -651,8 +1361,51 @@
   var exportBtn = document.getElementById('export-btn');
   if (exportBtn) {
     exportBtn.addEventListener('click', function () {
-      if (!transcriptionsData.length) { toast('暂无数据可导出'); return; }
       exportModal.classList.remove('hidden');
+      syncExportFontsizeVisibility();
+    });
+  }
+  var appendRecordingBtn = document.getElementById('append-recording-btn');
+  if (appendRecordingBtn) {
+    appendRecordingBtn.addEventListener('click', function () {
+      if (!LID) return;
+      window.location.href = 'recorder.html?append=' + encodeURIComponent(LID);
+    });
+  }
+
+  function syncExportFontsizeVisibility() {
+    var block = document.getElementById('export-fontsize-block');
+    if (!block) return;
+    var needsSize = exportFormat === 'word' || exportFormat === 'pdf' || exportFormat === 'txt';
+    block.classList.toggle('hidden', !needsSize);
+  }
+
+  function downloadAuthorizedBlob(url, fallbackName) {
+    var token = localStorage.getItem('livetrans_token') || '';
+    return fetch(url, { headers: { 'Authorization': 'Bearer ' + token } }).then(function (response) {
+      if (!response.ok) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          var detail = data.detail;
+          if (Array.isArray(detail)) detail = detail.map(function (item) { return item.msg || item; }).join('; ');
+          throw new Error(detail || ('下载失败 (' + response.status + ')'));
+        });
+      }
+      var disposition = response.headers.get('Content-Disposition') || '';
+      var match = /filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)\"?/i.exec(disposition);
+      var filename = fallbackName;
+      if (match) {
+        try { filename = decodeURIComponent(match[1] || match[2]); } catch (e) { filename = match[1] || match[2] || fallbackName; }
+      }
+      return response.blob().then(function (blob) {
+        var objectUrl = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 1000);
+      });
     });
   }
 
@@ -667,6 +1420,7 @@
         this.classList.add('border-primary', 'bg-primary/5', 'text-primary', 'font-semibold');
         this.classList.remove('border-outline-variant', 'text-on-surface-variant', 'font-medium');
         exportFormat = this.getAttribute('data-format');
+        syncExportFontsizeVisibility();
       });
     });
 
@@ -701,7 +1455,19 @@
   }
 
   function doExport(format, fontSize) {
-    if (!transcriptionsData.length) { toast('暂无数据可导出'); return; }
+    if (format === 'briefing-md') {
+      downloadAuthorizedBlob('/api/lectures/' + LID + '/briefing/export?format=md', '简报.md')
+        .then(function () { toast('简报已导出'); })
+        .catch(function (err) { toast(err.message || '导出失败'); });
+      return;
+    }
+    if (format === 'materials-zip') {
+      downloadAuthorizedBlob('/api/lectures/' + LID + '/materials/export', '资料包.zip')
+        .then(function () { toast('资料包已开始下载'); })
+        .catch(function (err) { toast(err.message || '导出失败'); });
+      return;
+    }
+    if (!transcriptionsData.length) { toast('暂无字幕可导出'); return; }
     var title = (document.querySelector('h2') || {}).textContent || '课堂回顾';
     var date = new Date().toLocaleDateString('zh-CN');
 
@@ -730,7 +1496,7 @@
     transcriptionsData.forEach(function (t, i) {
       lines.push('【' + (i + 1) + '】' + (t.is_bookmarked ? ' [已收藏]' : ''));
       lines.push(t.source_text || '');
-      lines.push(t.translated_text || '');
+      if (translationEnabled) lines.push(t.translated_text || '');
       lines.push('');
     });
     return lines.join('\n');
@@ -749,7 +1515,7 @@
       html += '<div class="' + cls + '">';
       if (t.is_bookmarked) html += '<span class="badge">⭐ 已收藏</span>';
       html += '<p class="source">' + escapeHtml(t.source_text || '') + '</p>';
-      html += '<p class="trans">' + escapeHtml(t.translated_text || '') + '</p>';
+      if (translationEnabled) html += '<p class="trans">' + escapeHtml(t.translated_text || '') + '</p>';
       html += '</div>';
     });
     html += '</body></html>';
@@ -792,6 +1558,7 @@
     loadLectureInfo().then(function () {
       render();
       loadBriefing();
+      loadMedia();
     }).catch(function () {});
   }
   else {

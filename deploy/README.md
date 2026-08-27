@@ -31,6 +31,16 @@ nano .env.production
 
 中国大陆服务器不建议把 Google/MyMemory 作为生产翻译依赖。模板默认使用百度翻译和百度 ASR，需要填入对应的 App ID/API Key/Secret。
 
+若改用阿里云百炼实时识别（Fun-ASR），在 `.env.production` 中设置：
+
+```dotenv
+ASR_PROVIDER=aliyun
+DASHSCOPE_API_KEY=sk-xxxxxxxx
+ASR_ALIYUN_MODEL=fun-asr-realtime
+```
+
+分片降级仍可保留百度短语音（`ASR_API_URL` 等）。切换后重启 backend 容器即可。
+
 ## 4. HTTPS 证书
 
 在腾讯云 SSL 证书控制台下载 Nginx 格式证书，将证书链和私钥放到：

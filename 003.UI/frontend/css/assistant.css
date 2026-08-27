@@ -1,0 +1,76 @@
+/* 学习助手：降低阅读密度，突出范围、对话与输入三个层级。 */
+.assistant-page { background: linear-gradient(180deg, #f5f9fc 0, #faf9fa 18rem); }
+.assistant-page main { min-height: calc(100dvh - 4rem); }
+.assistant-page aside, .assistant-page main > section { box-shadow: 0 10px 26px rgba(35, 47, 58, .06); }
+.assistant-page #lecture-list { scrollbar-gutter: stable; }
+.assistant-page #thread-list { max-height: 38vh; overflow-y: auto; scrollbar-gutter: stable; }
+.assistant-page .thread-item { border: 1px solid transparent; transition: border-color .16s ease, background-color .16s ease; }
+.assistant-page .thread-item:hover { border-color: rgba(0, 97, 164, .2); }
+.assistant-page #message-list { scroll-behavior: smooth; background: linear-gradient(180deg, rgba(248, 250, 252, .72), #fff 9rem); }
+.assistant-page #message-list > div > div { box-shadow: 0 2px 7px rgba(32, 42, 52, .04); }
+.assistant-page #capability-bar .js-chip { min-height: 2rem; transition: background-color .16s ease, transform .16s ease, border-color .16s ease; }
+.assistant-page #capability-bar .js-chip:active { transform: scale(.97); }
+.assistant-page #ask-form { background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px); }
+.assistant-page #question { line-height: 1.5; }
+.assistant-page #question:focus { box-shadow: 0 0 0 3px rgba(0, 97, 164, .1); }
+
+.assistant-page .course-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.9rem;
+  background: #eef2f6;
+}
+.assistant-page .course-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #5f6b76;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.assistant-page .course-tab:hover { color: #0061a4; }
+.assistant-page .course-tab.is-active {
+  background: #fff;
+  color: #0061a4;
+  box-shadow: 0 1px 3px rgba(35, 47, 58, .1);
+}
+.assistant-page .course-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(0, 97, 164, .1);
+  color: inherit;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.assistant-page .course-tab.is-active .course-tab-count {
+  background: rgba(0, 97, 164, .14);
+}
+
+@media (min-width: 1024px) {
+  .assistant-page aside { position: sticky; top: 5rem; height: fit-content; max-height: calc(100dvh - 6rem); overflow-y: auto; }
+}
+
+@media (max-width: 640px) {
+  .assistant-page main { gap: .75rem; padding: .75rem; }
+  .assistant-page aside { padding: .875rem; }
+  .assistant-page main > section { min-height: calc(100dvh - 18rem); }
+  .assistant-page #message-list { padding: 1rem; }
+  .assistant-page #ask-form { padding: .75rem; padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+  .assistant-page #send { min-width: 4.5rem; }
+}

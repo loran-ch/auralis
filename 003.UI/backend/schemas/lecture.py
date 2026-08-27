@@ -5,9 +5,14 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class StartLectureReq(BaseModel):
+    course_id: Optional[int] = Field(None, gt=0)
     course_name: str = Field(default="未命名课程", min_length=1, max_length=256)
     source_lang: str = Field(default="de", pattern=r"^[a-z]{2}(?:-[A-Z]{2})?$")
     target_lang: str = Field(default="zh-CN", pattern=r"^[a-z]{2}(?:-[A-Z]{2})?$")
+    # None 表示沿用所选课程配置；未选课程时等同于开启翻译。
+    translation_enabled: Optional[bool] = None
+    # True：结束当前未完成课堂并开新课；False/默认：异常中断后优先续录同一堂课。
+    force_new: bool = False
 
     @field_validator("course_name")
     @classmethod
@@ -20,9 +25,13 @@ class StartLectureReq(BaseModel):
 
 class LectureResp(BaseModel):
     id: int
+    course_id: Optional[int] = None
+    session_number: Optional[int] = None
     course_name: str
+    title: Optional[str] = None
     source_lang: str
     target_lang: str
+    translation_enabled: bool = True
     status: str
     duration_seconds: int = 0
     sentence_count: int = 0
@@ -123,35 +132,55 @@ class BookmarkUpdateReq(BaseModel):
 
 class GenerateBriefingReq(BaseModel):
     force: bool = False
+    # 简报若已经人工修订，强制重生必须显式确认覆盖。
+    confirm_overwrite: bool = False
 
 
 class BriefingCitation(BaseModel):
-    text: str
-    source_text: str = ""
-    sentence_order: int
-    start_offset_ms: int = 0
+    text: str = Field(..., min_length=1, max_length=1000)
+    source_text: str = Field("", max_length=1000)
+    # 0 表示用户手写补充、暂无课堂引用。
+    sentence_order: int = Field(0, ge=0)
+    start_offset_ms: int = Field(0, ge=0)
     tag: Optional[str] = None
+    source: str = Field("auto", pattern="^(auto|user_added|from_attachment)$")
+    attachment_id: Optional[int] = Field(None, gt=0)
 
 
 class BriefingOutlineItem(BaseModel):
-    title: str
-    summary: str = ""
-    start_order: int
-    end_order: int
-    start_offset_ms: int = 0
+    title: str = Field(..., min_length=1, max_length=200)
+    summary: str = Field("", max_length=1000)
+    start_order: int = Field(0, ge=0)
+    end_order: int = Field(0, ge=0)
+    start_offset_ms: int = Field(0, ge=0)
 
 
 class BriefingTerm(BaseModel):
-    term: str
-    explanation: str = ""
-    source_text: str = ""
-    sentence_order: int
-    start_offset_ms: int = 0
+    term: str = Field(..., min_length=1, max_length=120)
+    explanation: str = Field("", max_length=1000)
+    source_text: str = Field("", max_length=1000)
+    sentence_order: int = Field(0, ge=0)
+    start_offset_ms: int = Field(0, ge=0)
+    source: str = Field("auto", pattern="^(auto|user_added|from_attachment)$")
+    attachment_id: Optional[int] = Field(None, gt=0)
+
+
+class BriefingAssignment(BaseModel):
+    text: str = Field(..., min_length=1, max_length=1000)
+    source_text: str = Field("", max_length=1000)
+    sentence_order: int = Field(0, ge=0)
+    start_offset_ms: int = Field(0, ge=0)
+    due_date: Optional[str] = Field(None, max_length=64)
+    # 课堂语音很容易把日期或作业要求识别错，必须由用户确认后再作为待办使用。
+    needs_confirmation: bool = True
+    source: str = Field("auto", pattern="^(auto|user_added|from_attachment)$")
+    attachment_id: Optional[int] = Field(None, gt=0)
 
 
 class BriefingResp(BaseModel):
     lecture_id: int
     status: str
+    edit_status: str = "auto"
     provider: Optional[str] = None
     overview: str = ""
     outline: list[BriefingOutlineItem] = Field(default_factory=list)
@@ -159,9 +188,61 @@ class BriefingResp(BaseModel):
     exam_hints: list[BriefingCitation] = Field(default_factory=list)
     questions: list[BriefingCitation] = Field(default_factory=list)
     terms: list[BriefingTerm] = Field(default_factory=list)
+    assignments: list[BriefingAssignment] = Field(default_factory=list)
     source_sentence_count: int = 0
     error_message: Optional[str] = None
     generated_at: Optional[datetime] = None
+    edited_at: Optional[datetime] = None
+
+
+class BriefingPatchReq(BaseModel):
+    """按区块部分更新；未出现的字段保持原值。"""
+    overview: Optional[str] = Field(None, max_length=4000)
+    outline: Optional[list[BriefingOutlineItem]] = Field(None, max_length=40)
+    key_points: Optional[list[BriefingCitation]] = Field(None, max_length=40)
+    exam_hints: Optional[list[BriefingCitation]] = Field(None, max_length=40)
+    questions: Optional[list[BriefingCitation]] = Field(None, max_length=40)
+    terms: Optional[list[BriefingTerm]] = Field(None, max_length=40)
+    assignments: Optional[list[BriefingAssignment]] = Field(None, max_length=40)
+
+    @field_validator("overview")
+    @classmethod
+    def normalize_overview(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strip()
+
+
+class BriefingSupplementReq(BaseModel):
+    """向简报追加一条人工补充（作业/考点等）。"""
+    section: str = Field(..., pattern="^(assignments|exam_hints|key_points|questions)$")
+    text: str = Field(..., min_length=1, max_length=1000)
+    sentence_order: int = Field(0, ge=0)
+    due_date: Optional[str] = Field(None, max_length=64)
+    attachment_id: Optional[int] = Field(None, gt=0)
+    needs_confirmation: bool = False
+
+    @field_validator("text")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("补充内容不能为空")
+        return value
+
+
+class LectureAttachmentResp(BaseModel):
+    id: int
+    lecture_id: int
+    category: str
+    title: str
+    url: str
+    content_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    status: str = "ready"
+    error_message: Optional[str] = None
+    created_at: Optional[datetime] = None
+    model_config = {"from_attributes": True}
 
 
 class AssistantHistoryItem(BaseModel):

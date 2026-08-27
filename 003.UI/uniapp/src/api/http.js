@@ -132,3 +132,51 @@ export async function upload(path, filePath, formData = {}, retry = true) {
   }
   return response.data
 }
+
+export async function streamAssistantAnswer(threadId, payload, handlers = {}) {
+  const path = `/api/assistant/threads/${threadId}/ask/stream`
+  // #ifdef H5
+  const token = getAccessToken()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok || !response.body) {
+    const error = new Error(`课堂助手请求失败（${response.status}）`)
+    error.statusCode = response.status
+    throw error
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+  while (true) {
+    const { value, done } = await reader.read()
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
+    const packets = buffer.split(/\r?\n\r?\n/)
+    buffer = packets.pop() || ''
+    packets.forEach((packet) => {
+      const event = (packet.match(/^event:\s*(.+)$/m) || [])[1]
+      const raw = (packet.match(/^data:\s*(.+)$/m) || [])[1]
+      if (!event || !raw) return
+      try { handlers[event]?.(JSON.parse(raw)) } catch (_) {}
+    })
+    if (done) break
+  }
+  return true
+  // #endif
+
+  // #ifndef H5
+  // 原生 App / 小程序暂不支持 fetch ReadableStream，使用同一业务接口的完整响应降级，
+  // 仍能得到工具化、可引用的回答，避免平台差异造成页面不可用。
+  const result = await request(`/api/assistant/threads/${threadId}/ask`, {
+    method: 'POST', data: payload, timeout: 60000,
+  })
+  handlers.delta?.({ content: result.answer || '' })
+  handlers.done?.(result)
+  return true
+  // #endif
+}

@@ -45,6 +45,24 @@ if ACCESS_EXPIRE_MINUTES <= 0 or REFRESH_EXPIRE_DAYS <= 0:
 if min(DB_POOL_SIZE, DB_POOL_TIMEOUT_SECONDS, DB_POOL_RECYCLE_SECONDS) <= 0:
     raise RuntimeError("数据库连接池参数必须为正整数")
 
+MAX_VIDEO_SIZE_MB = int(os.getenv("MAX_VIDEO_SIZE_MB", "1024"))
+if MAX_VIDEO_SIZE_MB <= 0:
+    raise RuntimeError("MAX_VIDEO_SIZE_MB 必须为正整数")
+
+MAX_ATTACHMENT_SIZE_MB = int(os.getenv("MAX_ATTACHMENT_SIZE_MB", "10"))
+if MAX_ATTACHMENT_SIZE_MB <= 0:
+    raise RuntimeError("MAX_ATTACHMENT_SIZE_MB 必须为正整数")
+
+MAX_MATERIAL_SIZE_MB = int(os.getenv("MAX_MATERIAL_SIZE_MB", "50"))
+if MAX_MATERIAL_SIZE_MB <= 0:
+    raise RuntimeError("MAX_MATERIAL_SIZE_MB 必须为正整数")
+
+# 生产环境应显式配置容器内路径；开发环境默认使用项目的语言模型目录。
+FFMPEG_BINARY = os.getenv("FFMPEG_BINARY", "ffmpeg").strip()
+TESSERACT_CMD = os.getenv("TESSERACT_CMD", "tesseract").strip()
+TESSDATA_DIR = os.getenv("TESSDATA_DIR", str(Path(__file__).with_name("tessdata"))).strip()
+OCR_LANGUAGES = os.getenv("OCR_LANGUAGES", "chi_sim+eng").strip()
+
 CODE_LENGTH       = 6
 CODE_EXPIRE_SEC   = 300
 CODE_RESEND_SEC   = 60
@@ -128,7 +146,10 @@ if TRANSLATION_TIMEOUT_SECONDS <= 0 or TRANSLATION_CACHE_TTL_SECONDS < 0:
 # 兼容常见 multipart 语音转文字服务。留空时客户端会明确进入演示降级，
 # 生产环境应通过密钥管理服务注入地址和凭据。
 # ─── 语音识别 API ─────────────────────────────────────
-# 在这里直接填写你的 API Key，留空则使用演示模式
+# ASR_PROVIDER=baidu|aliyun；实时字幕走对应上游，分片降级仍可用百度/通用 multipart。
+ASR_PROVIDER = os.getenv("ASR_PROVIDER", "baidu").strip().lower() or "baidu"
+if ASR_PROVIDER not in {"baidu", "aliyun"}:
+    raise RuntimeError("ASR_PROVIDER 仅支持 baidu 或 aliyun")
 ASR_API_URL = os.getenv("ASR_API_URL", "").strip()     # ← 填服务商地址
 ASR_API_KEY = os.getenv("ASR_API_KEY", "").strip()     # ← 填 API Key（百度需配合 SECRET）
 ASR_API_SECRET = os.getenv("ASR_API_SECRET", "").strip()  # ← 百度 Secret Key
@@ -137,10 +158,37 @@ ASR_MODEL = os.getenv("ASR_MODEL", "").strip()         # ← 填模型名称
 ASR_REALTIME_URL = os.getenv(
     "ASR_REALTIME_URL", "wss://vop.baidu.com/realtime_asr"
 ).strip()
+# 阿里云百炼实时 ASR（Fun-ASR / Paraformer）
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "").strip()
+ASR_ALIYUN_REALTIME_URL = os.getenv(
+    "ASR_ALIYUN_REALTIME_URL",
+    "wss://dashscope.aliyuncs.com/api-ws/v1/inference",
+).strip()
+ASR_ALIYUN_MODEL = os.getenv(
+    "ASR_ALIYUN_MODEL", "fun-asr-realtime"
+).strip() or "fun-asr-realtime"
 ASR_REALTIME_PREVIEW_INTERVAL_MS = int(
     os.getenv("ASR_REALTIME_PREVIEW_INTERVAL_MS", "800")
 )
 ASR_CONTEXT_SENTENCES = int(os.getenv("ASR_CONTEXT_SENTENCES", "3"))
+# 单条字幕/翻译上限：防止 interim/final 无限变长占内存与翻译额度。
+ASR_MAX_SEGMENT_CHARS = int(os.getenv("ASR_MAX_SEGMENT_CHARS", "200"))
+ASR_PREVIEW_TRANSLATE_CHARS = int(os.getenv("ASR_PREVIEW_TRANSLATE_CHARS", "80"))
+ASR_FORCE_FINAL_MS = int(os.getenv("ASR_FORCE_FINAL_MS", "25000"))
+ASR_HISTORY_DOM_LIMIT = int(os.getenv("ASR_HISTORY_DOM_LIMIT", "80"))
+ASR_MERGE_MIN_CHARS = int(os.getenv("ASR_MERGE_MIN_CHARS", "40"))
+ASR_MERGE_WAIT_MS = int(os.getenv("ASR_MERGE_WAIT_MS", "1800"))
+# 阿里实时断句：课堂场景默认语义断句，减少「话说一半就被切开」。
+ASR_ALIYUN_SEMANTIC_PUNCTUATION = os.getenv(
+    "ASR_ALIYUN_SEMANTIC_PUNCTUATION", "true"
+).strip().lower() in {"1", "true", "yes", "on"}
+ASR_ALIYUN_MAX_SENTENCE_SILENCE_MS = int(
+    os.getenv("ASR_ALIYUN_MAX_SENTENCE_SILENCE_MS", "1800")
+)
+# 长时间静音时保持连接：需持续推送静音 PCM（前端本就会推），并开启心跳。
+ASR_ALIYUN_HEARTBEAT = os.getenv(
+    "ASR_ALIYUN_HEARTBEAT", "true"
+).strip().lower() in {"1", "true", "yes", "on"}
 
 # ─── 企业翻译 API（可选）──────────────────────────────
 # 如果要用付费翻译服务，在这里填写
@@ -152,8 +200,21 @@ if ASR_TIMEOUT_SECONDS <= 0 or ASR_MAX_SEGMENT_MB <= 0:
     raise RuntimeError("ASR 超时和分片大小必须为正数")
 if ASR_REALTIME_PREVIEW_INTERVAL_MS < 300 or not 0 <= ASR_CONTEXT_SENTENCES <= 5:
     raise RuntimeError("实时翻译间隔至少 300ms，上下文句数必须在 0 到 5 之间")
-if IS_PRODUCTION and not ASR_API_URL:
-    raise RuntimeError("生产环境必须配置 ASR_API_URL")
+if min(ASR_MAX_SEGMENT_CHARS, ASR_PREVIEW_TRANSLATE_CHARS, ASR_FORCE_FINAL_MS, ASR_HISTORY_DOM_LIMIT) <= 0:
+    raise RuntimeError("ASR 字幕切分/预览/强制断句/历史条数上限必须为正数")
+if ASR_PREVIEW_TRANSLATE_CHARS > ASR_MAX_SEGMENT_CHARS:
+    raise RuntimeError("ASR_PREVIEW_TRANSLATE_CHARS 不能大于 ASR_MAX_SEGMENT_CHARS")
+if ASR_MERGE_MIN_CHARS <= 0 or ASR_MERGE_WAIT_MS <= 0:
+    raise RuntimeError("ASR 短句合并阈值必须为正数")
+if not 200 <= ASR_ALIYUN_MAX_SENTENCE_SILENCE_MS <= 6000:
+    raise RuntimeError("ASR_ALIYUN_MAX_SENTENCE_SILENCE_MS 必须在 200～6000")
+if IS_PRODUCTION and ASR_PROVIDER == "baidu" and not ASR_API_URL:
+    raise RuntimeError("生产环境使用百度 ASR 时必须配置 ASR_API_URL")
+if IS_PRODUCTION and ASR_PROVIDER == "aliyun" and not DASHSCOPE_API_KEY:
+    raise RuntimeError("生产环境使用阿里 ASR 时必须配置 DASHSCOPE_API_KEY")
+if ASR_PROVIDER == "aliyun" and not DASHSCOPE_API_KEY:
+    import warnings
+    warnings.warn("ASR_PROVIDER=aliyun 但未配置 DASHSCOPE_API_KEY，实时识别将不可用")
 
 MAX_AVATAR_SIZE_MB = int(os.getenv("MAX_AVATAR_SIZE_MB", "2"))
 MAX_AUDIO_SIZE_MB = int(os.getenv("MAX_AUDIO_SIZE_MB", "100"))
@@ -170,3 +231,10 @@ if BRIEFING_LLM_TIMEOUT_SECONDS <= 0 or BRIEFING_MAX_SENTENCES <= 0 or BRIEFING_
 if BRIEFING_LLM_API_URL and not BRIEFING_LLM_API_KEY:
     import warnings
     warnings.warn("已配置 BRIEFING_LLM_API_URL 但未配置 BRIEFING_LLM_API_KEY，简报将使用抽取模式")
+
+# ─── LLM Token 额度（滚动窗口，仅统计简报/助手大模型调用）──
+LLM_QUOTA_WINDOW_DAYS = int(os.getenv("LLM_QUOTA_WINDOW_DAYS", "30"))
+LLM_QUOTA_FREE_TOKENS = int(os.getenv("LLM_QUOTA_FREE_TOKENS", "200000"))
+LLM_QUOTA_PREMIUM_TOKENS = int(os.getenv("LLM_QUOTA_PREMIUM_TOKENS", "2000000"))
+if LLM_QUOTA_WINDOW_DAYS <= 0 or LLM_QUOTA_FREE_TOKENS < 0 or LLM_QUOTA_PREMIUM_TOKENS < 0:
+    raise RuntimeError("LLM 额度窗口与默认上限必须为非负，且窗口天数 > 0")

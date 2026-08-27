@@ -62,6 +62,25 @@ export const bookmarkApi = {
   removeByTranscription: (id) => request(`/api/bookmarks/by-transcription/${id}`, { method: 'DELETE' }),
 }
 
+export const courseApi = {
+  list: (includeInactive = false) => request(`/api/courses${query({ include_inactive: includeInactive })}`),
+  listPublic: () => request('/api/courses/public'),
+  recommendation: () => request('/api/courses/recommendation/now'),
+  create: (data) => request('/api/courses', { method: 'POST', data }),
+  detail: (id) => request(`/api/courses/${id}`),
+  update: (id, data) => request(`/api/courses/${id}`, { method: 'PATCH', data }),
+  remove: (id, permanent = false) => request(`/api/courses/${id}${query({ permanent })}`, { method: 'DELETE' }),
+  overview: (id) => request(`/api/courses/${id}/overview`),
+}
+
+export const assistantApi = {
+  listThreads: (courseId = null) => request(`/api/assistant/threads${query({ course_id: courseId })}`),
+  createThread: (data) => request('/api/assistant/threads', { method: 'POST', data }),
+  detail: (id) => request(`/api/assistant/threads/${id}`),
+  removeThread: (id) => request(`/api/assistant/threads/${id}`, { method: 'DELETE' }),
+  ask: (id, data) => request(`/api/assistant/threads/${id}/ask`, { method: 'POST', data, timeout: 60000 }),
+}
+
 export const adminApi = {
   dashboard: () => request('/api/admin/dashboard'),
   registrationSetting: () => request('/api/admin/settings/registration'),

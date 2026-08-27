@@ -1,0 +1,40 @@
+/* 课堂产品的统一导航菜单：所有带 #navMenu 的主页面共用。 */
+.app-nav-menu {
+  position: fixed;
+  top: 4.5rem;
+  left: 1rem;
+  z-index: 100;
+  width: min(15rem, calc(100vw - 2rem));
+  padding: .5rem;
+  border: 1px solid rgba(121, 116, 126, .2);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 18px 40px rgba(31, 35, 40, .16);
+  backdrop-filter: blur(12px);
+}
+
+.app-nav-menu a {
+  display: flex;
+  align-items: center;
+  gap: .875rem;
+  min-height: 3rem;
+  padding: .75rem 1rem;
+  border-radius: .875rem;
+  color: #1a1c1d;
+  font-size: .9375rem;
+  font-weight: 600;
+  transition: background-color .16s ease, color .16s ease;
+}
+
+.app-nav-menu a:hover { background: #f4f2f6; }
+.app-nav-menu a .material-symbols-outlined { color: #0061a4; font-size: 1.35rem; }
+.app-nav-menu a.is-active { color: #0061a4; background: rgba(0, 97, 164, .1); }
+.app-nav-menu a.is-active .material-symbols-outlined { font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24; }
+.app-nav-menu .app-nav-divider { height: 1px; margin: .35rem .5rem; background: rgba(121, 116, 126, .16); }
+.app-nav-menu a.app-nav-auth { color: #ba1a1a; }
+.app-nav-menu a.app-nav-auth .material-symbols-outlined { color: currentColor; }
+.app-nav-menu a.app-nav-auth.is-login { color: #0061a4; }
+
+@media (max-width: 420px) {
+  .app-nav-menu { width: min(15rem, calc(100vw - 2rem)); }
+}

@@ -2,13 +2,14 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
 <title>LiveTrans Voice - 管理后台</title>
+<link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/app-ux.css?v=1">
 <link rel="stylesheet" href="../css/admin.css">
 <script src="../shared/tailwind-config.js"></script>
 <script src="../shared/auth-client.js?v=2"></script>
-<script defer src="../js/admin.js?v=4"></script>
+<script defer src="../js/admin.js?v=5"></script>
 </head>
 <body class="flex h-screen bg-surface overflow-hidden">
 
@@ -86,6 +87,17 @@
       <!-- populated by JS -->
     </div>
 
+    <div class="bg-white rounded-2xl border border-outline-variant/10 p-6 mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-on-surface">近 30 日趋势</h3>
+        <p class="text-xs text-on-surface-variant">DAU / 新增用户 / LLM Tokens</p>
+      </div>
+      <div class="overflow-x-auto">
+        <canvas id="trend-chart" height="120"></canvas>
+      </div>
+      <div id="trend-legend" class="mt-4 flex flex-wrap gap-4 text-xs text-on-surface-variant"></div>
+    </div>
+
     <!-- System Info -->
     <div class="bg-white rounded-2xl border border-outline-variant/10 p-6" id="system-info-card">
       <h3 class="text-sm font-semibold text-on-surface mb-4">系统信息</h3>
@@ -99,7 +111,7 @@
   <section id="tab-users" class="tab-content p-6 lg:p-8" style="display:none;">
     <header class="mb-6">
       <h1 class="text-2xl font-bold text-on-surface tracking-tight">用户管理</h1>
-      <p class="text-sm text-on-surface-variant mt-1">管理所有注册用户</p>
+      <p class="text-sm text-on-surface-variant mt-1">角色升降、启停与滚动 30 天 LLM Token 额度（仅超级管理员）</p>
     </header>
 
     <!-- Filters -->
@@ -118,7 +130,7 @@
       <select id="users-role-filter" class="px-4 py-2.5 bg-white border border-outline-variant/30 rounded-xl text-sm focus:ring-2 focus:ring-primary/10 outline-none">
         <option value="">全部角色</option>
         <option value="user">普通用户</option>
-        <option value="admin">管理员</option>
+        <option value="admin">教师(admin)</option>
         <option value="super_admin">超级管理员</option>
       </select>
     </div>
@@ -135,12 +147,13 @@
               <th>角色</th>
               <th>状态</th>
               <th>会员</th>
+              <th>LLM额度(30天)</th>
               <th>注册时间</th>
               <th class="text-right">操作</th>
             </tr>
           </thead>
           <tbody id="users-table-body">
-            <tr><td colspan="8" class="text-center py-12 text-on-surface-variant">加载中...</td></tr>
+            <tr><td colspan="9" class="text-center py-12 text-on-surface-variant">加载中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -251,9 +264,10 @@
         <option value="">全部操作</option>
         <option value="user.status_active">用户启用</option>
         <option value="user.status_disabled">用户禁用</option>
-        <option value="user.role_admin">提升管理员</option>
+        <option value="user.role_admin">提升教师(admin)</option>
         <option value="user.role_super_admin">提升超管</option>
         <option value="user.role_user">降级用户</option>
+        <option value="user.quota_update">调整LLM额度</option>
         <option value="user.delete">删除用户</option>
         <option value="lecture.delete">删除课堂</option>
         <option value="guide.update">更新功能说明</option>
