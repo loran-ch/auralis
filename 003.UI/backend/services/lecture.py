@@ -97,25 +97,25 @@ def stop_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture
     return lecture
 
 
-def reopen_lecture_for_append(db: Session, lecture_id: int, user_id: int) -> Lecture:
+def reopen_lecture_for_append(db: Session, lecture_id: int, user) -> Lecture:
     """把已结束课堂重新打开为可录制，便于补录。
 
     若该课已是 recording/paused，直接返回（paused 会恢复）。
     若另有未结束课堂，拒绝，避免两堂并行。
+    仅课主或超级管理员可补录。
     """
-    active = get_active_lecture(db, user_id)
+    lecture = db.query(Lecture).filter(Lecture.id == lecture_id).first()
+    if not lecture or not can_manage_lecture(lecture, user):
+        raise LookupError("课堂不存在")
+
+    owner_id = int(lecture.user_id)
+    active = get_active_lecture(db, owner_id)
     if active and int(active.id) != int(lecture_id):
         raise ValueError("你还有未结束的课堂，请先继续录完或结束后再补录")
 
-    lecture = db.query(Lecture).filter(
-        Lecture.id == lecture_id, Lecture.user_id == user_id
-    ).first()
-    if not lecture:
-        raise LookupError("课堂不存在")
-
     if lecture.status in {"recording", "paused"}:
         if lecture.status == "paused":
-            return resume_lecture(db, lecture.id, user_id) or lecture
+            return resume_lecture(db, lecture.id, owner_id) or lecture
         return lecture
 
     if lecture.status != "completed":
@@ -204,8 +204,11 @@ def get_lecture(db: Session, lecture_id: int, user_id: int) -> Optional[Lecture]
     return None
 
 
-def can_manage_lecture(lecture: Lecture, user_id: int) -> bool:
-    return int(lecture.user_id) == int(user_id)
+def can_manage_lecture(lecture: Lecture, user) -> bool:
+    """修改课堂内容：仅课主或超级管理员。"""
+    if int(lecture.user_id) == int(getattr(user, "id", user)):
+        return True
+    return getattr(user, "role", None) == "super_admin"
 
 
 # ─── 转录 (演示模式) ──────────────────────────────────────

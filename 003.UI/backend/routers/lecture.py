@@ -59,9 +59,15 @@ def _readable_lecture(db: Session, lecture_id: int, user: User) -> Lecture:
 
 def _manageable_lecture(db: Session, lecture_id: int, user: User) -> Lecture:
     lecture = get_lecture(db, lecture_id, user.id)
-    if not lecture or not can_manage_lecture(lecture, user.id):
-        raise HTTPException(404, "课堂不存在")
+    if not lecture or not can_manage_lecture(lecture, user):
+        raise HTTPException(403, "仅课主或超级管理员可修改该课堂")
     return lecture
+
+
+def _lecture_resp(lecture: Lecture, user: User) -> LectureResp:
+    payload = LectureResp.model_validate(lecture).model_dump()
+    payload["can_manage"] = can_manage_lecture(lecture, user)
+    return LectureResp(**payload)
 
 
 def _generate_briefing_job(lecture_id: int, user_id: int, force: bool = False) -> None:
@@ -155,7 +161,7 @@ def api_start(req: StartLectureReq, background_tasks: BackgroundTasks,
     )
     if stopped:
         background_tasks.add_task(_generate_briefing_job, stopped.id, user.id)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.post("/{lecture_id}/pause", response_model=LectureResp)
@@ -166,7 +172,7 @@ def api_pause(lecture_id: int, user: User = Depends(get_current_user),
     lecture = pause_lecture(db, lecture_id, user.id)
     if not lecture:
         raise HTTPException(409, "课堂不存在或当前状态无法暂停")
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.post("/{lecture_id}/resume", response_model=LectureResp)
@@ -177,7 +183,7 @@ def api_resume(lecture_id: int, user: User = Depends(get_current_user),
     lecture = resume_lecture(db, lecture_id, user.id)
     if not lecture:
         raise HTTPException(409, "课堂不存在或当前状态无法恢复")
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.post("/{lecture_id}/append", response_model=LectureResp)
@@ -187,12 +193,12 @@ def api_append(lecture_id: int, user: User = Depends(get_current_user),
     if not user:
         raise HTTPException(401, "请先登录")
     try:
-        lecture = reopen_lecture_for_append(db, lecture_id, user.id)
+        lecture = reopen_lecture_for_append(db, lecture_id, user)
     except LookupError:
         raise HTTPException(404, "课堂不存在") from None
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from None
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.post("/{lecture_id}/stop", response_model=LectureResp)
@@ -212,7 +218,7 @@ def api_stop(lecture_id: int, background_tasks: BackgroundTasks,
     )
     background_tasks.add_task(_generate_briefing_job, lecture.id, user.id, force_briefing)
     background_tasks.add_task(_process_lecture_media_job, lecture.id, user.id)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.get("")
@@ -263,7 +269,7 @@ def api_list(user: User = Depends(get_current_user), db: Session = Depends(get_d
         Lecture.lecture_date.desc(), Lecture.started_at.desc(), Lecture.id.desc()
     ).offset((page-1)*size).limit(size).all()
     return {
-        "items": [LectureResp.model_validate(l) for l in lectures],
+        "items": [_lecture_resp(l, user) for l in lectures],
         "total": total,
         "page": page,
         "size": size,
@@ -324,7 +330,7 @@ def api_active(user: User = Depends(get_current_user), db: Session = Depends(get
     if not user:
         raise HTTPException(401, "请先登录")
     lecture = get_active_lecture(db, user.id)
-    return LectureResp.model_validate(lecture) if lecture else None
+    return _lecture_resp(lecture, user) if lecture else None
 
 
 @router.get("/{lecture_id}", response_model=LectureResp)
@@ -333,7 +339,7 @@ def api_detail(lecture_id: int, user: User = Depends(get_current_user),
     if not user:
         raise HTTPException(401, "请先登录")
     lecture = _readable_lecture(db, lecture_id, user)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.patch("/{lecture_id}", response_model=LectureResp)
@@ -352,7 +358,7 @@ def api_update(lecture_id: int, request: LectureUpdateReq,
         setattr(lecture, field, value)
     db.commit()
     db.refresh(lecture)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 AUDIO_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "uploads" / "audio"
@@ -734,7 +740,7 @@ async def api_upload_audio(lecture_id: int, file: UploadFile = File(...),
     db.refresh(lecture)
     if not appending_existing and old_audio_url != lecture.audio_url:
         _remove_local_audio(old_audio_url)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 @router.delete("/{lecture_id}")
@@ -771,7 +777,7 @@ def api_rename(lecture_id: int, req: RenameReq, user: User = Depends(get_current
         lecture.course_name = req.title
     db.commit()
     db.refresh(lecture)
-    return LectureResp.model_validate(lecture)
+    return _lecture_resp(lecture, user)
 
 
 class TranscribeTextReq(BaseModel):

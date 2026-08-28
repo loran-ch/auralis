@@ -22,6 +22,7 @@ class LanguageResp(BaseModel):
 class UserSettingsResp(BaseModel):
     default_source_lang: str = "auto"
     default_target_lang: str = "zh-CN"
+    interface_locale: str = "zh-Hans"
     default_engine: str = "default"
     translation_mode: str = "auto"
     font_size: str = "medium"
@@ -41,6 +42,7 @@ class UserSettingsResp(BaseModel):
 class UserSettingsUpdate(BaseModel):
     default_source_lang: Optional[str] = Field(None, pattern=r"^(auto|[a-z]{2}(?:-[A-Z]{2})?)$")
     default_target_lang: Optional[str] = Field(None, pattern=LANG_PATTERN)
+    interface_locale: Optional[str] = Field(None, pattern=r"^(zh-Hans|zh-HK|en)$")
     default_engine: Optional[str] = Field(None, min_length=1, max_length=32)
     translation_mode: Optional[str] = Field(None, pattern=r"^(online|offline|auto)$")
     font_size: Optional[str] = Field(None, pattern=r"^(small|medium|large)$")

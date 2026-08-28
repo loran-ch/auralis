@@ -86,7 +86,7 @@ onLoad(async (options) => {
 })
 
 onUnload(() => player?.destroy())
-onShareAppMessage(() => ({ title: lecture.value.course_name || 'LiveTrans Voice 课堂笔记', path: `/pages/review/index?id=${id.value}` }))
+onShareAppMessage(() => ({ title: lecture.value.course_name || 'Auralis 智听 课堂笔记', path: `/pages/review/index?id=${id.value}` }))
 
 async function load() {
   loading.value = true

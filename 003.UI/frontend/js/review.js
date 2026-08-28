@@ -1,4 +1,4 @@
-// LiveTrans Voice — 真实课堂音频播放器
+// Auralis 智听 — 真实课堂音频播放器
 (function () {
   const audio = document.getElementById('lecture-audio');
   const playBtn = document.getElementById('play-pause');

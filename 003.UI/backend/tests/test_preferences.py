@@ -30,6 +30,9 @@ class PreferencesSchemaTests(unittest.TestCase):
     def test_settings_reject_unknown_values(self):
         with self.assertRaises(ValidationError):
             UserSettingsUpdate(dark_mode="midnight")
+        self.assertEqual(UserSettingsUpdate(interface_locale="en").interface_locale, "en")
+        with self.assertRaises(ValidationError):
+            UserSettingsUpdate(interface_locale="yue")
 
 
 class UserStatsTests(unittest.TestCase):

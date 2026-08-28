@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — 浏览器语音识别 + 实时翻译
+ * Auralis 智听 — 浏览器语音识别 + 实时翻译
  */
 (function () {
   var API = '/api';
@@ -145,7 +145,7 @@
   }
 
   function selectedSourceLang() {
-    return sourceLangSelect && sourceLangSelect.value ? sourceLangSelect.value : 'en';
+    return sourceLangSelect && sourceLangSelect.value ? sourceLangSelect.value : 'zh-CN';
   }
 
   function selectedTargetLang() {
@@ -210,12 +210,12 @@
       var languages = results[0] || [];
       var settings = results[1] || {};
       var source = settings.default_source_lang === 'auto'
-        ? 'en' : (settings.default_source_lang || 'en');
+        ? 'zh-CN' : (settings.default_source_lang || 'zh-CN');
       var target = settings.default_target_lang || 'zh-CN';
       populateLanguageSelect(sourceLangSelect, languages, source);
       populateLanguageSelect(targetLangSelect, languages, target);
     }).catch(function () {
-      // 保留 HTML 中的英语→中文默认选项。
+      // 保留 HTML 中的中文默认选项。
     });
   }
 
@@ -569,7 +569,7 @@
   var guidePopover = document.getElementById('guide-popover');
   var GUIDE_COLORS = ['primary', 'secondary', 'accent-purple'];
   var currentGuide = {
-    title: '课堂学习助手',
+    title: '小橘子',
     subtitle: '从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。',
     footer_hint: '建议先在「课程中心」建课 → 回来点绿色麦克风开始 · 未登录会提示注册',
     items: [
@@ -600,7 +600,7 @@
       },
       {
         icon: 'psychology',
-        title: '随时：学习助手问答',
+        title: '随时：小橘子问答',
         body: '按课程检索笔记、拆解作业，也可粘贴报错/题目截图提问；回答会附上可跳转的课堂证据。'
       }
     ]

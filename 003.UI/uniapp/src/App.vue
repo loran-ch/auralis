@@ -5,7 +5,7 @@ export default {
     if (!uni.getStorageSync('livetrans_privacy_accepted')) {
       uni.showModal({
         title: '隐私保护说明',
-        content: 'LiveTrans Voice 仅在你主动录音或更换头像时申请麦克风和相册权限。课堂音频会上传到你的账号用于回顾。',
+        content: 'Auralis 智听 仅在你主动录音或更换头像时申请麦克风和相册权限。课堂音频会上传到你的账号用于回顾。',
         confirmText: '同意并继续',
         cancelText: '暂不使用',
         success: (result) => {

@@ -1,7 +1,7 @@
 <!DOCTYPE html><html class="light" lang="zh-CN"><head>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
-<title>LiveTrans Voice - 已完成课堂回顾</title>
+<title>Auralis 智听 - 已完成课堂回顾</title>
 <link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
 <div class="flex items-center gap-4">
 <button class="hover:bg-surface-variant/50 transition-colors p-2 rounded-full ease-out duration-200" onclick="window.location.href='history.html'"><span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">arrow_back</span></button>
 <div class="flex flex-col">
-<h1 class="font-display-current-source text-[18px] font-bold text-primary dark:text-primary-fixed-dim leading-none">LiveTrans Voice</h1>
+<h1 class="font-display-current-source text-[18px] font-bold text-primary dark:text-primary-fixed-dim leading-none">Auralis 智听</h1>
 <p id="review-subtitle" class="text-[12px] text-ink-subdued">正在加载课堂信息…</p>
 </div>
 </div>
@@ -70,10 +70,10 @@
   <div class="mb-3"><h3 class="text-base font-bold text-ink-deep flex items-center gap-2"><span class="material-symbols-outlined text-primary text-[20px]">video_library</span>课堂媒体</h3><p class="text-xs text-ink-subdued mt-1">视频可选；关键帧等待 OCR 处理后会显示板书文字。</p></div>
   <div id="media-body" class="text-sm text-on-surface-variant"></div>
 </section>
-<!-- 问这堂课 -->
+<!-- 问小橘子 -->
 <section id="assistant-panel" class="mt-stack-md rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
   <h3 class="text-base font-bold text-ink-deep flex items-center gap-2 mb-1">
-    <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>问这堂课
+    <span class="material-symbols-outlined text-primary text-[20px]">psychology</span>问小橘子
   </h3>
   <p id="assistant-hint" class="text-xs text-ink-subdued mb-3">根据本堂转录和收藏回答；每次最多 500 字，并带上最近几轮对话。点击 #编号 可跳到原句。</p>
   <div class="flex flex-wrap gap-2 mb-3">
@@ -157,7 +157,7 @@
     </div>
     <!-- Right: 追加 / 导出 -->
     <div class="flex justify-end gap-2">
-      <button id="append-recording-btn" class="flex items-center gap-1.5 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:bg-primary/5 transition-colors" title="在已有字幕后续录">
+      <button id="append-recording-btn" class="hidden flex items-center gap-1.5 border border-primary/30 text-primary px-4 py-1.5 rounded-full text-xs font-medium hover:bg-primary/5 transition-colors" title="在已有字幕后续录">
         <span class="material-symbols-outlined text-base">mic</span>追加录音
       </button>
       <button id="export-btn" class="flex items-center gap-1.5 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-xs font-medium hover:opacity-90 transition-opacity">
@@ -243,6 +243,7 @@
   var transcriptFilter = 'all';
   var currentBriefing = null;
   var lectureStatus = '';
+  var canManageLecture = false;
   var translationEnabled = true;
   var briefingTimer = null;
   var briefingPolls = 0;
@@ -390,10 +391,10 @@
     var cancelBtn = document.getElementById('briefing-cancel');
     var refreshBtn = document.getElementById('briefing-refresh');
     var ready = currentBriefing && (currentBriefing.status === 'ready' || currentBriefing.status === 'empty' || currentBriefing.status === 'failed');
-    if (editBtn) editBtn.classList.toggle('hidden', editing || !ready || currentBriefing.status === 'failed');
-    if (saveBtn) saveBtn.classList.toggle('hidden', !editing);
-    if (cancelBtn) cancelBtn.classList.toggle('hidden', !editing);
-    if (refreshBtn) refreshBtn.classList.toggle('hidden', editing || !ready);
+    if (editBtn) editBtn.classList.toggle('hidden', !canManageLecture || editing || !ready || currentBriefing.status === 'failed');
+    if (saveBtn) saveBtn.classList.toggle('hidden', !canManageLecture || !editing);
+    if (cancelBtn) cancelBtn.classList.toggle('hidden', !canManageLecture || !editing);
+    if (refreshBtn) refreshBtn.classList.toggle('hidden', !canManageLecture || editing || !ready);
   }
 
   function citationBadge(order) {
@@ -409,6 +410,11 @@
   }
 
   function emptySectionHint(title, section) {
+    if (!canManageLecture) {
+      return '<div class="mb-3 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low/40 px-3 py-3">' +
+        '<p class="text-xs font-bold text-on-surface-variant mb-1">' + title + '</p>' +
+        '<p class="text-xs text-ink-subdued">暂无内容（只读浏览公开课）。</p></div>';
+    }
     return '<div class="mb-3 rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-low/40 px-3 py-3">' +
       '<p class="text-xs font-bold text-on-surface-variant mb-1">' + title + '</p>' +
       '<p class="text-xs text-ink-subdued mb-2">自动识别未发现明确内容，可补充文字或上传截图/PDF。</p>' +
@@ -419,6 +425,7 @@
   }
 
   function renderSupplementPanel() {
+    if (!canManageLecture) return '';
     return '<div id="briefing-supplement" class="mt-4 border-t border-outline-variant/20 pt-4">' +
       '<p class="text-xs font-bold text-on-surface-variant mb-2">人工补录</p>' +
       '<div class="grid gap-2 sm:grid-cols-[120px_1fr]">' +
@@ -664,11 +671,16 @@
           + (lectureCourseId ? '&course_id=' + encodeURIComponent(lectureCourseId) : '')
           + '&hint=breakdown_assignment&assignment_id=' + encodeURIComponent(assignmentId)
           + '&q=' + encodeURIComponent('请拆解作业 ' + assignmentId + '：' + (item.text || '').slice(0, 80));
-        var actions = item.needs_confirmation
-          ? '<button type="button" class="js-confirm-assignment text-[11px] font-semibold text-primary" data-index="' + index + '">确认</button>'
-          : '';
-        actions += '<a class="js-breakdown-assignment text-[11px] font-semibold text-primary ml-2" href="' + assistantUrl + '">让助手拆解</a>';
-        actions += '<button type="button" class="js-delete-assignment text-[11px] font-semibold text-error ml-2" data-index="' + index + '">删除</button>';
+        var actions = '';
+        if (canManageLecture) {
+          if (item.needs_confirmation) {
+            actions += '<button type="button" class="js-confirm-assignment text-[11px] font-semibold text-primary" data-index="' + index + '">确认</button>';
+          }
+          actions += '<a class="js-breakdown-assignment text-[11px] font-semibold text-primary ml-2" href="' + assistantUrl + '">让小橘子拆解</a>';
+          actions += '<button type="button" class="js-delete-assignment text-[11px] font-semibold text-error ml-2" data-index="' + index + '">删除</button>';
+        } else {
+          actions += '<a class="js-breakdown-assignment text-[11px] font-semibold text-primary" href="' + assistantUrl + '">让小橘子拆解</a>';
+        }
         return '<div class="rounded-lg border border-outline-variant/20 px-3 py-2"><button type="button" class="text-left text-xs text-on-surface-variant hover:text-primary w-full" data-jump="' +
           item.sentence_order + '" data-start-ms="' + (item.start_offset_ms || 0) + '">#' + (item.sentence_order || '—') + ' ' +
           escapeHtml(item.text || '') + note + citationBadge(item.sentence_order) + sourceBadge(item) + '</button><div class="mt-1 text-right">' + actions + '</div></div>';
@@ -900,7 +912,13 @@
     return api('/lectures/' + LID + '/briefing').then(function (data) {
       renderBriefing(data);
       if (data.status === 'missing' && lectureStatus === 'completed') {
-        return requestBriefing(false);
+        if (canManageLecture) return requestBriefing(false);
+        setBriefingStatus('本节暂无简报');
+        var body = document.getElementById('briefing-body');
+        if (body) {
+          body.innerHTML = '<p class="text-on-surface-variant">课主尚未生成课堂简报，当前为只读浏览。</p>';
+        }
+        return data;
       }
       if (data.status === 'generating') pollBriefing();
       return data;
@@ -1120,6 +1138,7 @@
   function loadLectureInfo() {
     return api('/lectures/' + LID).then(function (lecture) {
       lectureStatus = lecture.status || '';
+      canManageLecture = !!lecture.can_manage;
       lectureCourseId = lecture.course_id ? String(lecture.course_id) : '';
       translationEnabled = lecture.translation_enabled !== false;
       var title = lecture.title || (lecture.session_number ? (lecture.course_name || '课堂回顾') + ' · 第 ' + lecture.session_number + ' 节课' : (lecture.course_name || '课堂回顾'));
@@ -1130,7 +1149,7 @@
       var location = [lecture.location_name, lecture.room].filter(Boolean).join(' · ');
       document.getElementById('review-meta').textContent =
         (location ? '录制于' + location + ' • ' : '') + formatDuration(lecture.duration_seconds);
-      document.title = title + ' - LiveTrans Voice';
+      document.title = title + ' - Auralis 智听';
       var audio = document.getElementById('lecture-audio');
       if (audio && lecture.audio_url) {
         audio.src = lecture.audio_url;
@@ -1138,7 +1157,7 @@
       }
       var appendBtn = document.getElementById('append-recording-btn');
       if (appendBtn) {
-        appendBtn.classList.toggle('hidden', lectureStatus !== 'completed');
+        appendBtn.classList.toggle('hidden', !canManageLecture || lectureStatus !== 'completed');
       }
       return lecture;
     }).catch(function (error) {

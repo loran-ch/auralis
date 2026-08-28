@@ -3,45 +3,53 @@
     <view class="auth-orb orb-one" /><view class="auth-orb orb-two" />
     <view class="auth-card">
       <view class="brand-mark">≋</view>
-      <text class="brand-title">LiveTrans Voice</text>
-      <text class="brand-subtitle">欢迎回来</text>
+      <view class="locale-picker"><picker :range="localeNames" :value="localeIndex" @change="changeLocale"><text>{{ localeNames[localeIndex] }}⌄</text></picker></view>
+      <text class="brand-title">Auralis</text>
+      <text class="brand-subtitle">{{ t('auth.welcomeBack') }}</text>
 
       <view class="form">
         <view class="field">
-          <text class="field-label">账号</text>
-          <view class="input-wrap"><text class="prefix">♙</text><input v-model="account" class="auth-input" placeholder="用户名或手机号码" autocomplete="username" /></view>
+          <text class="field-label">{{ t('auth.account') }}</text>
+          <view class="input-wrap"><text class="prefix">♙</text><input v-model="account" class="auth-input" :placeholder="t('auth.accountPlaceholder')" autocomplete="username" /></view>
         </view>
         <view class="field">
-          <view class="row-between"><text class="field-label">登录密码</text><text class="link">忘记密码？</text></view>
+          <view class="row-between"><text class="field-label">{{ t('auth.password') }}</text><text class="link">{{ t('auth.forgot') }}</text></view>
           <view class="input-wrap">
             <text class="prefix">⌑</text>
-            <input v-model="password" class="auth-input" :password="!showPassword" placeholder="请输入密码" autocomplete="current-password" @confirm="submit" />
-            <text class="visibility" @tap="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</text>
+            <input v-model="password" class="auth-input" :password="!showPassword" :placeholder="t('auth.passwordPlaceholder')" autocomplete="current-password" @confirm="submit" />
+            <text class="visibility" @tap="showPassword = !showPassword">{{ showPassword ? t('auth.hidePassword') : t('auth.showPassword') }}</text>
           </view>
         </view>
-        <button class="btn btn-primary login-button" :disabled="submitting" @tap="submit">{{ submitting ? '正在登录…' : '登录' }}</button>
+        <button class="btn btn-primary login-button" :disabled="submitting" @tap="submit">{{ submitting ? t('auth.loggingIn') : t('auth.login') }}</button>
       </view>
 
-      <view class="register-hint"><text>还没有账号？</text><text class="link strong" @tap="goRegister">立即注册</text></view>
-      <view class="divider-title"><view class="line" /><text>第三方登录</text><view class="line" /></view>
+      <view class="register-hint"><text>{{ t('auth.noAccount') }}</text><text class="link strong" @tap="goRegister">{{ t('auth.registerNow') }}</text></view>
+      <view class="divider-title"><view class="line" /><text>{{ t('auth.thirdParty') }}</text><view class="line" /></view>
       <view class="third-party"><button class="social">微</button><button class="social"></button><button class="social">G</button></view>
-      <text class="agreement">登录即代表您已阅读并同意《服务协议》与《隐私政策》</text>
+      <text class="agreement">{{ t('auth.agreement') }}</text>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { authApi } from '../../api'
 import { saveAuth } from '../../api/session'
 import { showError } from '../../platform/format'
 import { useTheme } from '../../platform/theme'
+import { setLocale, t, useLocale } from '../../platform/i18n'
 
 const account = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const submitting = ref(false)
 const themeClass = useTheme()
+const locale = useLocale()
+const localeCodes = ['zh-Hans', 'zh-HK', 'en']
+const localeNames = computed(() => [t('locale.simplified'), t('locale.cantonese'), t('locale.english')])
+const localeIndex = computed(() => Math.max(0, localeCodes.indexOf(locale.value)))
+
+function changeLocale(event) { setLocale(localeCodes[Number(event.detail.value)] || 'zh-Hans') }
 
 async function submit() {
   if (!account.value.trim()) return uni.showToast({ title: '请输入用户名或手机号', icon: 'none' })
@@ -68,7 +76,7 @@ function goRegister() { uni.navigateTo({ url: '/pages/register/index' }) }
 .orb-one { width: 430rpx; height: 430rpx; left: -180rpx; top: -100rpx; background: rgba(0,94,161,.12); }
 .orb-two { width: 360rpx; height: 360rpx; right: -150rpx; bottom: -100rpx; background: rgba(0,110,28,.1); }
 .auth-card { position: relative; z-index: 2; width: 100%; max-width: 680rpx; padding: 58rpx 44rpx 44rpx; background: rgba(255,255,255,.92); border: 1rpx solid rgba(193,199,210,.35); border-radius: 42rpx; box-shadow: 0 26rpx 70rpx rgba(0,56,98,.1); }
-.brand-mark { width: 96rpx; height: 96rpx; margin: 0 auto 20rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; font-size: 70rpx; font-weight: 900; line-height: 1; transform: rotate(90deg); }
+.locale-picker { display: flex; justify-content: flex-end; min-height: 30rpx; color: var(--primary); font-size: 21rpx; }.brand-mark { width: 96rpx; height: 96rpx; margin: 0 auto 20rpx; border-radius: 28rpx; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; font-size: 70rpx; font-weight: 900; line-height: 1; transform: rotate(90deg); }
 .brand-title,.brand-subtitle { display: block; text-align: center; }
 .brand-title { font-size: 42rpx; font-weight: 800; letter-spacing: -1rpx; color: var(--text); }
 .brand-subtitle { margin-top: 10rpx; font-size: 26rpx; color: var(--muted); }

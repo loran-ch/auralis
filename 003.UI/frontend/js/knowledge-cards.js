@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — 知识卡片交互
+ * Auralis 智听 — 知识卡片交互
  */
 (function () {
   var TOKEN = localStorage.getItem('livetrans_token');

@@ -1,4 +1,4 @@
-// LiveTrans Voice — H5 实时语音识别适配。
+// Auralis 智听 — H5 实时语音识别适配。
 // 原生 App/小程序没有统一的 Web Speech API，返回 false 交由服务端 ASR。
 
 let recognition = null

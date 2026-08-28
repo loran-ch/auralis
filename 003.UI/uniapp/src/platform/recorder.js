@@ -1,4 +1,4 @@
-// LiveTrans Voice — 录音平台适配（H5 / App / 微信小程序）
+// Auralis 智听 — 录音平台适配（H5 / App / 微信小程序）
 
 const RECORD_OPTIONS = {
   duration: 8000,

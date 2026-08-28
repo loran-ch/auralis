@@ -1,6 +1,6 @@
 <template>
   <view class="page page-with-nav assistant-page" :class="themeClass">
-    <AppHeader title="课堂助手" :subtitle="selectedCourse?.name || '选择课程后，基于课堂资料提问'">
+    <AppHeader title="小橘子" :subtitle="selectedCourse?.name || '选择课程后，基于课堂资料提问'">
       <template #right><button class="new-thread" @tap="newThread">＋</button></template>
     </AppHeader>
 
@@ -132,12 +132,12 @@ async function send(hint = null) {
         if (index >= 0) threads.value[index] = activeThread.value
         scrollToEnd()
       },
-      error: (event) => { answer.content = event.message || '课堂助手回答失败，请重试。'; answer.streaming = false; answer.toolStatus = '' },
+      error: (event) => { answer.content = event.message || '小橘子回答失败，请重试。'; answer.streaming = false; answer.toolStatus = '' },
     })
   } catch (error) {
     answer.content = answer.content || '回答暂时失败，请稍后重试。'
     answer.streaming = false; answer.toolStatus = ''
-    showError(error, '课堂助手回答失败')
+    showError(error, '小橘子回答失败')
   } finally { sending.value = false }
 }
 function toolLabel(value) { return { search_notebook: '课堂笔记检索', list_assignments: '作业清单', breakdown_assignment: '作业拆解', get_notebook_overview: '资料概览' }[value] || '课堂工具' }

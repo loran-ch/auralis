@@ -114,6 +114,7 @@ CREATE TABLE user_settings (
     -- 翻译偏好
     default_source_lang CHAR(5)         DEFAULT 'auto'       COMMENT '默认源语言(auto=自动检测)',
     default_target_lang CHAR(5)         DEFAULT 'zh-CN'      COMMENT '默认目标语言',
+    interface_locale    VARCHAR(16)     NOT NULL DEFAULT 'zh-Hans' COMMENT '界面语言(zh-Hans/zh-HK/en)',
     default_engine      VARCHAR(32)     DEFAULT 'default'    COMMENT '翻译引擎(default/deepl/glossary)',
     translation_mode    ENUM('online','offline','auto') DEFAULT 'auto',
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html><html class="light" lang="zh-CN" style=""><head>
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
-<title>LiveTrans Voice - 实时录音</title>
+<title>Auralis 智听 - 实时录音</title>
 <link rel="stylesheet" href="../shared/material-symbols.css">
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
   <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
   <a href="history.html" data-nav-page data-require-auth data-auth-reason="登录后即可查看课堂记录"><span class="material-symbols-outlined">history</span>课堂记录</a>
   <a href="courses.html" data-nav-page data-require-auth data-auth-reason="登录后即可管理课程"><span class="material-symbols-outlined">school</span>课程中心</a>
-  <a href="assistant.html" data-nav-page data-require-auth data-auth-reason="登录后即可使用学习助手"><span class="material-symbols-outlined">psychology</span>学习助手</a>
+  <a href="assistant.html" data-nav-page data-require-auth data-auth-reason="登录后即可使用课堂助手"><span class="material-symbols-outlined">psychology</span>课堂助手</a>
   <a href="knowledge-cards.html" data-nav-page data-require-auth data-auth-reason="登录后即可查看知识卡片"><span class="material-symbols-outlined">star</span>知识卡片</a>
   <a href="profile.html" data-nav-page data-require-auth data-auth-reason="登录后即可进入个人中心"><span class="material-symbols-outlined">person</span>个人中心</a>
   <div class="app-nav-divider"></div>
@@ -41,6 +41,7 @@
 </div>
 <div class="flex items-center gap-1 text-[11px] text-on-surface-variant">
   <select id="source-lang" class="bg-transparent border-0 py-0 pl-0 pr-5 text-[11px] focus:ring-0 cursor-pointer" title="识别语言">
+    <option value="zh-CN" selected>🇨🇳 简体中文</option>
     <option value="en">🇬🇧 English</option>
   </select>
   <label class="inline-flex items-center gap-1 cursor-pointer" title="关闭后只保存原文和录音，不调用翻译服务">
@@ -82,8 +83,8 @@
 </div>
 <section id="feature-intro" class="flex-1 overflow-y-auto pt-stack-lg pb-4">
   <div class="max-w-lg mx-auto">
-    <p class="text-[11px] font-semibold tracking-widest uppercase text-primary mb-1">LiveTrans Voice</p>
-    <h2 id="feature-intro-title" class="text-2xl font-extrabold text-ink-deep leading-tight mb-2">课堂学习助手</h2>
+    <p class="text-[11px] font-semibold tracking-widest uppercase text-primary mb-1">Auralis 智听</p>
+    <h2 id="feature-intro-title" class="text-2xl font-extrabold text-ink-deep leading-tight mb-2">小橘子</h2>
     <p id="feature-intro-subtitle" class="text-sm text-on-surface-variant mb-5">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <div id="feature-intro-items" class="space-y-3">
       <div class="feature-card bg-white rounded-2xl p-4 border border-outline-variant/20 shadow-sm flex gap-3">
@@ -136,7 +137,7 @@
           <span class="material-symbols-outlined">psychology</span>
         </div>
         <div>
-          <h3 class="font-bold text-ink-deep text-sm">随时：学习助手问答</h3>
+          <h3 class="font-bold text-ink-deep text-sm">随时：小橘子问答</h3>
           <p class="text-xs text-on-surface-variant mt-0.5 leading-relaxed">按课程检索笔记、拆解作业，也可粘贴报错/题目截图提问；回答会附上可跳转的课堂证据。</p>
         </div>
       </div>
@@ -191,7 +192,7 @@
 </button>
 <div id="guide-popover" class="hidden absolute bottom-full left-0 mb-3 w-[min(20.5rem,calc(100vw-2rem))] z-[60]">
   <div class="guide-popover-card bg-white rounded-2xl shadow-2xl border border-outline-variant/20 p-4 max-h-[min(62vh,28rem)] overflow-y-auto">
-    <h3 id="guide-popover-title" class="text-base font-bold text-on-surface mb-1">课堂学习助手</h3>
+    <h3 id="guide-popover-title" class="text-base font-bold text-on-surface mb-1">小橘子</h3>
     <p id="guide-popover-subtitle" class="text-xs text-on-surface-variant mb-3">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <div id="guide-popover-items" class="space-y-2.5 text-sm text-on-surface"></div>
     <p id="guide-popover-footer" class="text-[11px] text-outline mt-3"></p>
@@ -235,7 +236,7 @@
 <!-- 功能介绍弹窗 -->
 <div id="featureModal" class="hidden fixed inset-0 z-[80] bg-black/30 flex items-center justify-center px-4">
   <div class="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] overflow-y-auto p-6 shadow-2xl">
-    <h3 id="feature-modal-title" class="text-lg font-bold text-on-surface mb-1">课堂学习助手</h3>
+    <h3 id="feature-modal-title" class="text-lg font-bold text-on-surface mb-1">小橘子</h3>
     <p id="feature-modal-subtitle" class="text-sm text-on-surface-variant mb-4">从上课录音到课后复习提问，一条完整学习链路：听懂、记下、汇总、带走、再提问。</p>
     <ul id="feature-modal-items" class="space-y-3 text-sm text-on-surface"></ul>
     <button id="featureModalClose" type="button" class="mt-5 w-full py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90">知道了</button>

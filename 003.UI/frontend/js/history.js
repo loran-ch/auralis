@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — 课堂记录页
+ * Auralis 智听 — 课堂记录页
  * 会话检查 + API 加载
  */
 (function () {

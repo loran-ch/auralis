@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — 管理后台
+ * Auralis 智听 — 管理后台
  */
 (function () {
   'use strict';

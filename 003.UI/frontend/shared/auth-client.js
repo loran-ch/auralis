@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — authenticated fetch with single-flight token refresh.
+ * Auralis 智听 — authenticated fetch with single-flight token refresh.
  * Protected pages load this before their own scripts, so existing API calls
  * gain Authorization and one safe retry without duplicating refresh logic.
  */

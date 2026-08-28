@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
+from models.course import Course
 from models.preferences import CourseSchedule
 from models.user import User
 from routers.auth import get_current_user
@@ -13,6 +14,7 @@ from schemas.courses import (CourseCreate, CourseOverviewResp, CourseResp,
                              CourseScheduleAttachReq, CourseUpdate)
 from schemas.preferences import CourseScheduleCreate as LegacyCourseScheduleCreate, CourseScheduleResp
 from services.courses import (
+    can_manage_course,
     course_for_current_schedule,
     course_to_resp,
     create_course,
@@ -109,10 +111,10 @@ def api_deactivate_course(course_id: int, permanent: bool = Query(False),
                           db: Session = Depends(get_db)):
     user = _user_or_401(user)
     if permanent:
-        if not delete_course(db, user.id, course_id):
+        if not delete_course(db, user, course_id):
             raise HTTPException(404, "课程不存在")
         return MsgResp(message="课程已永久删除；课堂记录已保留为未归类，关联课表已停用")
-    if not deactivate_course(db, user.id, course_id):
+    if not deactivate_course(db, user, course_id):
         raise HTTPException(404, "课程不存在")
     return MsgResp(message="课程已归档，既有课堂记录会继续保留")
 
@@ -142,9 +144,12 @@ def api_course_schedules(course_id: int, user: User = Depends(get_current_user),
     user = _user_or_401(user)
     course = get_owned_course(db, user.id, course_id)
     if not course:
-        raise HTTPException(404, "课程不存在")
+        course = db.query(Course).filter(Course.id == course_id).first()
+        if not course or not can_manage_course(course, user):
+            raise HTTPException(404, "课程不存在")
+    owner_id = int(course.user_id)
     rows = db.query(CourseSchedule).filter(
-        CourseSchedule.user_id == user.id, CourseSchedule.course_id == course_id
+        CourseSchedule.user_id == owner_id, CourseSchedule.course_id == course_id
     ).order_by(CourseSchedule.day_of_week, CourseSchedule.start_time).all()
     return [CourseScheduleResp.model_validate(row) for row in rows]
 

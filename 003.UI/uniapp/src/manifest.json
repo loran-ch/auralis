@@ -1,5 +1,5 @@
 {
-  "name": "LiveTrans Voice",
+  "name": "Auralis 智听",
   "appid": "__UNI__LIVETRANSVOICE",
   "description": "课堂实时语音识别、翻译与知识点收藏",
   "versionName": "1.0.0",
@@ -52,7 +52,7 @@
   },
   "mp-weixin": {
     "appid": "",
-    "projectname": "LiveTrans Voice",
+    "projectname": "Auralis 智听",
     "usingComponents": true,
     "setting": {
       "urlCheck": true,
@@ -71,7 +71,7 @@
     }
   },
   "h5": {
-    "title": "LiveTrans Voice"
+    "title": "Auralis 智听"
   },
   "uniStatistics": {
     "enable": false

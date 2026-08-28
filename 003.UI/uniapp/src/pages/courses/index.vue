@@ -35,7 +35,7 @@
       <view v-if="selected" class="overview-card card">
         <view class="overview-head"><view><text class="section-title">{{ selected.course.name }}</text><text class="section-subtitle">{{ selected.completed_lecture_count || 0 }} 节已完成 · {{ formatDuration(selected.total_duration_seconds) }}</text></view><button class="close-button" @tap="selected = null">×</button></view>
         <view v-if="canManageSelected" class="publish-row"><view><text class="setting-title">发布课程</text><text class="setting-description">学生可浏览已完成课次及课后资料</text></view><switch :checked="selected.course.is_public" color="#005ea1" @change="togglePublish" /></view>
-        <view class="lecture-heading"><text class="section-title">最近课次</text><button class="ask-button" @tap="openAssistant(selected.course)">问课堂助手</button></view>
+        <view class="lecture-heading"><text class="section-title">最近课次</text><button class="ask-button" @tap="openAssistant(selected.course)">问小橘子</button></view>
         <view v-if="!selected.recent_lectures?.length" class="mini-empty">尚无已完成课堂</view>
         <view v-for="lecture in selected.recent_lectures || []" :key="lecture.id" class="lecture-row" @tap="openLecture(lecture.id)"><view class="lecture-dot" :style="{ background: selected.course.color || '#2563EB' }" /><view class="lecture-info"><text>{{ lecture.title || lecture.course_name }}</text><text>{{ formatDate(lecture.lecture_date) }} · {{ lecture.sentence_count || 0 }} 句</text></view><text class="chevron">›</text></view>
       </view>

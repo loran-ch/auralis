@@ -13,6 +13,9 @@ class UserSettings(Base):
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     default_source_lang = Column(String(5), default="auto")
     default_target_lang = Column(String(5), default="zh-CN")
+    # UI locale is deliberately independent from ASR / translation language.
+    # zh-HK denotes a Cantonese-style Traditional Chinese interface; ASR uses yue.
+    interface_locale = Column(String(16), default="zh-Hans", nullable=False)
     default_engine = Column(String(32), default="default")
     translation_mode = Column(Enum("online", "offline", "auto"), default="auto")
     font_size = Column(Enum("small", "medium", "large"), default="medium")

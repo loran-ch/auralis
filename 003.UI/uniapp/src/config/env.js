@@ -19,7 +19,7 @@ function resolveApiBaseUrl(value) {
 }
 
 export const API_BASE_URL = resolveApiBaseUrl(rawBaseUrl)
-export const APP_NAME = 'LiveTrans Voice'
+export const APP_NAME = 'Auralis 智听'
 export const REQUEST_TIMEOUT = 15000
 export const ENABLE_DEMO_MODE = String(
   import.meta.env.VITE_ENABLE_DEMO_MODE ?? (import.meta.env.DEV ? 'true' : 'false'),

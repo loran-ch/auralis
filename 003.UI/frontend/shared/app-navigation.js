@@ -1,4 +1,4 @@
-/* LiveTrans Voice — 主页面统一导航菜单。 */
+/* Auralis 智听 — 主页面统一导航菜单。 */
 (function () {
   'use strict';
 

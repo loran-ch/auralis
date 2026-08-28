@@ -10,7 +10,7 @@
 
 ## 本地运行
 
-1. 启动 MySQL。新库依次执行 `004.数据库脚本/01_livetrans_voice_建表.sql` 与 `02_livetrans_voice_初始化数据.sql`；已有旧库再执行 `03_livetrans_voice_企业级索引升级.sql`。如启用课堂简报与课堂助手，还需执行 `07_lecture_briefings.sql`、`09_classroom_assistant_upgrade.sql`、`10_record_only_mode.sql`、`11_courses_p0.sql` 与 `12_lecture_titles.sql`。
+1. 启动 MySQL。新库依次执行 `004.数据库脚本/01_livetrans_voice_建表.sql` 与 `02_livetrans_voice_初始化数据.sql`；已有旧库再执行 `03_livetrans_voice_企业级索引升级.sql` 与 `21_interface_locale_p0.sql`。如启用课堂简报与课堂助手，还需执行 `07_lecture_briefings.sql`、`09_classroom_assistant_upgrade.sql`、`10_record_only_mode.sql`、`11_courses_p0.sql` 与 `12_lecture_titles.sql`。
 2. 在项目根目录创建虚拟环境并安装 `003.UI/backend/requirements.txt`。
 3. 参考 `.env.example`，通过 PowerShell、进程管理器或部署平台设置环境变量。
 4. 从 `003.UI/backend` 启动：

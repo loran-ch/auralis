@@ -45,6 +45,8 @@ class LectureResp(BaseModel):
     lecture_date: Optional[date] = None
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
+    # 是否可追加录音 / 改简报等；公开课只读访客为 False。
+    can_manage: bool = False
     model_config = {"from_attributes": True}
 
 

@@ -2,7 +2,7 @@
   "name": "livetrans-voice-uniapp",
   "version": "1.0.0",
   "private": true,
-  "description": "LiveTrans Voice 多端客户端（iOS / Android / 微信小程序 / H5）",
+  "description": "Auralis 智听 多端客户端（iOS / Android / 微信小程序 / H5）",
   "scripts": {
     "dev:h5": "uni",
     "dev:app": "uni -p app",

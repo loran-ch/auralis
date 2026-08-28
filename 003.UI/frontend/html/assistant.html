@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LiveTrans Voice - 学习助手</title>
+  <title>Auralis 智听 - 小橘子</title>
 <link rel="stylesheet" href="../shared/material-symbols.css">
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
           <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
           <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
           <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
-          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>课堂助手</a>
           <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
           <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
           <div class="app-nav-divider"></div>
@@ -31,7 +31,7 @@
         </nav>
         <a href="history.html" class="hidden sm:flex items-center gap-2 text-sm font-semibold text-primary hover:opacity-80"><span class="material-symbols-outlined">arrow_back</span>课堂记录</a>
       </div>
-      <div class="text-center"><h1 class="font-bold text-primary">学习助手</h1><p class="text-xs text-slate-500">基于已保存的课堂记录回答</p></div>
+      <div class="text-center"><h1 class="font-bold text-primary">小橘子</h1><p class="text-xs text-slate-500">Auralis 智听的课堂助手 · 基于已保存课堂记录回答</p></div>
       <a href="courses.html" class="text-sm font-semibold text-primary">课程中心</a>
     </div>
   </header>
@@ -123,7 +123,8 @@
   var presetAssignmentId = params.get('assignment_id') || '';
   var presetQuestion = params.get('q') || params.get('question') || '';
   var WELCOME_HTML = '<div class="rounded-xl bg-primary/5 p-4 text-sm leading-6 text-slate-600">'
-    + '<p class="font-semibold text-slate-700 mb-1">我可以帮你：</p>'
+    + '<p class="font-semibold text-slate-700 mb-1">你好，我是小橘子 🍊</p>'
+    + '<p class="mb-2 text-xs text-slate-500">Auralis 智听的课堂助手，可以帮你：</p>'
     + '<p>1. <b>检索笔记</b> — 在字幕、简报和附件里找老师怎么讲的。</p>'
     + '<p>2. <b>拆解作业</b> — 列出作业并给出学习步骤（不代写答卷）。</p>'
     + '<p>3. <b>截图提问</b> — 上传报错/题目截图，结合课堂记录解释。</p>'
@@ -237,9 +238,16 @@
     if (!items || !items.length) return '';
     var evidence = items.filter(function (item) { return item && item.type !== 'image'; });
     if (!evidence.length) return '';
+    function citationPreview(item) {
+      var dst = String(item.translated_text || '').trim();
+      var src = String(item.source_text || '').trim();
+      var qmarks = (dst.match(/\?/g) || []).length;
+      if (!dst || qmarks >= Math.max(3, Math.floor(dst.length * 0.4))) return src || dst;
+      return dst;
+    }
     return '<div class="mt-3 space-y-1">' + evidence.map(function (item) {
       var label = item.lecture_title || (item.session_number ? '第 ' + item.session_number + ' 节课' : '课堂记录');
-      var text = item.translated_text || item.source_text || '';
+      var text = citationPreview(item);
       var href = item.lecture_id ? 'review.html?id=' + encodeURIComponent(item.lecture_id) : '#';
       return '<a href="' + href + '" class="block rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:border-primary/40 hover:text-primary"><b>' + escapeHtml(label) + ' #' + escapeHtml(String(item.sentence_order || '')) + '</b> · ' + escapeHtml(text.slice(0, 100)) + '</a>';
     }).join('') + '</div>';
@@ -542,7 +550,7 @@
         }
         if (event.event === 'done') {
           completed = true;
-          var finalAnswer = event.data.answer || streamView.buffer || '课堂助手未返回内容。';
+          var finalAnswer = event.data.answer || streamView.buffer || '小橘子未返回内容。';
           setStreamText(streamView.text, finalAnswer);
           streamView.citations.innerHTML = citations(event.data.citations || []);
           state.thread = event.data.thread || state.thread;

@@ -1,5 +1,5 @@
 /**
- * LiveTrans Voice — 个人中心
+ * Auralis 智听 — 个人中心
  */
 (function () {
   var TOKEN = localStorage.getItem('livetrans_token');

@@ -1,4 +1,4 @@
-"""LiveTrans Voice — FastAPI 入口"""
+"""Auralis 智听 — FastAPI 入口"""
 from pathlib import Path
 import time
 import uuid
@@ -24,7 +24,7 @@ from routers.courses import router as courses_router
 from routers.assistant import router as assistant_router
 
 app = FastAPI(
-    title="LiveTrans Voice API",
+    title="Auralis 智听 API",
     version="1.3.0",
     docs_url="/docs" if ENABLE_DOCS else None,
     redoc_url="/redoc" if ENABLE_DOCS else None,

@@ -84,7 +84,8 @@ for sql in \
   "004.数据库脚本/17_lecture_attachments_p0.sql" \
   "004.数据库脚本/18_lecture_materials_export_p0.sql" \
   "004.数据库脚本/19_public_courses_p0.sql" \
-  "004.数据库脚本/20_admin_llm_quota_p0.sql"
+  "004.数据库脚本/20_admin_llm_quota_p0.sql" \
+  "004.数据库脚本/21_interface_locale_p0.sql"
 do
     apply_sql "$sql"
 done

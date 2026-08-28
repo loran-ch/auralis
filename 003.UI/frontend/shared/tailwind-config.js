@@ -1,4 +1,4 @@
-/** LiveTrans Voice — 共享 Tailwind 配置 | livetrans_voice DESIGN.md */
+/** Auralis 智听 — 共享 Tailwind 配置 | livetrans_voice DESIGN.md */
 document.addEventListener('click',function(e){
   var m=document.getElementById('navMenu');
   if(m&&!m.classList.contains('hidden')&&!e.target.closest('#navMenu')&&!e.target.closest('button[onclick*="navMenu"]')){

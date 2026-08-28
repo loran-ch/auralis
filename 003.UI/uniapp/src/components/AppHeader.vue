@@ -16,7 +16,7 @@
 
 <script setup>
 const props = defineProps({
-  title: { type: String, default: 'LiveTrans Voice' },
+  title: { type: String, default: 'Auralis 智听' },
   subtitle: { type: String, default: '' },
   back: { type: Boolean, default: false },
   menu: { type: Boolean, default: false },

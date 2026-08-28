@@ -3,7 +3,7 @@
     <view class="nav-inner content-wide">
       <view v-for="item in items" :key="item.key" class="nav-item" :class="{ active: normalizedActive === item.key }" @tap="navigate(item)">
         <text class="nav-icon">{{ item.icon }}</text>
-        <text class="nav-label">{{ item.label }}</text>
+        <text class="nav-label">{{ item.label() }}</text>
       </view>
     </view>
   </view>
@@ -11,15 +11,16 @@
 
 <script setup>
 import { computed } from 'vue'
+import { t } from '../platform/i18n'
 
 const props = defineProps({ active: { type: String, required: true } })
 const normalizedActive = computed(() => props.active === 'cards' ? 'history' : props.active)
 const items = [
-  { key: 'courses', label: '课程', icon: '▦', url: '/pages/courses/index' },
-  { key: 'history', label: '记录', icon: '◷', url: '/pages/history/index' },
-  { key: 'recorder', label: '录音', icon: '●', url: '/pages/recorder/index' },
-  { key: 'assistant', label: '助手', icon: '✦', url: '/pages/assistant/index' },
-  { key: 'profile', label: '我的', icon: '♙', url: '/pages/profile/index' },
+  { key: 'courses', label: () => t('nav.courses'), icon: '▦', url: '/pages/courses/index' },
+  { key: 'history', label: () => t('nav.history'), icon: '◷', url: '/pages/history/index' },
+  { key: 'recorder', label: () => t('nav.recorder'), icon: '●', url: '/pages/recorder/index' },
+  { key: 'assistant', label: () => t('nav.assistant'), icon: '✦', url: '/pages/assistant/index' },
+  { key: 'profile', label: () => t('nav.profile'), icon: '♙', url: '/pages/profile/index' },
 ]
 
 function navigate(item) {

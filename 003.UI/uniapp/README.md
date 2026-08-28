@@ -1,4 +1,4 @@
-# LiveTrans Voice UniApp 多端客户端
+# Auralis 智听 UniApp 多端客户端
 
 本目录是浏览器端 `003.UI/frontend` 的 UniApp Vue 3/Vite 实现，复用同一套 FastAPI 接口和 MySQL 业务数据，目标平台为：
 

@@ -2,7 +2,7 @@
   <view class="register-page" :class="themeClass">
     <view class="topbar"><button class="back" @tap="goBack">‹</button><text>创建账户</text><view class="back" /></view>
     <view class="register-content">
-      <view class="intro"><view class="logo">≋</view><text class="title">加入 LiveTrans Voice</text><text class="subtitle">保存每一堂课，收藏每一个知识点</text></view>
+      <view class="intro"><view class="logo">≋</view><text class="title">加入 Auralis 智听</text><text class="subtitle">保存每一堂课，收藏每一个知识点</text></view>
       <view v-if="statusLoading" class="registration-notice card"><text>正在确认注册状态…</text></view>
       <view v-else-if="!registrationEnabled" class="registration-notice paused card"><text class="notice-title">新用户注册已暂停</text><text class="notice-copy">{{ registrationMessage }}，请稍后再试或联系管理员。</text></view>
       <view class="form-card card">

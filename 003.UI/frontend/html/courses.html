@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LiveTrans Voice - 课程中心</title>
+  <title>Auralis 智听 - 课程中心</title>
 <link rel="stylesheet" href="../shared/material-symbols.css">
   <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,13 +23,13 @@
           <a href="recorder.html" data-nav-page><span class="material-symbols-outlined">mic</span>实时录音</a>
           <a href="history.html" data-nav-page><span class="material-symbols-outlined">history</span>课堂记录</a>
           <a href="courses.html" data-nav-page><span class="material-symbols-outlined">school</span>课程中心</a>
-          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>学习助手</a>
+          <a href="assistant.html" data-nav-page><span class="material-symbols-outlined">psychology</span>课堂助手</a>
           <a href="knowledge-cards.html" data-nav-page><span class="material-symbols-outlined">star</span>知识卡片</a>
           <a href="profile.html" data-nav-page><span class="material-symbols-outlined">person</span>个人中心</a>
           <div class="app-nav-divider"></div>
           <a href="login.html?next=courses.html" data-nav-auth class="app-nav-auth is-login"><span class="material-symbols-outlined">login</span>登录 / 注册</a>
         </nav>
-        <a href="recorder.html" class="font-extrabold text-primary hidden sm:flex items-center gap-2"><span class="material-symbols-outlined">arrow_back</span>LiveTrans Voice</a>
+        <a href="recorder.html" class="font-extrabold text-primary hidden sm:flex items-center gap-2"><span class="material-symbols-outlined">arrow_back</span>Auralis 智听</a>
       </div>
       <a href="recorder.html" class="app-primary-action"><span class="material-symbols-outlined text-lg">mic</span><span class="hidden sm:inline">开始录音</span></a>
     </div>
@@ -105,7 +105,16 @@
     function api(path, opts) {
       opts = opts || {}; var token = localStorage.getItem('livetrans_token') || '';
       return fetch(API + path, { method: opts.method || 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: opts.body ? JSON.stringify(opts.body) : undefined })
-        .then(function (response) { return response.json().catch(function () { return {}; }).then(function (body) { if (!response.ok) throw new Error(body.detail || '请求失败'); return body; }); });
+        .then(function (response) {
+          return response.json().catch(function () { return {}; }).then(function (body) {
+            if (!response.ok) {
+              var err = new Error((body && body.detail) || ('请求失败 (' + response.status + ')'));
+              err.status = response.status;
+              throw err;
+            }
+            return body;
+          });
+        });
     }
     function duration(value) { var mins = Math.floor((value || 0) / 60); return Math.floor(mins / 60) + '小时' + (mins % 60) + '分'; }
     function day(value) { return ['','周一','周二','周三','周四','周五','周六','周日'][value] || ''; }
@@ -268,7 +277,16 @@
         renderList();
         if (activeId) showCourse(activeId, activeSource);
         else document.getElementById('course-detail').innerHTML = '<div class="h-full min-h-[320px] flex flex-col items-center justify-center text-center text-on-surface-variant"><span class="material-symbols-outlined text-5xl text-primary/50">school</span><p class="mt-3 font-medium">选择或创建一门课程</p></div>';
-      }).catch(function () { window.location.href = 'login.html?next=courses.html'; });
+      }).catch(function (err) {
+        if (err && err.status === 401) {
+          window.location.href = 'login.html?next=courses.html';
+          return;
+        }
+        var detail = document.getElementById('course-detail');
+        if (detail) {
+          detail.innerHTML = '<p class="text-error p-6">' + escapeHtml((err && err.message) || '课程加载失败') + '</p>';
+        }
+      });
     }
     document.getElementById('tab-mine').onclick = function () { setListTab('mine'); };
     document.getElementById('tab-public').onclick = function () { setListTab('public'); };

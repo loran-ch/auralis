@@ -1,31 +1,33 @@
 <template>
   <view class="page page-with-nav" :class="themeClass">
-    <AppHeader title="个人中心" subtitle="账号、学习统计与偏好设置" />
+    <AppHeader :title="t('profile.title')" :subtitle="t('profile.subtitle')" />
     <view class="content content-wide">
       <view class="profile-hero card">
         <view class="avatar-wrap" @tap="chooseAvatar"><image v-if="user.avatar_url" class="avatar" :src="absoluteAssetUrl(user.avatar_url)" mode="aspectFill" /><view v-else class="avatar-placeholder">{{ initials }}</view><view class="camera-badge">✎</view></view>
-        <view class="identity"><text class="display-name">{{ user.nickname || user.username || '用户' }}</text><text class="identity-meta">{{ identityMeta }}</text><view class="member-badge">{{ user.member_level === 'premium' ? '高级会员' : '免费账户' }}</view></view>
-        <button class="edit-name" @tap="profileOpen = true">编辑</button>
+        <view class="identity"><text class="display-name">{{ user.nickname || user.username || t('common.user') }}</text><text class="identity-meta">{{ identityMeta }}</text><view class="member-badge">{{ user.member_level === 'premium' ? t('profile.premium') : t('profile.free') }}</view></view>
+        <button class="edit-name" @tap="profileOpen = true">{{ t('common.edit') }}</button>
       </view>
 
       <view class="stats-grid">
-        <view class="stat-card card"><text class="stat-icon blue">◷</text><text class="stat-value">{{ stats.total_hours || 0 }}h</text><text class="stat-label">总录音</text></view>
-        <view class="stat-card card"><text class="stat-icon gold">★</text><text class="stat-value">{{ stats.bookmark_count || 0 }}</text><text class="stat-label">知识卡片</text></view>
-        <view class="stat-card card"><text class="stat-icon green">▤</text><text class="stat-value">{{ stats.lecture_count || 0 }}</text><text class="stat-label">课堂记录</text></view>
+        <view class="stat-card card"><text class="stat-icon blue">◷</text><text class="stat-value">{{ stats.total_hours || 0 }}h</text><text class="stat-label">{{ t('profile.totalRecording') }}</text></view>
+        <view class="stat-card card"><text class="stat-icon gold">★</text><text class="stat-value">{{ stats.bookmark_count || 0 }}</text><text class="stat-label">{{ t('profile.cards') }}</text></view>
+        <view class="stat-card card"><text class="stat-icon green">▤</text><text class="stat-value">{{ stats.lecture_count || 0 }}</text><text class="stat-label">{{ t('profile.records') }}</text></view>
       </view>
 
-      <view class="section-heading"><view><text class="section-title">学习偏好</text><text class="section-subtitle">设置默认翻译语言和应用体验</text></view></view>
+      <view class="section-heading"><view><text class="section-title">{{ t('profile.preferences') }}</text><text class="section-subtitle">{{ t('profile.preferencesHint') }}</text></view></view>
       <view class="settings-card card">
-        <view class="setting-row"><view><text class="setting-title">原文语言</text><text class="setting-description">开始录音时自动选择</text></view><picker :range="sourceLanguageNames" :value="sourceLanguageIndex" @change="changeSource"><view class="setting-value">{{ languageName(settings.default_source_lang, true) }} ›</view></picker></view>
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.interfaceLanguage') }}</text><text class="setting-description">{{ t('profile.interfaceLanguageHint') }}</text></view><picker :range="interfaceLocaleNames" :value="interfaceLocaleIndex" @change="changeInterfaceLocale"><view class="setting-value">{{ interfaceLocaleNames[interfaceLocaleIndex] }} ›</view></picker></view>
         <view class="divider" />
-        <view class="setting-row"><view><text class="setting-title">翻译语言</text><text class="setting-description">译文输出语言</text></view><picker :range="languageNames" :value="targetLanguageIndex" @change="changeTarget"><view class="setting-value">{{ languageName(settings.default_target_lang) }} ›</view></picker></view>
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.sourceLanguage') }}</text><text class="setting-description">{{ t('profile.sourceLanguageHint') }}</text></view><picker :range="sourceLanguageNames" :value="sourceLanguageIndex" @change="changeSource"><view class="setting-value">{{ languageName(settings.default_source_lang, true) }} ›</view></picker></view>
         <view class="divider" />
-        <view class="setting-row"><view><text class="setting-title">翻译模式</text><text class="setting-description">优先速度或离线可用性</text></view><picker :range="modeNames" :value="modeIndex" @change="settings.translation_mode = modes[$event.detail.value].key"><view class="setting-value">{{ modes[modeIndex].label }} ›</view></picker></view>
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.targetLanguage') }}</text><text class="setting-description">{{ t('profile.targetLanguageHint') }}</text></view><picker :range="languageNames" :value="targetLanguageIndex" @change="changeTarget"><view class="setting-value">{{ languageName(settings.default_target_lang) }} ›</view></picker></view>
         <view class="divider" />
-        <view class="setting-row"><view><text class="setting-title">深色模式</text><text class="setting-description">跟随系统或固定主题</text></view><picker :range="themeNames" :value="themeIndex" @change="settings.dark_mode = themes[$event.detail.value].key"><view class="setting-value">{{ themes[themeIndex].label }} ›</view></picker></view>
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.translationMode') }}</text><text class="setting-description">{{ t('profile.translationModeHint') }}</text></view><picker :range="modeNames" :value="modeIndex" @change="settings.translation_mode = modes[$event.detail.value].key"><view class="setting-value">{{ modes[modeIndex].label }} ›</view></picker></view>
         <view class="divider" />
-        <view class="setting-row"><view><text class="setting-title">云端同步</text><text class="setting-description">同步历史、收藏与设置</text></view><switch :checked="settings.cloud_sync_enabled" color="#005ea1" @change="settings.cloud_sync_enabled = $event.detail.value" /></view>
-        <button class="btn btn-primary save-settings" :disabled="saving" @tap="saveSettings">{{ saving ? '保存中…' : '保存偏好' }}</button>
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.theme') }}</text><text class="setting-description">{{ t('profile.themeHint') }}</text></view><picker :range="themeNames" :value="themeIndex" @change="settings.dark_mode = themes[$event.detail.value].key"><view class="setting-value">{{ themes[themeIndex].label }} ›</view></picker></view>
+        <view class="divider" />
+        <view class="setting-row"><view><text class="setting-title">{{ t('profile.cloud') }}</text><text class="setting-description">{{ t('profile.cloudHint') }}</text></view><switch :checked="settings.cloud_sync_enabled" color="#005ea1" @change="settings.cloud_sync_enabled = $event.detail.value" /></view>
+        <button class="btn btn-primary save-settings" :disabled="saving" @tap="saveSettings">{{ saving ? t('profile.saving') : t('profile.savePreferences') }}</button>
       </view>
 
       <view class="section-heading"><view><text class="section-title">课程表</text><text class="section-subtitle">预先设置常用课堂和语言</text></view><button class="add-button" @tap="scheduleOpen = true">＋ 添加</button></view>
@@ -37,13 +39,13 @@
         </view>
       </view>
 
-      <view class="section-heading"><view><text class="section-title">学习空间</text><text class="section-subtitle">查看课程资料并向课堂助手提问</text></view></view>
+      <view class="section-heading"><view><text class="section-title">学习空间</text><text class="section-subtitle">查看课程资料并向小橘子提问</text></view></view>
       <view class="account-card card"><view class="account-row" @tap="uni.reLaunch({ url: '/pages/courses/index' })"><view><text class="setting-title">课程中心</text><text class="setting-description">浏览我创建的课程和教师共享课程</text></view><text class="chevron">›</text></view><view class="divider" /><view class="account-row" @tap="uni.reLaunch({ url: '/pages/assistant/index' })"><view><text class="setting-title">课堂助手</text><text class="setting-description">根据课堂记录、简报和作业进行复习</text></view><text class="chevron">›</text></view></view>
 
       <view class="section-heading"><view><text class="section-title">账号与安全</text><text class="section-subtitle">管理密码和登录设备</text></view></view>
       <view class="account-card card"><view class="account-row" @tap="passwordOpen = true"><view><text class="setting-title">修改密码</text><text class="setting-description">定期更换密码可提升安全性</text></view><text class="chevron">›</text></view><view class="divider" /><view v-if="isAdmin" class="account-row admin-row" @tap="uni.navigateTo({ url: '/pages/admin/index' })"><view><text class="setting-title">管理后台</text><text class="setting-description">用户、课堂与审计日志</text></view><text class="chevron">›</text></view><view v-if="isAdmin" class="divider" /><view class="account-row" @tap="logoutAll"><view><text class="setting-title error-text">退出所有设备</text><text class="setting-description">撤销当前账号的全部登录会话</text></view><text class="chevron">›</text></view></view>
       <button class="btn logout-button" @tap="logout">退出当前账号</button>
-      <text class="version-text">LiveTrans Voice · UniApp 多端版</text>
+      <text class="version-text">Auralis 智听 · UniApp 多端版</text>
     </view>
     <BottomNav active="profile" />
 
@@ -65,12 +67,13 @@ import { clearAuth, requireAuth, updateStoredUser } from '../../api/session'
 import { absoluteAssetUrl } from '../../config/env'
 import { showError } from '../../platform/format'
 import { setThemeMode, useTheme } from '../../platform/theme'
+import { setLocale, t, useLocale } from '../../platform/i18n'
 
 const user = ref({})
 const stats = ref({})
 const languages = ref([])
 const schedules = ref([])
-const settings = reactive({ default_source_lang: 'auto', default_target_lang: 'zh-CN', translation_mode: 'auto', dark_mode: 'system', cloud_sync_enabled: false })
+const settings = reactive({ default_source_lang: 'auto', default_target_lang: 'zh-CN', interface_locale: 'zh-Hans', translation_mode: 'auto', dark_mode: 'system', cloud_sync_enabled: false })
 const saving = ref(false)
 const profileOpen = ref(false)
 const scheduleOpen = ref(false)
@@ -82,6 +85,10 @@ const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六'
 const modes = [{ key: 'auto', label: '自动' }, { key: 'online', label: '在线' }, { key: 'offline', label: '离线' }]
 const themes = [{ key: 'system', label: '跟随系统' }, { key: 'light', label: '浅色' }, { key: 'dark', label: '深色' }]
 const themeClass = useTheme()
+const interfaceLocale = useLocale()
+const interfaceLocaleCodes = ['zh-Hans', 'zh-HK', 'en']
+const interfaceLocaleNames = computed(() => [t('locale.simplified'), t('locale.cantonese'), t('locale.english')])
+const interfaceLocaleIndex = computed(() => Math.max(0, interfaceLocaleCodes.indexOf(settings.interface_locale || interfaceLocale.value)))
 const languageNames = computed(() => languages.value.map((item) => `${item.flag_emoji || '🌐'} ${item.name_native}`))
 const sourceLanguageNames = computed(() => ['🌐 自动检测', ...languageNames.value])
 const sourceLanguageIndex = computed(() => settings.default_source_lang === 'auto' ? 0 : Math.max(1, languages.value.findIndex((item) => item.code === settings.default_source_lang) + 1))
@@ -99,16 +106,17 @@ onPullDownRefresh(async () => { await load(); uni.stopPullDownRefresh() })
 async function load() {
   try {
     const [userData, statsData, languageData, settingData, scheduleData] = await Promise.all([authApi.me(), authApi.stats(), preferenceApi.languages(), preferenceApi.settings(), preferenceApi.schedules()])
-    user.value = userData; stats.value = statsData; languages.value = languageData; Object.assign(settings, settingData); schedules.value = scheduleData; setThemeMode(settingData.dark_mode)
+    user.value = userData; stats.value = statsData; languages.value = languageData; Object.assign(settings, settingData); setLocale(settingData.interface_locale); schedules.value = scheduleData; setThemeMode(settingData.dark_mode)
     Object.assign(profileForm, { nickname: userData.nickname || '', university: userData.university || '', major: userData.major || '', focus_area: userData.focus_area || '' })
     updateStoredUser(userData)
   } catch (error) { showError(error, '个人中心加载失败') }
 }
-function languageName(code, allowAuto = false) { if (allowAuto && code === 'auto') return '🌐 自动检测'; const item = languages.value.find((value) => value.code === code); return item ? `${item.flag_emoji || '🌐'} ${item.name_native}` : code }
+function languageName(code, allowAuto = false) { if (allowAuto && code === 'auto') return `🌐 ${t('common.autoDetect')}`; const item = languages.value.find((value) => value.code === code); return item ? `${item.flag_emoji || '🌐'} ${item.name_native}` : code }
+function changeInterfaceLocale(event) { const value = interfaceLocaleCodes[Number(event.detail.value)] || 'zh-Hans'; settings.interface_locale = value; setLocale(value) }
 function changeSource(event) { const index = Number(event.detail.value); settings.default_source_lang = index === 0 ? 'auto' : languages.value[index - 1]?.code || 'auto' }
 function changeTarget(event) { settings.default_target_lang = languages.value[Number(event.detail.value)]?.code || 'zh-CN' }
 function shortTime(value) { return String(value || '').slice(0, 5) }
-async function saveSettings() { saving.value = true; try { const data = await preferenceApi.saveSettings({ default_source_lang: settings.default_source_lang, default_target_lang: settings.default_target_lang, translation_mode: settings.translation_mode, dark_mode: settings.dark_mode, cloud_sync_enabled: settings.cloud_sync_enabled }); Object.assign(settings, data); setThemeMode(data.dark_mode); uni.showToast({ title: '偏好已保存', icon: 'success' }) } catch (error) { showError(error, '保存失败') } finally { saving.value = false } }
+async function saveSettings() { saving.value = true; try { const data = await preferenceApi.saveSettings({ default_source_lang: settings.default_source_lang, default_target_lang: settings.default_target_lang, interface_locale: settings.interface_locale, translation_mode: settings.translation_mode, dark_mode: settings.dark_mode, cloud_sync_enabled: settings.cloud_sync_enabled }); Object.assign(settings, data); setLocale(data.interface_locale); setThemeMode(data.dark_mode); uni.showToast({ title: t('profile.preferencesSaved'), icon: 'success' }) } catch (error) { showError(error, t('common.save')) } finally { saving.value = false } }
 async function saveProfile() { try { const result = await authApi.updateProfile({ nickname: profileForm.nickname.trim(), university: profileForm.university.trim(), major: profileForm.major.trim(), focus_area: profileForm.focus_area.trim() }); user.value = result.user || { ...user.value, ...profileForm }; updateStoredUser(user.value); profileOpen.value = false; uni.showToast({ title: '资料已保存', icon: 'success' }) } catch (error) { showError(error, '资料保存失败') } }
 function chooseAvatar() { uni.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'], success: async (result) => { try { const data = await authApi.uploadAvatar(result.tempFilePaths[0]); user.value.avatar_url = data.avatar_url; updateStoredUser(user.value); uni.showToast({ title: '头像已更新', icon: 'success' }) } catch (error) { showError(error, '头像上传失败') } } }) }
 async function createSchedule() { if (!scheduleForm.course_name.trim()) return uni.showToast({ title: '请输入课程名称', icon: 'none' }); try { await preferenceApi.createSchedule({ course_name: scheduleForm.course_name.trim(), source_lang: settings.default_source_lang === 'auto' ? 'en' : settings.default_source_lang, target_lang: settings.default_target_lang, day_of_week: scheduleForm.day_of_week, start_time: scheduleForm.start_time, end_time: scheduleForm.end_time, room: scheduleForm.room.trim() || null, professor_name: scheduleForm.professor_name.trim() || null }); scheduleOpen.value = false; scheduleForm.course_name = ''; schedules.value = await preferenceApi.schedules(); uni.showToast({ title: '课程已添加', icon: 'success' }) } catch (error) { showError(error, '课程添加失败') } }

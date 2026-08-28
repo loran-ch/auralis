@@ -1,6 +1,6 @@
 <template>
   <view class="page admin-page" :class="themeClass">
-    <AppHeader title="管理后台" subtitle="LiveTrans Voice 系统管理" back fallback="/pages/profile/index" />
+    <AppHeader title="管理后台" subtitle="Auralis 智听 系统管理" back fallback="/pages/profile/index" />
     <view class="admin-tabs content-wide"><view v-for="item in visibleTabs" :key="item.key" class="admin-tab" :class="{ active: tab === item.key }" @tap="switchTab(item.key)">{{ item.icon }}<text>{{ item.label }}</text></view></view>
     <scroll-view class="admin-scroll" scroll-y>
       <view class="content content-wide">

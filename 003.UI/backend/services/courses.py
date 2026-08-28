@@ -24,6 +24,17 @@ def is_admin_user(user: User) -> bool:
     return getattr(user, "role", None) in {"admin", "super_admin"}
 
 
+def is_super_admin_user(user: User) -> bool:
+    return getattr(user, "role", None) == "super_admin"
+
+
+def can_manage_course(course: Course, user: User) -> bool:
+    """修改课程内容：仅课主或超级管理员。"""
+    if int(course.user_id) == int(user.id):
+        return True
+    return is_super_admin_user(user)
+
+
 def course_to_resp(course: Course, viewer: User, owner: Optional[User] = None) -> dict:
     owner_id = int(course.user_id)
     is_owner = owner_id == int(viewer.id)
@@ -102,8 +113,8 @@ def create_course(db: Session, user_id: int, request: CourseCreate) -> Course:
 
 def update_course(db: Session, user: User, course_id: int,
                   request: CourseUpdate) -> Optional[Course]:
-    course = get_owned_course(db, user.id, course_id)
-    if not course:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course or not can_manage_course(course, user):
         return None
     values = request.model_dump(exclude_unset=True)
     if "is_public" in values:
@@ -126,29 +137,31 @@ def update_course(db: Session, user: User, course_id: int,
     return course
 
 
-def deactivate_course(db: Session, user_id: int, course_id: int) -> bool:
-    course = get_owned_course(db, user_id, course_id)
-    if not course:
+def deactivate_course(db: Session, user: User, course_id: int) -> bool:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course or not can_manage_course(course, user):
         return False
+    owner_id = int(course.user_id)
     course.is_active = False
     course.is_public = False
     # 归档课程后不应继续出现在“当前上课推荐”中，也不能占用排课冲突检测。
     db.query(CourseSchedule).filter(
-        CourseSchedule.user_id == user_id,
+        CourseSchedule.user_id == owner_id,
         CourseSchedule.course_id == course_id,
     ).update({CourseSchedule.is_active: False}, synchronize_session=False)
     db.commit()
     return True
 
 
-def delete_course(db: Session, user_id: int, course_id: int) -> bool:
+def delete_course(db: Session, user: User, course_id: int) -> bool:
     """永久删除课程实体，但不删除已经产生的课堂学习资料。"""
-    course = get_owned_course(db, user_id, course_id)
-    if not course:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course or not can_manage_course(course, user):
         return False
+    owner_id = int(course.user_id)
     # 保留课表审计信息但让其不再参与推荐和排课冲突；课堂的外键由数据库置空。
     db.query(CourseSchedule).filter(
-        CourseSchedule.user_id == user_id,
+        CourseSchedule.user_id == owner_id,
         CourseSchedule.course_id == course_id,
     ).update({CourseSchedule.is_active: False}, synchronize_session=False)
     db.delete(course)
@@ -198,7 +211,7 @@ def get_course_overview(db: Session, viewer: User, course: Course) -> dict:
         "total_duration_seconds": int(duration or 0),
         "schedules": schedules,
         "recent_lectures": lectures,
-        "can_manage": is_owner,
+        "can_manage": can_manage_course(course, viewer),
     }
 
 

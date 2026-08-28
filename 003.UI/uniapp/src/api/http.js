@@ -146,7 +146,7 @@ export async function streamAssistantAnswer(threadId, payload, handlers = {}) {
     body: JSON.stringify(payload),
   })
   if (!response.ok || !response.body) {
-    const error = new Error(`课堂助手请求失败（${response.status}）`)
+    const error = new Error(`小橘子请求失败（${response.status}）`)
     error.statusCode = response.status
     throw error
   }

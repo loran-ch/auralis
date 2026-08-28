@@ -2,13 +2,13 @@
   <view v-if="modelValue" class="modal-mask" @tap.self="close">
     <view class="modal-sheet">
       <view class="row-between title-row">
-        <text class="section-title">选择收藏标签</text>
+        <text class="section-title">{{ t('recorder.bookmark') }}</text>
         <text class="close" @tap="close">×</text>
       </view>
       <view class="tag-list">
         <view v-for="tag in tags" :key="tag.value" class="tag-option" @tap="select(tag.value)">
           <text class="tag-icon">{{ tag.icon }}</text>
-          <view><text class="tag-name">{{ tag.label }}</text><text class="tag-desc">{{ tag.desc }}</text></view>
+          <view><text class="tag-name">{{ tag.label() }}</text><text class="tag-desc">{{ tag.desc() }}</text></view>
         </view>
       </view>
     </view>
@@ -16,13 +16,14 @@
 </template>
 
 <script setup>
+import { t } from '../platform/i18n'
 defineProps({ modelValue: Boolean })
 const emit = defineEmits(['update:modelValue', 'select'])
 const tags = [
-  { value: 'important', label: '重要', icon: '⭐', desc: '需要重点回顾' },
-  { value: 'question', label: '疑问', icon: '❓', desc: '课后需要查证' },
-  { value: 'exam', label: '考点', icon: '🎯', desc: '可能出现在考试中' },
-  { value: 'definition', label: '定义', icon: '📘', desc: '概念与术语解释' },
+  { value: 'important', label: () => t('tag.important'), icon: '⭐', desc: () => t('tag.importantHint') },
+  { value: 'question', label: () => t('tag.question'), icon: '❓', desc: () => t('tag.questionHint') },
+  { value: 'exam', label: () => t('tag.exam'), icon: '🎯', desc: () => t('tag.examHint') },
+  { value: 'definition', label: () => t('tag.definition'), icon: '📘', desc: () => t('tag.definitionHint') },
 ]
 function close() { emit('update:modelValue', false) }
 function select(value) { emit('select', value); close() }

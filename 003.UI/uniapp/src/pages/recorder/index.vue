@@ -34,12 +34,12 @@
       >
         <view v-if="!transcripts.length && !liveTranscript" class="welcome-state">
           <view class="welcome-icon">◉</view>
-          <text class="welcome-title">让课堂内容实时变成双语笔记</text>
-          <text class="welcome-copy">点击下方录音按钮开始。系统会自动断句、翻译并保存到课堂记录。</text>
+          <text class="welcome-title">{{ t('recorder.welcomeTitle') }}</text>
+          <text class="welcome-copy">{{ t('recorder.welcomeCopy') }}</text>
         </view>
         <view v-if="transcripts.length" class="transcript-history-heading">
-          <view><text class="history-title">已确认内容</text><text class="history-count">{{ transcripts.length }} 句</text></view>
-          <text class="history-hint">前文会持续保留</text>
+          <view><text class="history-title">{{ t('recorder.confirmed') }}</text><text class="history-count">{{ t('recorder.sentences', { count: transcripts.length }) }}</text></view>
+          <text class="history-hint">{{ t('recorder.keepPrevious') }}</text>
         </view>
         <view v-for="(item, index) in transcripts" :id="`transcript-${item.id || item.client_id || index}`" :key="item.id || item.client_id || index" class="transcript-card confirmed" :class="{ 'latest-final': index === transcripts.length - 1 }">
           <view class="transcript-main">
@@ -51,10 +51,10 @@
         </view>
         <view v-if="liveTranscript" id="live-transcript" class="transcript-card live-preview current">
           <view class="transcript-main">
-            <view class="live-label"><view class="live-dot" /><text>正在更新</text></view>
+            <view class="live-label"><view class="live-dot" /><text>{{ t('recorder.updating') }}</text></view>
             <text class="source-text">{{ liveTranscript }}</text>
             <text v-if="liveTranslation" class="translated-text live-translation">{{ liveTranslation }}</text>
-            <text v-else class="recognizing-text">正在识别与理解上下文…</text>
+            <text v-else class="recognizing-text">{{ t('recorder.recognizing') }}</text>
           </view>
         </view>
         <view id="transcript-end" class="scroll-spacer" />
@@ -65,18 +65,18 @@
     <view class="recorder-controls">
       <Waveform :active="recording && !paused" />
       <view class="control-row content-wide">
-        <view class="side-action" @tap="markLatest"><view class="small-circle purple">◆</view><text>标记</text></view>
+        <view class="side-action" @tap="markLatest"><view class="small-circle purple">◆</view><text>{{ t('recorder.mark') }}</text></view>
         <button class="round-action" :disabled="!recording || stopping" @tap="togglePause">{{ paused ? '▶' : 'Ⅱ' }}</button>
         <button class="record-button" :class="{ recording, stopping }" :disabled="stopping" @tap="toggleRecording"><text>{{ recording ? '■' : '●' }}</text></button>
         <button class="round-action" @tap="navigate('/pages/history/index')">◷</button>
-        <view class="side-action" @tap="navigate('/pages/cards/index')"><view class="small-circle gold">★</view><text>收藏</text></view>
+        <view class="side-action" @tap="navigate('/pages/cards/index')"><view class="small-circle gold">★</view><text>{{ t('recorder.bookmark') }}</text></view>
       </view>
     </view>
 
     <view v-if="menuOpen" class="menu-mask" @tap.self="menuOpen = false">
       <view class="side-menu">
-        <view class="menu-brand"><text class="brand-icon">≋</text><view><text class="brand-name">LiveTrans Voice</text><text class="brand-caption">课堂翻译助手</text></view></view>
-        <view v-for="item in menuItems" :key="item.url" class="menu-item" @tap="navigate(item.url)"><text class="menu-icon">{{ item.icon }}</text><text>{{ item.label }}</text></view>
+        <view class="menu-brand"><text class="brand-icon">≋</text><view><text class="brand-name">Auralis</text><text class="brand-caption">{{ t('recorder.assistant') }}</text></view></view>
+        <view v-for="item in menuItems" :key="item.url" class="menu-item" @tap="navigate(item.url)"><text class="menu-icon">{{ item.icon }}</text><text>{{ item.label() }}</text></view>
         <view class="divider" />
         <view class="menu-item error-text" @tap="logout"><text class="menu-icon">↪</text><text>退出登录</text></view>
       </view>
@@ -86,10 +86,10 @@
 
     <view v-if="nameModal" class="modal-mask center">
       <view class="modal-card">
-        <text class="section-title">保存课堂记录</text>
-        <text class="section-subtitle">共 {{ completedLecture?.sentence_count || transcripts.length }} 句话</text>
-        <input v-model="renameValue" class="input rename-input" maxlength="80" placeholder="输入课程名称" />
-        <view class="modal-actions"><button class="btn btn-soft" @tap="finishNaming(false)">稍后再说</button><button class="btn btn-primary" @tap="finishNaming(true)">保存</button></view>
+        <text class="section-title">{{ t('recorder.saveLecture') }}</text>
+        <text class="section-subtitle">{{ t('recorder.sentences', { count: completedLecture?.sentence_count || transcripts.length }) }}</text>
+        <input v-model="renameValue" class="input rename-input" maxlength="80" :placeholder="t('recorder.enterCourseName')" />
+        <view class="modal-actions"><button class="btn btn-soft" @tap="finishNaming(false)">{{ t('recorder.later') }}</button><button class="btn btn-primary" @tap="finishNaming(true)">{{ t('common.save') }}</button></view>
       </view>
     </view>
   </view>
@@ -109,13 +109,14 @@ import { abortSpeechRecognition, isSpeechRecognitionSupported, resumeSpeechRecog
 import { abortRealtimeSpeech, isRealtimeSpeechSupported, startRealtimeSpeech, stopRealtimeSpeech } from '../../platform/realtime-speech'
 import { formatClock, languageLabel, showError } from '../../platform/format'
 import { useTheme } from '../../platform/theme'
+import { setLocale, t } from '../../platform/i18n'
 
 const lectureId = ref(null)
 const recording = ref(false)
 const paused = ref(false)
 const stopping = ref(false)
-const courseName = ref('课堂录音')
-const statusText = ref('待机中')
+const courseName = ref(t('recorder.title'))
+const statusText = ref(t('recorder.idle'))
 const elapsed = ref(0)
 const transcripts = ref([])
 const liveTranscript = ref('')
@@ -132,7 +133,7 @@ const scrollTarget = ref('')
 const followLatest = ref(true)
 const unseenTranscriptCount = ref(0)
 const nameModal = ref(false)
-const renameValue = ref('课堂录音')
+const renameValue = ref(t('recorder.title'))
 const completedLecture = ref(null)
 const themeClass = useTheme()
 let timer = null
@@ -151,12 +152,12 @@ let lastTranscriptScrollTop = 0
 let transcriptTouchTimer = null
 
 const menuItems = [
-  { label: '实时录音', icon: '●', url: '/pages/recorder/index' },
-  { label: '课堂记录', icon: '◷', url: '/pages/history/index' },
-  { label: '课程中心', icon: '▦', url: '/pages/courses/index' },
-  { label: '课堂助手', icon: '✦', url: '/pages/assistant/index' },
-  { label: '知识卡片', icon: '★', url: '/pages/cards/index' },
-  { label: '个人中心', icon: '♙', url: '/pages/profile/index' },
+  { label: () => t('recorder.recording'), icon: '●', url: '/pages/recorder/index' },
+  { label: () => t('recorder.history'), icon: '◷', url: '/pages/history/index' },
+  { label: () => t('recorder.courseCenter'), icon: '▦', url: '/pages/courses/index' },
+  { label: () => t('recorder.assistant'), icon: '✦', url: '/pages/assistant/index' },
+  { label: () => t('recorder.cards'), icon: '★', url: '/pages/cards/index' },
+  { label: () => t('recorder.profile'), icon: '♙', url: '/pages/profile/index' },
 ]
 const languageNames = computed(() => languages.value.map((item) => `${item.flag_emoji || '🌐'} ${item.name_native}`))
 const sourceIndex = computed(() => Math.max(0, languages.value.findIndex((item) => item.code === sourceLang.value)))
@@ -169,10 +170,13 @@ onLoad(async () => {
   if (!requireAuth()) return
   try {
     const [languageData, settings] = await Promise.all([preferenceApi.languages(), preferenceApi.settings()])
+    setLocale(settings.interface_locale)
+    courseName.value = t('recorder.title')
+    renameValue.value = t('recorder.title')
     languages.value = languageData
     sourceLang.value = settings.default_source_lang === 'auto' ? 'en' : settings.default_source_lang
     targetLang.value = settings.default_target_lang || 'zh-CN'
-  } catch (error) { showError(error, '语言设置加载失败') }
+  } catch (error) { showError(error, t('recorder.title')) }
 })
 
 onUnload(() => {
@@ -269,7 +273,7 @@ function applyRealtimeInterim(message) {
   liveTranscript.value = message.source_text || ''
   if (message.type !== 'preview') liveTranslation.value = ''
   if (liveTranscript.value) scrollToLatest()
-  statusText.value = '正在实时识别…'
+  statusText.value = t('recorder.recognizing')
 }
 
 function applyRealtimePreview(message) {
@@ -299,7 +303,7 @@ async function applyRealtimeFinal(message) {
   if (sentence.translation_success === false) {
     uni.showToast({ title: sentence.translation_warning || '翻译服务暂时不可用，已保留原文', icon: 'none' })
   }
-  if (finalizedCurrentDraft && recording.value && !paused.value) statusText.value = '正在聆听…'
+  if (finalizedCurrentDraft && recording.value && !paused.value) statusText.value = t('recorder.listening')
 }
 
 function realtimeCallbacks() {
@@ -308,7 +312,7 @@ function realtimeCallbacks() {
       realtimeRecognition.value = true
       asrAvailable = true
       stopDemoMode()
-      statusText.value = '正在实时聆听…'
+      statusText.value = t('recorder.listening')
     },
     onInterim: applyRealtimeInterim,
     onPreview: applyRealtimePreview,
@@ -316,7 +320,7 @@ function realtimeCallbacks() {
     onFinal: applyRealtimeFinal,
     onNoSpeech: () => {
       // 静音分片不应清掉可能已开始的下一句动态草稿。
-      if (recording.value && !paused.value) statusText.value = '正在聆听…'
+      if (recording.value && !paused.value) statusText.value = t('recorder.listening')
     },
     onError: (message) => {
       if (!message?.fallback || realtimeErrorShown) return
@@ -404,7 +408,7 @@ function translateAndSave(text) {
 function speechOptions() {
   return {
     language: sourceLang.value,
-    onStart: () => { if (recording.value && !paused.value) statusText.value = '正在聆听…' },
+    onStart: () => { if (recording.value && !paused.value) statusText.value = t('recorder.listening') },
     onInterim: showLiveTranscript,
     onFinal: translateAndSave,
     onError: ({ code, fatal }) => {
@@ -432,7 +436,7 @@ async function fetchDemoSentence() {
   try {
     const sentence = await lectureApi.demoTranscribe(lectureId.value)
     await appendTranscript(sentence)
-    statusText.value = '正在聆听…'
+    statusText.value = t('recorder.listening')
   } catch (error) {
     statusText.value = '识别服务暂时不可用'
   }
@@ -471,14 +475,14 @@ function queueSegment(segment, forceAudioOnly = false) {
         stopDemoMode()
         if (!sentence) {
           // 静音或过短分片由服务端以 204 跳过，继续聆听且不弹错误。
-          if (recording.value && !paused.value) statusText.value = '正在聆听…'
+          if (recording.value && !paused.value) statusText.value = t('recorder.listening')
           return
         }
         await appendTranscript(sentence)
         if (sentence.translation_success === false) {
           uni.showToast({ title: sentence.translation_warning || '翻译服务暂时不可用，已保留原文', icon: 'none' })
         }
-        if (recording.value && !paused.value) statusText.value = '正在聆听…'
+        if (recording.value && !paused.value) statusText.value = t('recorder.listening')
       } catch (error) {
         if (error.statusCode === 503) {
           const firstFallback = asrAvailable !== false
@@ -502,7 +506,7 @@ function queueSegment(segment, forceAudioOnly = false) {
 }
 
 async function startRecording() {
-  statusText.value = '正在启动…'
+  statusText.value = t('recorder.recognizing')
   try {
     const lecture = await lectureApi.start({ course_name: '课堂录音', source_lang: sourceLang.value, target_lang: targetLang.value })
     lectureId.value = lecture.id
@@ -538,11 +542,11 @@ async function startRecording() {
       try { browserRecognition.value = await startSpeechRecognition(speechOptions()) }
       catch (_) { browserRecognition.value = false }
     }
-    statusText.value = '正在聆听…'
+    statusText.value = t('recorder.listening')
     beginTimers()
   } catch (error) {
     recording.value = false
-    statusText.value = '待机中'
+    statusText.value = t('recorder.idle')
     showError(error, '课堂启动失败')
   }
 }
@@ -637,8 +641,8 @@ async function finishNaming(save) {
   }
   nameModal.value = false
   lectureId.value = null
-  courseName.value = '课堂录音'
-  statusText.value = '待机中'
+  courseName.value = t('recorder.title')
+  statusText.value = t('recorder.idle')
   uni.navigateTo({ url: `/pages/review/index?id=${completedLecture.value.id}` })
 }
 
