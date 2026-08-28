@@ -9,9 +9,8 @@ SET @sql = IF(
   'SELECT ''interface_locale already exists''',
   CONCAT(
     'ALTER TABLE user_settings ADD COLUMN interface_locale VARCHAR(16) NOT NULL DEFAULT ',
-    QUOTE('zh-Hans'),
-    ' AFTER default_target_lang COMMENT ',
-    QUOTE('界面语言(zh-Hans/zh-HK/en)')
+    CHAR(39), 'zh-Hans', CHAR(39),
+    ' AFTER default_target_lang'
   )
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
