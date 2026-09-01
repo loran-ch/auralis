@@ -480,7 +480,10 @@
           '<p class="text-[11px] text-ink-subdued">' + escapeHtml(categoryLabel(item.category)) + '</p>' +
           '<div class="mt-1">' + preview + '</div>' +
         '</div>' +
+        '<div class="flex shrink-0 flex-col items-end gap-2">' +
+        (canManageLecture ? '<button type="button" class="js-attachment-briefing text-[11px] font-semibold text-primary" data-id="' + item.id + '">小橘子补充简报</button>' : '') +
         '<button type="button" class="js-delete-attachment text-[11px] font-semibold text-error" data-id="' + item.id + '">删除</button>' +
+        '</div>' +
       '</div>';
     }).join('');
     host.querySelectorAll('.js-delete-attachment').forEach(function (button) {
@@ -489,6 +492,22 @@
         api('/lectures/' + LID + '/attachments/' + button.getAttribute('data-id'), { method: 'DELETE' })
           .then(function () { return loadAttachments(); })
           .catch(function (err) { toast(err.message || '删除失败'); });
+      });
+    });
+    host.querySelectorAll('.js-attachment-briefing').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var attachmentId = button.getAttribute('data-id');
+        if (!attachmentId) return;
+        var original = button.textContent;
+        button.disabled = true;
+        button.textContent = '小橘子阅读中…';
+        api('/lectures/' + LID + '/attachments/' + attachmentId + '/briefing', { method: 'POST' })
+          .then(function (data) {
+            renderBriefing(data);
+            toast('已根据资料补充简报');
+          })
+          .catch(function (err) { toast(err.message || '资料补充失败'); })
+          .then(function () { button.disabled = false; button.textContent = original; });
       });
     });
   }

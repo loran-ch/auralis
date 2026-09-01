@@ -25,8 +25,9 @@ from services.attachments import (ALLOWED_CONTENT_TYPES, ATTACHMENT_CATEGORIES,
                                   extension_for_upload, get_attachment,
                                   list_attachments, max_upload_mb_for)
 from services.briefing import (briefing_to_dict, confirm_briefing_assignment,
-                               delete_briefing_assignment, generate_briefing,
-                               get_briefing, patch_briefing, supplement_briefing_item)
+                                delete_briefing_assignment, generate_briefing,
+                                get_briefing, patch_briefing, supplement_briefing_item,
+                                supplement_briefing_from_attachment)
 from services.export_pack import (build_briefing_markdown, build_materials_zip,
                                   content_disposition)
 from services.lecture import (stop_lecture,
@@ -1114,6 +1115,27 @@ def api_supplement_briefing_item(lecture_id: int, req: BriefingSupplementReq,
         raise HTTPException(422, str(exc)) from None
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from None
+    return BriefingResp(**briefing_to_dict(row))
+
+
+@router.post("/{lecture_id}/attachments/{attachment_id}/briefing", response_model=BriefingResp)
+def api_supplement_briefing_from_attachment(lecture_id: int, attachment_id: int,
+                                            user: User = Depends(get_current_user),
+                                            db: Session = Depends(get_db)):
+    """让小橘子读取一份已上传资料并补充课堂简报。"""
+    if not user:
+        raise HTTPException(401, "请先登录")
+    _manageable_lecture(db, lecture_id, user)
+    try:
+        row = supplement_briefing_from_attachment(db, lecture_id, user.id, attachment_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from None
+    except QuotaExceededError as exc:
+        raise HTTPException(429, str(exc)) from None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from None
     return BriefingResp(**briefing_to_dict(row))
 
 

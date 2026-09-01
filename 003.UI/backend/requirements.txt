@@ -10,5 +10,6 @@ bcrypt==5.0.0
 requests==2.34.2
 Pillow==12.3.0
 pytesseract==0.3.13
+pypdf==6.7.3
 python-dotenv==1.2.1
 websockets==17.0.1

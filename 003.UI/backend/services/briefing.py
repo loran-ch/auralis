@@ -9,10 +9,14 @@ import json
 import logging
 import re
 import threading
+import zipfile
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
+from xml.etree import ElementTree
 
 import requests
+from PIL import Image
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -22,6 +26,7 @@ from config import (BRIEFING_LLM_API_KEY, BRIEFING_LLM_API_URL,
                     BRIEFING_MAX_SENTENCES, BRIEFING_STALE_SECONDS)
 from database import engine
 from models.lecture import Bookmark, Lecture, LectureBriefing, Transcription
+from services.attachments import get_attachment
 from services.llm_quota import (QuotaExceededError, assert_within_quota,
                                 parse_usage_from_response, record_usage)
 
@@ -37,6 +42,8 @@ _MAX_QUESTIONS = 6
 _MAX_TERMS = 8
 _MAX_ASSIGNMENTS = 6
 _LLM_CHAR_BUDGET = 14000
+_ATTACHMENT_TEXT_BUDGET = 12000
+_ATTACHMENT_ROOT = Path(__file__).resolve().parent.parent.parent / "frontend" / "uploads" / "attachments"
 
 _EXAM_PATTERN = re.compile(
     r"(exam|quiz|midterm|final|homework|assignment|remember this|"
@@ -958,6 +965,128 @@ def supplement_briefing_item(db: Session, lecture_id: int, user_id: int, *,
     db.commit()
     db.refresh(row)
     return row
+
+
+def _attachment_text(attachment) -> str:
+    """提取可由小橘子阅读的附件文字；扫描版 PDF 请作为图片上传。"""
+    url = str(getattr(attachment, "url", "") or "")
+    candidate = (_ATTACHMENT_ROOT / Path(url).name).resolve()
+    if candidate.parent != _ATTACHMENT_ROOT.resolve() or not candidate.is_file():
+        raise ValueError("附件文件不存在")
+    suffix = candidate.suffix.lower()
+    if suffix in {".jpg", ".jpeg", ".png", ".webp"}:
+        try:
+            import pytesseract
+            return pytesseract.image_to_string(Image.open(candidate), lang="chi_sim+eng").strip()
+        except Exception as exc:
+            raise ValueError("图片文字识别失败，请上传清晰图片") from exc
+    if suffix == ".pdf":
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(candidate))
+            return "\n".join((page.extract_text() or "") for page in reader.pages).strip()
+        except Exception as exc:
+            raise ValueError("无法读取 PDF 文字；扫描版 PDF 请转为图片后上传") from exc
+    if suffix == ".pptx":
+        try:
+            with zipfile.ZipFile(candidate) as archive:
+                slides = sorted(name for name in archive.namelist()
+                                if name.startswith("ppt/slides/slide") and name.endswith(".xml"))
+                texts = []
+                for name in slides:
+                    root = ElementTree.fromstring(archive.read(name))
+                    slide_text = " ".join(node.text or "" for node in root.iter()
+                                          if node.tag.endswith("}t") and node.text)
+                    if slide_text:
+                        texts.append(slide_text)
+            return "\n".join(texts).strip()
+        except Exception as exc:
+            raise ValueError("无法读取 PPTX 文件") from exc
+    raise ValueError("当前可由小橘子读取图片、PDF 和 PPTX；旧版 PPT 请另存为 PPTX")
+
+
+def _attachment_llm_items(course_name: str, target_lang: str, title: str, text: str) -> tuple[dict, dict]:
+    if not (BRIEFING_LLM_API_URL and BRIEFING_LLM_API_KEY):
+        raise RuntimeError("未配置小橘子模型，暂无法解析资料")
+    language = "简体中文" if _is_zh(target_lang) else target_lang
+    prompt = (
+        f"课程：{course_name}\n资料标题：{title}\n输出语言：{language}\n"
+        "仅根据以下上传资料提取可补入课堂简报的内容，不要编造。"
+        "返回 JSON：key_points、exam_hints、assignments、questions，四个字段均为字符串数组；"
+        "没有明确证据时返回空数组。\n资料正文：\n" + _clip(text, _ATTACHMENT_TEXT_BUDGET)
+    )
+    body = {
+        "model": BRIEFING_LLM_MODEL,
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": "你是严谨的课堂资料整理助手，只输出 JSON 对象。"},
+            {"role": "user", "content": prompt},
+        ],
+    }
+    response = requests.post(
+        BRIEFING_LLM_API_URL, json=body,
+        headers={"Authorization": f"Bearer {BRIEFING_LLM_API_KEY}", "Content-Type": "application/json"},
+        timeout=BRIEFING_LLM_TIMEOUT_SECONDS,
+    )
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise RuntimeError("小橘子未返回可解析结果") from exc
+    if not response.ok:
+        raise RuntimeError(payload.get("error", {}).get("message") or "小橘子暂时不可用")
+    content = payload.get("choices", [{}])[0].get("message", {}).get("content", "")
+    result = _parse_llm_json(content)
+    usage = parse_usage_from_response(payload, prompt_hint=prompt, completion_hint=content)
+    return result, usage
+
+
+def supplement_briefing_from_attachment(db: Session, lecture_id: int, user_id: int,
+                                        attachment_id: int) -> LectureBriefing:
+    """让小橘子读取一个附件，将有证据的要点补入现有简报。"""
+    lecture = db.query(Lecture).filter(Lecture.id == lecture_id, Lecture.user_id == user_id).first()
+    if not lecture:
+        raise LookupError("课堂不存在")
+    attachment = get_attachment(db, lecture_id, user_id, attachment_id)
+    if not attachment:
+        raise LookupError("附件不存在")
+    source_text = _attachment_text(attachment)
+    if not source_text:
+        raise ValueError("资料中未识别到可用文字")
+    assert_within_quota(db, user_id)
+    suggestions, usage = _attachment_llm_items(
+        lecture.course_name, lecture.target_lang, attachment.title, source_text,
+    )
+    record_usage(db, user_id=user_id, source="briefing_attachment",
+                 prompt_tokens=usage.get("prompt_tokens", 0),
+                 completion_tokens=usage.get("completion_tokens", 0),
+                 total_tokens=usage.get("total_tokens", 0))
+    existing = get_briefing(db, lecture_id, user_id)
+    existing_texts = {
+        str(item.get("text") or "").strip()
+        for section in ("key_points", "exam_hints", "assignments", "questions")
+        for item in (getattr(existing, section, None) or [])
+    } if existing else set()
+    updated = existing
+    for section in ("key_points", "exam_hints", "assignments", "questions"):
+        values = suggestions.get(section) or []
+        if isinstance(values, str):
+            values = [values]
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            text = str(value or "").strip()
+            if not text or text in existing_texts:
+                continue
+            updated = supplement_briefing_item(
+                db, lecture_id, user_id, section=section, text=text,
+                attachment_id=attachment.id, needs_confirmation=(section == "assignments"),
+                source="from_attachment",
+            )
+            existing_texts.add(text)
+    if not updated:
+        raise ValueError("资料未发现可补充到简报的内容")
+    return updated
 
 
 def generate_briefing(db: Session, lecture_id: int, user_id: int,
