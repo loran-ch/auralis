@@ -115,6 +115,10 @@ class LectureUpdateReq(BaseModel):
         return normalized
 
 
+class LectureAssignCourseReq(BaseModel):
+    course_id: int = Field(..., gt=0)
+
+
 class BookmarkListItem(BaseModel):
     bookmark_id: int
     transcription_id: int

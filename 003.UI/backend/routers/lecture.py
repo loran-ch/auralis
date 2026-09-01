@@ -8,12 +8,14 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, UploadFile, File, Form, Query
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, field_validator, model_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from config import (ASR_MAX_SEGMENT_MB, IS_PRODUCTION, MAX_ATTACHMENT_SIZE_MB,
                     MAX_AUDIO_SIZE_MB, MAX_VIDEO_SIZE_MB)
 from database import SessionLocal, get_db
 from models.lecture import (Bookmark, Lecture, LectureBriefing, MediaAsset,
-                            MediaClipCandidate, Transcription, TranscriptionVerification)
+                             MediaClipCandidate, Transcription, TranscriptionVerification)
+from models.course import Course
 from models.user import User
 from routers.auth import get_current_user
 from services.assistant import answer_lecture_question
@@ -41,7 +43,7 @@ from services.speech_recognizer import (SpeechRecognitionNoSpeech,
 from services.translator import translate_with_context
 from services.media import (export_clip, generate_clip_candidates,
                             process_lecture_media, verify_transcription)
-from schemas.lecture import (StartLectureReq, LectureResp, LectureUpdateReq,
+from schemas.lecture import (StartLectureReq, LectureResp, LectureUpdateReq, LectureAssignCourseReq,
                              TranscriptionResp, GenerateBriefingReq, BriefingResp,
                              BriefingPatchReq, BriefingSupplementReq,
                              LectureAttachmentResp, AssistantAskReq, AssistantAskResp)
@@ -356,6 +358,44 @@ def api_update(lecture_id: int, request: LectureUpdateReq,
         raise HTTPException(422, "课程名称不能为空")
     for field, value in values.items():
         setattr(lecture, field, value)
+    db.commit()
+    db.refresh(lecture)
+    return _lecture_resp(lecture, user)
+
+
+@router.put("/{lecture_id}/course", response_model=LectureResp)
+def api_assign_course(lecture_id: int, request: LectureAssignCourseReq,
+                      user: User = Depends(get_current_user),
+                      db: Session = Depends(get_db)):
+    """将一条未归类的已结束课堂归入当前用户的活跃课程。"""
+    if not user:
+        raise HTTPException(401, "请先登录")
+    lecture = db.query(Lecture).filter(
+        Lecture.id == lecture_id,
+        Lecture.user_id == user.id,
+    ).with_for_update().first()
+    if not lecture:
+        raise HTTPException(404, "课堂不存在")
+    if lecture.course_id is not None:
+        raise HTTPException(409, "该课堂已归入课程")
+    if lecture.status != "completed":
+        raise HTTPException(409, "仅已结束的课堂可归入课程")
+
+    # 与开始新课堂时使用同一把课程行锁，避免并发操作得到相同课次编号。
+    course = db.query(Course).filter(
+        Course.id == request.course_id,
+        Course.user_id == user.id,
+        Course.is_active == True,
+    ).with_for_update().first()
+    if not course:
+        raise HTTPException(404, "课程不存在、已归档或无权使用")
+
+    next_session = int(db.query(func.coalesce(func.max(Lecture.session_number), 0)).filter(
+        Lecture.course_id == course.id,
+    ).scalar() or 0) + 1
+    lecture.course_id = course.id
+    lecture.course_name = course.name
+    lecture.session_number = next_session
     db.commit()
     db.refresh(lecture)
     return _lecture_resp(lecture, user)

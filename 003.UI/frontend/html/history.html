@@ -105,6 +105,21 @@
   </form>
 </div>
 
+<!-- 归入课程弹窗 -->
+<div id="assignCourseModal" class="hidden fixed inset-0 z-[80] bg-black/30 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="assignCourseModalTitle">
+  <form id="assignCourseForm" class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+    <h3 id="assignCourseModalTitle" class="text-lg font-bold text-on-surface mb-1">归入课程</h3>
+    <p class="text-sm text-on-surface-variant mb-4">归入后会成为该课程的下一节课，原有录音和字幕会保留。</p>
+    <label for="assignCourseSelect" class="block text-sm font-medium text-on-surface mb-1.5">选择课程</label>
+    <select id="assignCourseSelect" class="w-full rounded-xl border border-outline-variant px-3.5 py-3 text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20" required></select>
+    <p id="assignCourseError" class="hidden mt-2 text-xs text-error" role="alert"></p>
+    <div class="mt-5 flex gap-3">
+      <button id="assignCourseCancel" type="button" class="flex-1 py-3 text-secondary font-medium hover:bg-surface-container-low rounded-xl transition-colors">取消</button>
+      <button id="assignCourseSave" type="submit" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">确认归入</button>
+    </div>
+  </form>
+</div>
+
 <!-- Batch Actions -->
   <div id="batch-bar" class="flex items-center justify-between mb-3 hidden">
     <label class="flex items-center gap-2 cursor-pointer text-sm text-on-surface-variant select-none">
@@ -161,6 +176,7 @@ var dateClearEl = document.getElementById('date-clear');
 var courseFilterEl = document.getElementById('course-filter');
 var currentCourseFilter = '';
 var lectureTitlesById = {};
+var assignableCourses = [];
 
 function renderCards(result) {
   var data = result.items || result;
@@ -223,6 +239,7 @@ function renderCards(result) {
     html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="exportBriefing('+l.id+', this)" title="导出简报 Markdown"><span class="material-symbols-outlined text-sm">description</span>导出简报</button>';
     html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="downloadMaterials('+l.id+', this)" title="打包下载简报与附件"><span class="material-symbols-outlined text-sm">folder_zip</span>资料包</button>';
     if (l.can_manage !== false) html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="openRenameModal('+l.id+')" title="修改课堂名称"><span class="material-symbols-outlined text-sm">edit</span>修改名称</button>';
+    if (!l.course_id && l.can_manage !== false) html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="openAssignCourseModal('+l.id+')" title="将课堂归入课程"><span class="material-symbols-outlined text-sm">school</span>归入课程</button>';
     html += '<button class="text-error/60 hover:text-error hover:bg-error/5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="del('+l.id+')"><span class="material-symbols-outlined text-sm">delete</span>删除</button>';
     html += '</div></div></div>';
   });
@@ -314,6 +331,85 @@ if (renameForm) renameForm.addEventListener('submit', function (event) {
   }).finally(function () {
     renameSave.disabled = false;
     renameSave.textContent = '保存';
+  });
+});
+
+var assignCourseModal = document.getElementById('assignCourseModal');
+var assignCourseForm = document.getElementById('assignCourseForm');
+var assignCourseSelect = document.getElementById('assignCourseSelect');
+var assignCourseError = document.getElementById('assignCourseError');
+var assignCourseCancel = document.getElementById('assignCourseCancel');
+var assignCourseSave = document.getElementById('assignCourseSave');
+var assignCourseLectureId = null;
+
+function setAssignCourseError(message) {
+  if (!assignCourseError) return;
+  assignCourseError.textContent = message || '';
+  assignCourseError.classList.toggle('hidden', !message);
+}
+
+function renderAssignableCourses() {
+  if (!assignCourseSelect) return;
+  assignCourseSelect.innerHTML = '';
+  assignableCourses.forEach(function (course) {
+    var option = document.createElement('option');
+    option.value = String(course.id);
+    option.textContent = course.name + (course.term ? ' · ' + course.term : '');
+    assignCourseSelect.appendChild(option);
+  });
+}
+
+function closeAssignCourseModal() {
+  assignCourseLectureId = null;
+  setAssignCourseError('');
+  if (assignCourseModal) assignCourseModal.classList.add('hidden');
+}
+
+function openAssignCourseModal(lectureId) {
+  if (!assignCourseModal || !assignCourseSelect) return;
+  if (!assignableCourses.length) {
+    historyToast('暂无活跃课程，请先在课程中心创建课程');
+    return;
+  }
+  assignCourseLectureId = Number(lectureId);
+  renderAssignableCourses();
+  setAssignCourseError('');
+  assignCourseModal.classList.remove('hidden');
+  setTimeout(function () { assignCourseSelect.focus(); }, 0);
+}
+
+if (assignCourseCancel) assignCourseCancel.addEventListener('click', closeAssignCourseModal);
+if (assignCourseModal) assignCourseModal.addEventListener('click', function (event) {
+  if (event.target === assignCourseModal) closeAssignCourseModal();
+});
+if (assignCourseForm) assignCourseForm.addEventListener('submit', function (event) {
+  event.preventDefault();
+  var courseId = Number(assignCourseSelect && assignCourseSelect.value);
+  if (!assignCourseLectureId || !courseId) {
+    setAssignCourseError('请选择要归入的课程');
+    return;
+  }
+  assignCourseSave.disabled = true;
+  assignCourseSave.textContent = '保存中…';
+  setAssignCourseError('');
+  fetch('/api/lectures/' + assignCourseLectureId + '/course', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+    body: JSON.stringify({ course_id: courseId })
+  }).then(function (response) {
+    return response.json().catch(function () { return {}; }).then(function (data) {
+      if (!response.ok) throw new Error(data.detail || '归入课程失败');
+      return data;
+    });
+  }).then(function () {
+    closeAssignCourseModal();
+    historyToast('已归入课程');
+    loadPage(currentPage, currentSearch, currentDateFrom, currentDateTo);
+  }).catch(function (error) {
+    setAssignCourseError(error.message || '归入课程失败');
+  }).finally(function () {
+    assignCourseSave.disabled = false;
+    assignCourseSave.textContent = '确认归入';
   });
 });
 
@@ -507,6 +603,7 @@ function loadCourseFilters() {
   fetch('/api/courses?include_inactive=true', { headers: { 'Authorization': 'Bearer ' + TOKEN } })
     .then(function (response) { return response.ok ? response.json() : []; })
     .then(function (courses) {
+      assignableCourses = (courses || []).filter(function (course) { return course.is_active !== false; });
       (courses || []).forEach(function (course) {
         var option = document.createElement('option');
         option.value = course.id;
