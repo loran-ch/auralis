@@ -2077,7 +2077,7 @@
   if (resumeContinueBtn) {
     resumeContinueBtn.addEventListener('click', function () {
       startForceNew = false;
-      if (!requireAuth('recorder.html', '登录后即可继续未结束的课堂')) return;
+      if (requireAuth('recorder.html', '登录后即可继续未结束的课堂')) return;
       startRecording();
     });
   }
@@ -2088,7 +2088,7 @@
         hideResumeBanner();
         return;
       }
-      if (!requireAuth('recorder.html', '登录后即可管理课堂')) return;
+      if (requireAuth('recorder.html', '登录后即可管理课堂')) return;
       resumeFinishBtn.disabled = true;
       api('/lectures/' + active.id + '/stop', { method: 'POST' })
         .then(function (lecture) {
