@@ -177,6 +177,7 @@ var courseFilterEl = document.getElementById('course-filter');
 var currentCourseFilter = '';
 var lectureTitlesById = {};
 var assignableCourses = [];
+var historyUploadsInFlight = 0;
 
 function renderCards(result) {
   var data = result.items || result;
@@ -478,7 +479,8 @@ function uploadHistoryMaterial(lectureId, file, input) {
   form.append('category', 'material');
   form.append('title', file.name || '学习资料');
   form.append('create_item', 'false');
-  historyToast('正在上传…');
+  historyUploadsInFlight += 1;
+  historyToast('正在上传资料，请勿离开当前页面…');
   fetch('/api/lectures/' + lectureId + '/attachments', {
     method: 'POST',
     headers: { 'Authorization': 'Bearer ' + TOKEN },
@@ -497,9 +499,16 @@ function uploadHistoryMaterial(lectureId, file, input) {
   }).catch(function (err) {
     historyToast(err.message || '上传失败');
   }).then(function () {
+    historyUploadsInFlight = Math.max(0, historyUploadsInFlight - 1);
     if (input) input.value = '';
   });
 }
+
+window.addEventListener('beforeunload', function (event) {
+  if (!historyUploadsInFlight) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 function bindHistoryMaterialActions() {
   document.querySelectorAll('.js-history-upload').forEach(function (input) {
