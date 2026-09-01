@@ -90,6 +90,21 @@
   </div>
 </div>
 
+<!-- 修改课堂名称弹窗 -->
+<div id="renameModal" class="hidden fixed inset-0 z-[80] bg-black/30 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="renameModalTitle">
+  <form id="renameForm" class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+    <h3 id="renameModalTitle" class="text-lg font-bold text-on-surface mb-1">修改课堂名称</h3>
+    <p class="text-sm text-on-surface-variant mb-4">名称会显示在课堂记录、简报和资料包中。</p>
+    <label for="renameInput" class="block text-sm font-medium text-on-surface mb-1.5">课堂名称</label>
+    <input id="renameInput" class="w-full rounded-xl border border-outline-variant px-3.5 py-3 text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20" maxlength="256" required>
+    <p id="renameError" class="hidden mt-2 text-xs text-error" role="alert"></p>
+    <div class="mt-5 flex gap-3">
+      <button id="renameCancel" type="button" class="flex-1 py-3 text-secondary font-medium hover:bg-surface-container-low rounded-xl transition-colors">取消</button>
+      <button id="renameSave" type="submit" class="flex-1 py-3 bg-primary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity">保存</button>
+    </div>
+  </form>
+</div>
+
 <!-- Batch Actions -->
   <div id="batch-bar" class="flex items-center justify-between mb-3 hidden">
     <label class="flex items-center gap-2 cursor-pointer text-sm text-on-surface-variant select-none">
@@ -145,6 +160,7 @@ var dateToEl = document.getElementById('date-to');
 var dateClearEl = document.getElementById('date-clear');
 var courseFilterEl = document.getElementById('course-filter');
 var currentCourseFilter = '';
+var lectureTitlesById = {};
 
 function renderCards(result) {
   var data = result.items || result;
@@ -155,6 +171,7 @@ function renderCards(result) {
   totalPages = pages;
 
   var html = '';
+  lectureTitlesById = {};
 
   // 搜索无结果
   if (!data || !data.length) {
@@ -176,6 +193,7 @@ function renderCards(result) {
     var num = startNum + idx + 1;
     // 高亮搜索关键词
     var rawDisplayName = l.title || (l.session_number ? (l.course_name || '未命名') + ' · 第 ' + l.session_number + ' 节课' : (l.course_name || '未命名'));
+    lectureTitlesById[String(l.id)] = rawDisplayName;
     var displayName = escapeHtml(rawDisplayName);
     if (currentSearch) {
       displayName = highlightMatch(rawDisplayName, currentSearch);
@@ -204,6 +222,7 @@ function renderCards(result) {
     html += '</label>';
     html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="exportBriefing('+l.id+', this)" title="导出简报 Markdown"><span class="material-symbols-outlined text-sm">description</span>导出简报</button>';
     html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="downloadMaterials('+l.id+', this)" title="打包下载简报与附件"><span class="material-symbols-outlined text-sm">folder_zip</span>资料包</button>';
+    if (l.can_manage !== false) html += '<button type="button" class="text-primary/80 hover:text-primary hover:bg-primary/5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="openRenameModal('+l.id+')" title="修改课堂名称"><span class="material-symbols-outlined text-sm">edit</span>修改名称</button>';
     html += '<button class="text-error/60 hover:text-error hover:bg-error/5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1" onclick="del('+l.id+')"><span class="material-symbols-outlined text-sm">delete</span>删除</button>';
     html += '</div></div></div>';
   });
@@ -232,6 +251,71 @@ function historyToast(message) {
   document.body.appendChild(node);
   setTimeout(function () { node.remove(); }, 2800);
 }
+
+var renameModal = document.getElementById('renameModal');
+var renameForm = document.getElementById('renameForm');
+var renameInput = document.getElementById('renameInput');
+var renameError = document.getElementById('renameError');
+var renameCancel = document.getElementById('renameCancel');
+var renameSave = document.getElementById('renameSave');
+var renameLectureId = null;
+
+function setRenameError(message) {
+  if (!renameError) return;
+  renameError.textContent = message || '';
+  renameError.classList.toggle('hidden', !message);
+}
+
+function closeRenameModal() {
+  renameLectureId = null;
+  setRenameError('');
+  if (renameModal) renameModal.classList.add('hidden');
+}
+
+function openRenameModal(lectureId) {
+  var title = lectureTitlesById[String(lectureId)];
+  if (!renameModal || !renameInput || !title) return;
+  renameLectureId = Number(lectureId);
+  renameInput.value = title;
+  setRenameError('');
+  renameModal.classList.remove('hidden');
+  setTimeout(function () { renameInput.focus(); renameInput.select(); }, 0);
+}
+
+if (renameCancel) renameCancel.addEventListener('click', closeRenameModal);
+if (renameModal) renameModal.addEventListener('click', function (event) {
+  if (event.target === renameModal) closeRenameModal();
+});
+if (renameForm) renameForm.addEventListener('submit', function (event) {
+  event.preventDefault();
+  var title = (renameInput && renameInput.value || '').trim();
+  if (!renameLectureId || !title) {
+    setRenameError('请输入课堂名称');
+    return;
+  }
+  renameSave.disabled = true;
+  renameSave.textContent = '保存中…';
+  setRenameError('');
+  fetch('/api/lectures/' + renameLectureId + '/rename', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+    body: JSON.stringify({ title: title })
+  }).then(function (response) {
+    return response.json().catch(function () { return {}; }).then(function (data) {
+      if (!response.ok) throw new Error(data.detail || '修改名称失败');
+      return data;
+    });
+  }).then(function () {
+    closeRenameModal();
+    historyToast('课堂名称已修改');
+    loadPage(currentPage, currentSearch, currentDateFrom, currentDateTo);
+  }).catch(function (error) {
+    setRenameError(error.message || '修改名称失败');
+  }).finally(function () {
+    renameSave.disabled = false;
+    renameSave.textContent = '保存';
+  });
+});
 
 function downloadAuthorized(url, fallbackName, button) {
   var original = button ? button.innerHTML : '';
